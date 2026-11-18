@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type Tenant = { id: string; name: string; slug: string; email: string; phone: string | null; status: string; createdAt: string; counts: { memberships: number; vehicles: number; branches: number; bookings: number }; subscription: { tier: string; status: string; plan: string } | null };
 
 export default function AdminPage() {
+  const router = useRouter();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
@@ -22,7 +24,20 @@ export default function AdminPage() {
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to load tenants."); }
     finally { setLoading(false); }
   }, []);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/tenants", { cache: "no-store" })
+      .then(async (response) => ({ response, data: await response.json() }))
+      .then(({ response, data }) => {
+        if (cancelled) return;
+        if (response.status === 403) { setDenied(true); return; }
+        if (!response.ok) throw new Error(data.error || "Unable to load tenants.");
+        setTenants(data.tenants || []);
+      })
+      .catch((e) => { if (!cancelled) setError(e instanceof Error ? e.message : "Unable to load tenants."); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
   async function changeStatus(tenantId: string, status: string) {
     setBusy(tenantId); setError("");
     try {
@@ -33,7 +48,7 @@ export default function AdminPage() {
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to update tenant."); }
     finally { setBusy(""); }
   }
-  async function signOut() { await fetch("/api/auth/logout", { method: "POST" }); window.location.href = "/login"; }
+  async function signOut() { await fetch("/api/auth/logout", { method: "POST" }); router.replace("/login"); router.refresh(); }
   if (loading) return <main className="min-h-screen bg-slate-950 p-8 text-slate-300">Loading platform console…</main>;
   if (denied) return <main className="min-h-screen bg-slate-950 px-5 py-16 text-slate-100"><section className="mx-auto max-w-lg rounded-2xl border border-white/10 bg-slate-900 p-8"><p className="text-xs font-bold tracking-[.2em] text-amber-300">RESTRICTED AREA</p><h1 className="mt-3 text-3xl font-bold">Admin access required</h1><p className="mt-3 text-sm leading-6 text-slate-400">This console is reserved for platform administrators. Sign in with an authorized admin email or contact the ROAM platform owner.</p><div className="mt-6 flex gap-4"><Link href="/login" className="rounded-xl bg-cyan-400 px-5 py-3 font-bold text-slate-950">Sign in</Link><Link href="/" className="px-4 py-3 text-slate-300">Home</Link></div></section></main>;
   const totals = tenants.reduce((sum, tenant) => ({ vehicles: sum.vehicles + tenant.counts.vehicles, bookings: sum.bookings + tenant.counts.bookings, users: sum.users + tenant.counts.memberships }), { vehicles: 0, bookings: 0, users: 0 });

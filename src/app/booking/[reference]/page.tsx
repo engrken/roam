@@ -38,7 +38,7 @@ export default function CustomerBookingPage() {
 
   useEffect(() => {
     let active = true;
-    if (!token) { setError("This private booking link is incomplete. Please open the original link from your booking confirmation."); return () => { active=false; }; }
+    if (!token) return () => { active=false; };
     refresh().catch(reason => { if(active) setError(reason instanceof Error ? reason.message : "Unable to load booking."); });
     return () => { active=false; };
   },[refresh,token]);
@@ -68,14 +68,14 @@ export default function CustomerBookingPage() {
     finally { setBusy(false); }
   }
 
-  if(!data) return <main className="client-page"><header className="client-topbar"><a className="client-brand" href="/"><span>R</span> ROAM</a><span>PRIVATE BOOKING PORTAL</span></header><div className="client-container"><section className="client-success client-loading-card"><div className="client-eyebrow">BOOKING PORTAL</div><h1>{error ? "We couldn’t open this booking" : "Loading your booking…"}</h1><p>{error || "Please wait while we securely retrieve your booking details."}</p>{error && <Link className="client-primary" href="/">Back to ROAM</Link>}</section></div></main>;
+  if(!data) return <main className="client-page"><header className="client-topbar"><a className="client-brand" href="/"><span>R</span> ROAM</a><span>PRIVATE BOOKING PORTAL</span></header><div className="client-container"><section className="client-success client-loading-card"><div className="client-eyebrow">BOOKING PORTAL</div><h1>{error ? "We couldn’t open this booking" : "Loading your booking…"}</h1><p>{error || (!token ? "This private booking link is incomplete. Please open the original link from your booking confirmation." : "Please wait while we securely retrieve your booking details.")}</p>{error && <Link className="client-primary" href="/">Back to ROAM</Link>}</section></div></main>;
 
   const statusLabel=statusText[data.status]||data.status.replaceAll("_"," ");
   const timeline=["PENDING","CONFIRMED","ACTIVE","COMPLETED"];
   const currentIndex=timeline.indexOf(data.status);
   const cancelled=["CANCELLED","REJECTED"].includes(data.status);
   return <main className="client-page">
-    <header className="client-topbar"><a href="/" className="client-brand"><span>R</span> ROAM</a><span>PRIVATE BOOKING PORTAL</span></header>
+    <header className="client-topbar"><Link href="/" className="client-brand"><span>R</span> ROAM</Link><span>PRIVATE BOOKING PORTAL</span></header>
     <div className="client-container">
       <div className="client-portal-heading"><div><div className="client-eyebrow">{data.business.name}</div><h1>Your booking</h1><p>Reference <b>{data.reference}</b></p></div><button className="client-refresh" onClick={reload} disabled={refreshing}>{refreshing?"Refreshing…":"↻ Refresh status"}</button></div>
       {error && <div className="client-alert" role="alert">{error}</div>}{notice && <div className="client-notice" role="status">{notice}</div>}

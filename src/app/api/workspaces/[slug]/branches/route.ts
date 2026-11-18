@@ -31,4 +31,110 @@ async function canDeactivate(tenantId: string, branchId: string) {
 export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const access = await getTenantAccess(slug);
-  if (!access) return NextResponse.json({ error: "Workspace not found¶»§q«^
+  if (!access) return NextResponse.json({ error: "Workspace not found or access denied." }, { status: 404 });
+
+  const includeInactive = request.nextUrl.searchParams.get("includeInactive") === "1";
+  const branches = await prisma.branch.findMany({
+    where: { tenantId: access.tenant.id, ...(includeInactive ? {} : { isActive: true }) },
+    orderBy: [{ isActive: "desc" }, { createdAt: "asc" }],
+    select: { id: true, name: true, code: true, address: true, isActive: true, createdAt: true },
+  });
+  return NextResponse.json({ branches, canManage: canManageFleet(access.role) });
+}
+
+export async function POST(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const access = await getTenantAccess(slug);
+  if (!access) return NextResponse.json({ error: "Workspace not found or access denied." }, { status: 404 });
+  if (!canManageFleet(access.role)) return NextResponse.json({ error: "You cannot manage branches." }, { status: 403 });
+
+  const body = await request.json().catch(() => null) as BranchBody | null;
+  const parsed = body && parseBranch(body);
+  if (!parsed) return NextResponse.json({ error: "Enter a valid branch name, code, and address." }, { status: 400 });
+
+  try {
+    const branch = await prisma.branch.create({
+      data: { tenantId: access.tenant.id, ...parsed },
+      select: { id: true, name: true, code: true, address: true, isActive: true, createdAt: true },
+    });
+    return NextResponse.json({ branch }, { status: 201 });
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
+      return NextResponse.json({ error: "That branch code is already in use in this workspace." }, { status: 409 });
+    }
+    console.error("Branch creation failed", error);
+    return NextResponse.json({ error: "Unable to create the branch right now." }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const access = await getTenantAccess(slug);
+  if (!access) return NextResponse.json({ error: "Workspace not found or access denied." }, { status: 404 });
+  if (!canManageFleet(access.role)) return NextResponse.json({ error: "You cannot manage branches." }, { status: 403 });
+
+  const body = await request.json().catch(() => null) as BranchBody | null;
+  const id = typeof body?.id === "string" ? body.id : "";
+  if (!id) return NextResponse.json({ error: "A branch ID is required." }, { status: 400 });
+
+  const existing = await prisma.branch.findFirst({
+    where: { id, tenantId: access.tenant.id },
+    select: { id: true, isActive: true },
+  });
+  if (!existing) return NextResponse.json({ error: "Branch not found." }, { status: 404 });
+
+  const data: { name?: string; code?: string | null; address?: string | null; isActive?: boolean } = {};
+  if (body?.name !== undefined || body?.code !== undefined || body?.address !== undefined) {
+    const parsed = body && parseBranch(body);
+    if (!parsed) return NextResponse.json({ error: "Enter a valid branch name, code, and address." }, { status: 400 });
+    Object.assign(data, parsed);
+  }
+  if (typeof body?.isActive === "boolean") {
+    if (!body.isActive && existing.isActive && !(await canDeactivate(access.tenant.id, id))) {
+      return NextResponse.json({
+        error: "Move or deactivate this branch's vehicles and resolve its upcoming bookings before deactivating it.",
+      }, { status: 409 });
+    }
+    data.isActive = body.isActive;
+  }
+
+  try {
+    const branch = await prisma.branch.update({
+      where: { id },
+      data,
+      select: { id: true, name: true, code: true, address: true, isActive: true, createdAt: true },
+    });
+    return NextResponse.json({ branch });
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
+      return NextResponse.json({ error: "That branch code is already in use in this workspace." }, { status: 409 });
+    }
+    console.error("Branch update failed", error);
+    return NextResponse.json({ error: "Unable to update the branch right now." }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const access = await getTenantAccess(slug);
+  if (!access) return NextResponse.json({ error: "Workspace not found or access denied." }, { status: 404 });
+  if (!canManageFleet(access.role)) return NextResponse.json({ error: "You cannot manage branches." }, { status: 403 });
+
+  const id = request.nextUrl.searchParams.get("id") || "";
+  if (!id) return NextResponse.json({ error: "A branch ID is required." }, { status: 400 });
+  const existing = await prisma.branch.findFirst({
+    where: { id, tenantId: access.tenant.id },
+    select: { id: true, isActive: true },
+  });
+  if (!existing) return NextResponse.json({ error: "Branch not found." }, { status: 404 });
+  if (!existing.isActive) return NextResponse.json({ deactivated: true });
+
+  if (!(await canDeactivate(access.tenant.id, id))) {
+    return NextResponse.json({
+      error: "Move or deactivate this branch's vehicles and resolve its upcoming bookings before deactivating it.",
+    }, { status: 409 });
+  }
+
+  await prisma.branch.update({ where: { id }, data: { isActive: false } });
+  return NextResponse.json({ deactivated: true });
+}

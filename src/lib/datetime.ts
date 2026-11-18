@@ -40,4 +40,42 @@ export function rentalDateTimeToUtc(value: unknown, timeZone: string): Date | nu
   try {
     const formatter = new Intl.DateTimeFormat("en-CA", {
       timeZone,
-      year: "numeric"¶»§q«^
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    });
+
+    const partsAt = (instant: number) => {
+      const parts = formatter.formatToParts(new Date(instant));
+      const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+      return {
+        year: Number(values.year), month: Number(values.month), day: Number(values.day),
+        hour: Number(values.hour), minute: Number(values.minute), second: Number(values.second),
+      };
+    };
+
+    let instant = wallClockEpoch;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const local = partsAt(instant);
+      const representedEpoch = Date.UTC(
+        local.year, local.month - 1, local.day, local.hour, local.minute, local.second,
+      );
+      instant = wallClockEpoch - (representedEpoch - instant);
+    }
+
+    const resolved = partsAt(instant);
+    if (
+      resolved.year !== desired.year || resolved.month !== desired.month ||
+      resolved.day !== desired.day || resolved.hour !== desired.hour ||
+      resolved.minute !== desired.minute || resolved.second !== desired.second
+    ) return null;
+
+    return new Date(instant);
+  } catch {
+    return null;
+  }
+}

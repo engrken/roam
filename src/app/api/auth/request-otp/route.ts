@@ -29,4 +29,61 @@ export async function POST(request: NextRequest) {
     const windowStart = new Date(now.getTime() - 15 * 60 * 1000);
 
     const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
-    const otp = await prisma.$transaction(async (¶»§q«^
+    const otp = await prisma.$transaction(async (tx) => {
+      // Acquire locks in the same order for every request to keep counters race-safe.
+      await tx.$queryRawUnsafe("SELECT pg_advisory_xact_lock(hashtext($1))", "email:" + email);
+      await tx.$queryRawUnsafe("SELECT pg_advisory_xact_lock(hashtext($1))", "ip:" + ipHash);
+
+      await tx.emailOtp.deleteMany({
+        where: { codeHash: "RATE_LIMIT", expiresAt: { lt: now } },
+      });
+
+      const [emailRequests, ipRequests] = await Promise.all([
+        tx.emailOtp.count({ where: { email, createdAt: { gt: windowStart } } }),
+        tx.emailOtp.count({ where: { email: ipBucket, createdAt: { gt: windowStart } } }),
+      ]);
+      if (emailRequests >= 5 || ipRequests >= 20) return null;
+
+      await tx.emailOtp.create({
+        data: {
+          email: ipBucket,
+          codeHash: "RATE_LIMIT",
+          expiresAt: new Date(now.getTime() + 15 * 60 * 1000),
+          consumedAt: now,
+        },
+      });
+
+      await tx.emailOtp.updateMany({
+        where: { email, consumedAt: null },
+        data: { consumedAt: now },
+      });
+      return tx.emailOtp.create({
+        data: {
+          email,
+          codeHash: purpose + ":" + digest(email, code),
+          expiresAt: new Date(now.getTime() + 5 * 60 * 1000),
+        },
+      });
+    });
+
+    if (!otp) {
+      return NextResponse.json({ error: "Too many code requests. Please try again later." }, { status: 429 });
+    }
+    otpId = otp.id;
+
+    try {
+      await sendLoginCode(email, code);
+    } catch (error) {
+      await prisma.emailOtp.updateMany({
+        where: { id: otp.id, consumedAt: null },
+        data: { consumedAt: new Date() },
+      });
+      throw error;
+    }
+
+    return NextResponse.json({ sent: true, message: "If this address can receive a code, one has been sent." });
+  } catch (error) {
+    console.error("OTP request failed", { otpId, error });
+    return NextResponse.json({ error: "Unable to send a sign-in code right now." }, { status: 500 });
+  }
+}

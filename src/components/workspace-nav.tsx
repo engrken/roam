@@ -20,4 +20,8 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
       <Link className={active === "fleet" ? "active" : ""} href={`/workspace/${slug}/fleet`}><CarFront size={18}/> Fleet management</Link>
       <Link className={active === "bookings" ? "active" : ""} href={`/workspace/${slug}/bookings`}><CalendarDays size={18}/> Bookings</Link>
       <Link className={active === "branches" ? "active" : ""} href={"/workspace/" + slug + "/branches"}><MapPin size={18}/> Branches</Link>
-      <Link href="/admin" className="roam-admin-link"><ShieldCheck size={18}/> Platform a¶»§q«^
+      <Link href="/admin" className="roam-admin-link"><ShieldCheck size={18}/> Platform admin</Link>
+    </nav>
+    <div className="roam-sidebar-bottom"><span className="roam-role">{role}</span><button onClick={signOut}><LogOut size={16}/> Sign out</button></div>
+  </aside>;
+}

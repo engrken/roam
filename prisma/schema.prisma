@@ -95,6 +95,7 @@ model User {
   updatedAt   DateTime     @updatedAt
   memberships Membership[]
   sessions    Session[]
+  legalAcceptances LegalAcceptance[]
 }
 
 model Membership {
@@ -314,4 +315,18 @@ model VehicleInspectionPhoto {
   createdAt    DateTime         @default(now())
   inspection   VehicleInspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
   @@index([inspectionId, createdAt])
+}
+
+
+model LegalAcceptance {
+  id             String   @id @default(cuid())
+  userId         String
+  termsVersion   String
+  privacyVersion String
+  acceptedAt     DateTime @default(now())
+  ipAddress      String?
+  userAgent      String?
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, termsVersion, privacyVersion])
+  @@index([userId, acceptedAt])
 }

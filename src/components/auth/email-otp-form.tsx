@@ -19,7 +19,7 @@ export function EmailOtpForm({ mode = "login" }: { mode?: "login" | "register" }
     setBusy(true); setError(""); setMessage("");
     try {
       const endpoint = step === "email" ? "/api/auth/request-otp" : "/api/auth/verify-otp";
-      const payload = step === "email" ? { email } : { email, code };
+      const payload = step === "email" ? { email, purpose: registering ? "register" : "login" } : { email, code };
       const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Something went wrong.");

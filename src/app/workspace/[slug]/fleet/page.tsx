@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { Plus, Search, CarFront, ArrowLeft, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { WorkspaceNav } from "@/components/workspace-nav";
@@ -13,16 +13,15 @@ const statuses=["AVAILABLE","RESERVED","RENTED","MAINTENANCE","INACTIVE"];
 const money=(v:number)=>new Intl.NumberFormat("en-PH",{style:"currency",currency:"PHP",maximumFractionDigits:0}).format(v);
 
 export default function FleetPage(){
- const {slug}=useParams<{slug:string}>();const router=useRouter();
+ const {slug}=useParams<{slug:string}>();
  const [vehicles,setVehicles]=useState<Vehicle[]>([]);const [branches,setBranches]=useState<Branch[]>([]);
  const [loading,setLoading]=useState(true);const [error,setError]=useState("");const [search,setSearch]=useState("");const [filter,setFilter]=useState("ALL");const [showForm,setShowForm]=useState(false);const [busy,setBusy]=useState(false);const [editingId,setEditingId]=useState<string|null>(null);
  const [form,setForm]=useState({type:"MOTORCYCLE",make:"",model:"",year:"",plateNumber:"",color:"",dailyRate:"",securityDeposit:"",branchId:""});
  const load=useCallback(async()=>{try{const [v,b]=await Promise.all([fetch(`/api/workspaces/${encodeURIComponent(slug)}/vehicles`,{cache:"no-store"}),fetch(`/api/workspaces/${encodeURIComponent(slug)}/branches`,{cache:"no-store"})]);const vd=await v.json(),bd=await b.json();if(!v.ok)throw new Error(vd.error||"Unable to load fleet.");setVehicles(vd.vehicles||[]);setBranches(bd.branches||[]);}catch(e){setError(e instanceof Error?e.message:"Unable to load fleet.");}finally{setLoading(false);}},[slug]);
- useEffect(()=>{load();},[load]);
+ useEffect(()=>{let active=true;Promise.resolve().then(()=>{if(active)void load();});return()=>{active=false;};},[load]);
  async function addVehicle(e:FormEvent){e.preventDefault();setBusy(true);setError("");try{const r=await fetch(`/api/workspaces/${encodeURIComponent(slug)}/vehicles`,{method:editingId?"PATCH":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(editingId?{...form,id:editingId}:form)});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to add vehicle.");setForm({type:"MOTORCYCLE",make:"",model:"",year:"",plateNumber:"",color:"",dailyRate:"",securityDeposit:"",branchId:""});setShowForm(false);setEditingId(null);await load();}catch(e){setError(e instanceof Error?e.message:"Unable to add vehicle.");}finally{setBusy(false);}}
  function editVehicle(v:Vehicle){setEditingId(v.id);setForm({type:v.type,make:v.make,model:v.model,year:v.year?String(v.year):"",plateNumber:v.plateNumber,color:v.color||"",dailyRate:String(v.dailyRate),securityDeposit:String(v.securityDeposit),branchId:v.branchId||""});setShowForm(true);window.scrollTo({top:0,behavior:"smooth"});}
  async function changeStatus(id:string,status:string){setError("");try{const r=await fetch(`/api/workspaces/${encodeURIComponent(slug)}/vehicles`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to update status.");setVehicles(v=>v.map(x=>x.id===id?{...x,status}:x));}catch(e){setError(e instanceof Error?e.message:"Unable to update vehicle.");}}
- async function signOut(){await fetch("/api/auth/logout",{method:"POST"});router.replace("/login");router.refresh();}
  const visible=vehicles.filter(v=>(filter==="ALL"||v.status===filter)&&`${v.make} ${v.model} ${v.plateNumber}`.toLowerCase().includes(search.toLowerCase()));
  const counts=Object.fromEntries(statuses.map(s=>[s,vehicles.filter(v=>v.status===s).length]));
  if(loading)return <main className="roam-loading">Loading fleet…</main>;

@@ -1,13 +1,13 @@
 "use client";
-import {useEffect,useState,FormEvent} from "react";
+import {useCallback,useEffect,useState,FormEvent} from "react";
 import {useParams,useSearchParams} from "next/navigation";
 import {upload} from "@vercel/blob/client";
 type Data={reference:string;status:string;startAt:string;endAt:string;totalAmount:number;business:{name:string;phone:string|null};messages:{id:string;sender:string;body:string;createdAt:string}[];documents:{id:string;kind:string;fileName:string;reviewStatus:string}[]};
 export default function CustomerBookingPage(){
  const {reference}=useParams<{reference:string}>();const query=useSearchParams();const token=query.get("token")||"";
  const [data,setData]=useState<Data|null>(null);const [message,setMessage]=useState("");const [kind,setKind]=useState("DRIVERS_LICENSE_FRONT");const [file,setFile]=useState<File|null>(null);const [error,setError]=useState("");const [busy,setBusy]=useState(false);
- async function refresh(){const r=await fetch("/api/public/bookings/"+encodeURIComponent(reference)+"?token="+encodeURIComponent(token),{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error);setData(d.booking);}
- useEffect(()=>{if(token)refresh().catch(e=>setError(e.message));else setError("This private booking link is incomplete.");},[reference,token]);
+ const refresh=useCallback(async()=>{const r=await fetch("/api/public/bookings/"+encodeURIComponent(reference),{cache:"no-store",headers:{Authorization:"Bearer "+token}});const d=await r.json();if(!r.ok)throw new Error(d.error);setData(d.booking);},[reference,token]);
+ useEffect(()=>{let active=true;if(!token){Promise.resolve().then(()=>{if(active)setError("This private booking link is incomplete.");});}else{Promise.resolve().then(()=>active?refresh():undefined).catch(e=>{if(active)setError(e instanceof Error?e.message:"Unable to load booking.");});}return()=>{active=false;};},[refresh,token]);
  async function send(e:FormEvent){e.preventDefault();setBusy(true);setError("");try{const r=await fetch("/api/public/bookings/"+encodeURIComponent(reference),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,message})});const d=await r.json();if(!r.ok)throw new Error(d.error);setMessage("");await refresh();}catch(e){setError(e instanceof Error?e.message:"Unable to send message.");}finally{setBusy(false);}}
  async function sendFile(e:FormEvent){e.preventDefault();if(!file)return;setBusy(true);setError("");try{await upload(file.name,file,{access:"private",handleUploadUrl:"/api/public/bookings/upload",clientPayload:JSON.stringify({reference,token,kind})});setFile(null);await refresh();}catch(e){setError(e instanceof Error?e.message:"Unable to upload document.");}finally{setBusy(false);}}
  if(!data)return <main style={{maxWidth:760,margin:"40px auto",padding:24,fontFamily:"Arial"}}><h1>Booking portal</h1><p>{error||"Loading booking…"}</p></main>;

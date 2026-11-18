@@ -43,7 +43,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: `Your ${plan.plan.name} plan allows up to ${plan.plan.maxVehicles} active vehicles. Upgrade your plan to add more.` }, { status: 403 });
   }
   const branchId = typeof body.branchId === "string" && body.branchId ? body.branchId : null;
-  if (branchId && !await prisma.branch.findFirst({ where: { id: branchId, tenantId: access.tenant.id } })) {
+  if (branchId && !await prisma.branch.findFirst({ where: { id: branchId, tenantId: access.tenant.id, isActive: true } })) {
     return NextResponse.json({ error: "Choose a branch in this workspace." }, { status: 400 });
   }
   try {
@@ -97,7 +97,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: "Enter valid vehicle details and a daily rate." }, { status: 400 });
   }
   const branchId = typeof body.branchId === "string" && body.branchId ? body.branchId : null;
-  if (branchId && !await prisma.branch.findFirst({ where: { id: branchId, tenantId: access.tenant.id } })) {
+  if (branchId && !await prisma.branch.findFirst({ where: { id: branchId, tenantId: access.tenant.id, isActive: true } })) {
     return NextResponse.json({ error: "Choose a branch in this workspace." }, { status: 400 });
   }
   try {

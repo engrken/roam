@@ -1,4 +1,4 @@
-import { createHmac, randomInt } from "node:crypto";
+import { createHash, createHmac, randomInt } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendLoginCode } from "@/lib/email";
@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 function digest(email: string, code: string) {
   const secret = process.env.AUTH_SECRET;
   if (!secret || secret.length < 32) throw new Error("Authentication is not configured.");
-  return createHmac("sha256", secret).update(`${email}:${code}`).digest("hex");
+  return createHmac("sha256", secret).update(email + ":" + code).digest("hex");
 }
 
 export async function POST(request: NextRequest) {
@@ -21,29 +21,59 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
     }
 
-    const recent = await prisma.emailOtp.count({
-      where: { email, createdAt: { gt: new Date(Date.now() - 15 * 60 * 1000) } },
-    });
-    if (recent >= 5) {
-      return NextResponse.json({ error: "Too many code requests. Please try again later." }, { status: 429 });
-    }
+    const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+    const clientIp = forwarded || request.headers.get("x-real-ip") || "unknown";
+    const ipHash = createHash("sha256").update(clientIp).digest("hex");
+    const ipBucket = "ip-" + ipHash + "@rate-limit.invalid";
+    const now = new Date();
+    const windowStart = new Date(now.getTime() - 15 * 60 * 1000);
 
     const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
     const otp = await prisma.$transaction(async (tx) => {
+      // Acquire locks in the same order for every request to keep counters race-safe.
+      await tx.$queryRawUnsafe("SELECT pg_advisory_xact_lock(hashtext($1))", "email:" + email);
+      await tx.$queryRawUnsafe("SELECT pg_advisory_xact_lock(hashtext($1))", "ip:" + ipHash);
+
+      await tx.emailOtp.deleteMany({
+        where: { codeHash: "RATE_LIMIT", expiresAt: { lt: now } },
+      });
+
+      const [emailRequests, ipRequests] = await Promise.all([
+        tx.emailOtp.count({ where: { email, createdAt: { gt: windowStart } } }),
+        tx.emailOtp.count({ where: { email: ipBucket, createdAt: { gt: windowStart } } }),
+      ]);
+      if (emailRequests >= 5 || ipRequests >= 20) return null;
+
+      await tx.emailOtp.create({
+        data: {
+          email: ipBucket,
+          codeHash: "RATE_LIMIT",
+          expiresAt: new Date(now.getTime() + 15 * 60 * 1000),
+          consumedAt: now,
+        },
+      });
+
       await tx.emailOtp.updateMany({
         where: { email, consumedAt: null },
-        data: { consumedAt: new Date() },
+        data: { consumedAt: now },
       });
       return tx.emailOtp.create({
-        data: { email, codeHash: `${purpose}:${digest(email, code)}`, expiresAt: new Date(Date.now() + 5 * 60 * 1000) },
+        data: {
+          email,
+          codeHash: purpose + ":" + digest(email, code),
+          expiresAt: new Date(now.getTime() + 5 * 60 * 1000),
+        },
       });
     });
+
+    if (!otp) {
+      return NextResponse.json({ error: "Too many code requests. Please try again later." }, { status: 429 });
+    }
     otpId = otp.id;
 
     try {
       await sendLoginCode(email, code);
     } catch (error) {
-      // A code that was never delivered must not remain usable.
       await prisma.emailOtp.updateMany({
         where: { id: otp.id, consumedAt: null },
         data: { consumedAt: new Date() },
@@ -51,14 +81,9 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    return NextResponse.json({ message: "If the address can receive ROAM sign-in messages, a code has been sent." });
-  } catch {
-    if (otpId) {
-      await prisma.emailOtp.updateMany({
-        where: { id: otpId, consumedAt: null },
-        data: { consumedAt: new Date() },
-      }).catch(() => undefined);
-    }
-    return NextResponse.json({ error: "Unable to send a sign-in code right now. Please try again." }, { status: 503 });
+    return NextResponse.json({ sent: true, message: "If this address can receive a code, one has been sent." });
+  } catch (error) {
+    console.error("OTP request failed", { otpId, error });
+    return NextResponse.json({ error: "Unable to send a sign-in code right now." }, { status: 500 });
   }
 }

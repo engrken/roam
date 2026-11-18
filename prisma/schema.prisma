@@ -196,6 +196,9 @@ model Booking {
   branch      Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
   customer    Customer      @relation(fields: [customerId], references: [id])
   items       BookingItem[]
+  messages    BookingMessage[]
+  documents   BookingDocument[]
+  publicTokenHash String? @unique
   @@unique([tenantId, reference])
   @@index([tenantId, startAt, endAt])
   @@index([tenantId, status])
@@ -234,4 +237,29 @@ model Session {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId, expiresAt])
   @@index([expiresAt])
+}
+
+model BookingMessage {
+  id        String   @id @default(cuid())
+  bookingId String
+  sender    String
+  body      String
+  createdAt DateTime @default(now())
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  @@index([bookingId, createdAt])
+}
+
+model BookingDocument {
+  id           String   @id @default(cuid())
+  bookingId    String
+  kind         String
+  pathname     String   @unique
+  fileName     String
+  contentType  String
+  size         Int
+  reviewStatus String   @default("PENDING")
+  reviewedAt   DateTime?
+  createdAt    DateTime @default(now())
+  booking      Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  @@index([bookingId, reviewStatus])
 }

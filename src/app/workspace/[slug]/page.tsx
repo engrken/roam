@@ -13,7 +13,6 @@ type Overview = {
 };
 
 const money=(value:number,currency="PHP")=>new Intl.NumberFormat("en-PH",{style:"currency",currency,maximumFractionDigits:0}).format(value);
-const date=(value:string)=>new Date(value).toLocaleDateString("en-PH",{month:"short",day:"numeric"});
 
 export default function WorkspaceOverviewPage() {
   const params=useParams<{slug:string}>();
@@ -23,7 +22,6 @@ export default function WorkspaceOverviewPage() {
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   useEffect(()=>{let live=true;fetch(`/api/workspaces/${encodeURIComponent(slug)}/overview`,{cache:"no-store"}).then(async r=>{const j=await r.json();if(!r.ok)throw new Error(j.error||"Unable to load workspace.");return j;}).then(j=>{if(live)setData(j);}).catch(e=>{if(live)setError(e instanceof Error?e.message:"Unable to load dashboard.");}).finally(()=>{if(live)setLoading(false);});return()=>{live=false;};},[slug]);
-  async function signOut(){await fetch("/api/auth/logout",{method:"POST"});router.replace("/login");router.refresh();}
   if(loading)return <main className="roam-loading">Loading your business overview…</main>;
   if(error||!data)return <main className="roam-loading"><h1>Workspace unavailable</h1><p>{error}</p><button className="roam-primary-btn" onClick={()=>router.replace("/workspace")}>Back to workspaces</button><button className="roam-quiet-btn" onClick={signOut}>Sign out</button></main>;
   const {workspace,metrics}=data;
@@ -31,7 +29,7 @@ export default function WorkspaceOverviewPage() {
   return <div className="roam-app-shell">
     <WorkspaceNav slug={slug} name={workspace.name} role={workspace.role} active="overview"/>
     <main className="roam-main">
-      <header className="roam-topbar"><div><span className="roam-eyebrow">BUSINESS OVERVIEW</span><h1>Good day. Here's your operation.</h1><p>Your fleet and rental activity at a glance.</p></div><div className="roam-topbar-actions"><span className="roam-date-pill"><CalendarDays size={15}/>{new Date().toLocaleDateString("en-PH",{weekday:"short",month:"short",day:"numeric"})}</span><button className="roam-primary-btn" onClick={()=>router.push(`/workspace/${slug}/fleet`)}>Manage fleet <ArrowUpRight size={16}/></button></div></header>
+      <header className="roam-topbar"><div><span className="roam-eyebrow">BUSINESS OVERVIEW</span><h1>Good day. Here&apos;s your operation.</h1><p>Your fleet and rental activity at a glance.</p></div><div className="roam-topbar-actions"><span className="roam-date-pill"><CalendarDays size={15}/>{new Date().toLocaleDateString("en-PH",{weekday:"short",month:"short",day:"numeric"})}</span><button className="roam-primary-btn" onClick={()=>router.push(`/workspace/${slug}/fleet`)}>Manage fleet <ArrowUpRight size={16}/></button></div></header>
       <section className="roam-metric-grid">
         <article className="roam-metric-card"><div className="roam-metric-icon"><CarFront/></div><span>Total fleet</span><strong>{metrics.totalVehicles}</strong><small>{metrics.availableVehicles} available now</small></article>
         <article className="roam-metric-card"><div className="roam-metric-icon"><CalendarDays/></div><span>Active bookings</span><strong>{metrics.activeBookings}</strong><small>{metrics.pendingBookings} pending confirmation</small></article>

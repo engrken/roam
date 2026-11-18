@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import {
   ArrowRight, Bike, BusFront, CalendarDays, Check, ChevronDown,
-  Clock3, Menu, Moon, ShieldCheck, Sun, Truck, X, CarFront,
-  ChartNoAxesCombined, Users, MapPin, WalletCards, Wrench
+  BarChart3, Menu, Moon, ShieldCheck, Sun, Truck, X, CarFront,
+  Users, MapPin, Wrench
 } from "lucide-react";
 
 function Brand({ light = false }: { light?: boolean }) {
@@ -18,7 +18,7 @@ const features = [
   { icon: CarFront, title: "One fleet, every vehicle", text: "Manage motorcycles, scooters, cars, SUVs, MPVs, vans, pickups, buses, and commercial vehicles in one organized workspace." },
   { icon: CalendarDays, title: "Bookings without the back-and-forth", text: "Keep reservations, rental periods, availability, and handovers visible so your team can stay in sync." },
   { icon: Users, title: "Customers and teams, connected", text: "Keep customer records and staff access organized with role-aware tools for your rental operation." },
-  { icon: ChartNoAxesCombined, title: "Know how your business is moving", text: "Bring fleet activity, bookings, and business performance into a clearer operational picture." },
+  { icon: BarChart3, title: "Know how your business is moving", text: "Bring fleet activity, bookings, and business performance into a clearer operational picture." },
   { icon: Wrench, title: "Keep every asset road-ready", text: "Track vehicle status and maintenance needs as part of your day-to-day fleet workflow." },
   { icon: ShieldCheck, title: "Built with business boundaries", text: "A multi-tenant foundation designed to keep each rental business's workspace and records separate." }
 ];

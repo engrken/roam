@@ -2,7 +2,14 @@
 ## Rental Operations and Asset Management
 **Move More. Manage Smarter.**
 
-ROAM is a multi-tenant vehicle-rental SaaS platform for independent rental operators, with a customer booking portal, fleet operations, subscription plans, and a future GPS/IoT tracking module.
+ROAM is a multi-tenant SaaS platform being built for private vehicle rental businesses of all sizes and vehicle types — motorcycles, scooters, cars, SUVs, MPVs, vans, pickups, buses, trucks, and more.
+
+### Product experience
+- Public marketing website with responsive mobile layouts and a light/dark theme.
+- Fleet, branch, customer, and booking management foundations.
+- Planned customer booking portal and rental operations workflows.
+- Subscription-aware workspaces for independent operators and growing fleets.
+- Future GPS/IoT tracking as a separate, access-controlled module.
 
 ### Technology
 - Next.js App Router + TypeScript
@@ -18,17 +25,26 @@ npx prisma generate
 npm run dev
 ```
 
-Configure `DATABASE_URL` before running database migrations.
+Configure `ROAMDB_POSTGRES_PRISMA_URL` and `ROAMDB_DATABASE_URL_UNPOOLED` before running database commands.
 
-### Product principles
+### Gmail SMTP preparation
+The `.env.example` file contains placeholders for Gmail SMTP. Before enabling outbound email:
+1. Enable 2-Step Verification on the dedicated Gmail account.
+2. Create a Google App Password for ROAM.
+3. Add the SMTP values to local environment variables and Vercel Production/Preview environments.
+4. Never commit the real App Password or share it in chat.
+
+SMTP delivery code, authentication emails, and transactional notification templates will be implemented and tested before being enabled in production.
+
+### Product and security principles
 - Strict tenant data isolation on every tenant-owned record and query.
 - Server-side authorization; never trust tenant IDs supplied by the browser.
 - Booking overlap protection enforced transactionally at the database/service layer.
-- GPS telemetry is designed as a separate, access-controlled subsystem.
-- Subscription limits are enforced by backend services, not only by the UI.
+- Subscription limits enforced by backend services, not only by the UI.
+- GPS telemetry is a separate, access-controlled subsystem.
 
-### Initial build scope
-This repository starts with the product foundation and architecture. Authentication, billing, transactional booking workflows, email delivery, and GPS integrations will be added in staged, tested increments before production use.
+### Legal pages
+The Privacy Policy and Terms of Service routes are pre-launch drafts. They must be reviewed and completed with the operator's legal identity, privacy contact, final data flows, retention schedules, commercial terms, and other required details before public launch.
 
 ### Status
-Early foundation — not production-ready until authentication, tenant authorization, database migrations, operational workflows, and deployment configuration have been completed and tested.
+Early foundation — not production-ready until production database migration, authentication, tenant authorization, operational workflows, email delivery, and security testing have been completed.

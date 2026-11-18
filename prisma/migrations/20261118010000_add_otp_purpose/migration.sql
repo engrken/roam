@@ -1,0 +1,1 @@
+ALTER TABLE "EmailOtp" ADD COLUMN "purpose" TEXT NOT NULL DEFAULT 'login';

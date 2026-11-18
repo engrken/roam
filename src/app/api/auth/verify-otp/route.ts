@@ -27,7 +27,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "The code is invalid or expired. Request a new one." }, { status: 400 });
     }
 
-    const expected = Buffer.from(otp.codeHash, "hex");
+    const [storedPurpose, storedDigest] = otp.codeHash.includes(":") ? otp.codeHash.split(":", 2) : ["login", otp.codeHash];
+    const purpose = storedPurpose === "register" ? "register" : "login";
+    const expected = Buffer.from(storedDigest, "hex");
     const actual = Buffer.from(codeDigest(email, code), "hex");
     const matches = expected.length === actual.length && timingSafeEqual(expected, actual);
 
@@ -54,17 +56,22 @@ export async function POST(request: NextRequest) {
       });
       if (consumed.count !== 1) return null;
 
-      const account = await tx.user.upsert({
-        where: { email },
-        update: {},
-        create: { email },
-      });
+      const existing = await tx.user.findUnique({ where: { email } });
+      if (purpose === "register" && existing) return { conflict: true as const };
+      if (purpose === "login" && !existing) return { missing: true as const };
+      const account = existing ?? await tx.user.create({ data: { email } });
       await tx.session.create({
         data: { tokenHash, userId: account.id, expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) },
       });
       return account;
     });
 
+    if (user && "missing" in user) {
+      return NextResponse.json({ error: "No ROAM account exists for this email. Create an account first." }, { status: 404 });
+    }
+    if (user && "conflict" in user) {
+      return NextResponse.json({ error: "An account already exists for this email. Please sign in instead." }, { status: 409 });
+    }
     if (!user) {
       return NextResponse.json({ error: "The code is invalid or expired. Request a new one." }, { status: 400 });
     }

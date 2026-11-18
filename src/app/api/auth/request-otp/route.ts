@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
         data: { consumedAt: new Date() },
       });
       return tx.emailOtp.create({
-        data: { email, purpose, codeHash: digest(email, code), expiresAt: new Date(Date.now() + 5 * 60 * 1000) },
+        data: { email, purpose, codeHash: `${purpose}:${digest(email, code)}`, expiresAt: new Date(Date.now() + 5 * 60 * 1000) },
       });
     });
     otpId = otp.id;

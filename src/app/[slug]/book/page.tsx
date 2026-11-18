@@ -12,10 +12,41 @@ type Vehicle = {
 };
 type Business = { name: string; phone: string | null; timezone: string; currency?: string };
 
-function localDateTime(offsetMinutes = 0) {
+function localDateTime(timeZone: string, offsetMinutes = 0) {
   const date = new Date(Date.now() + offsetMinutes * 60_000);
-  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
-  return date.toISOString().slice(0, 16);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return values.year + "-" + values.month + "-" + values.day + "T" + values.hour + ":" + values.minute;
+}
+function wallClockEpoch(value: string, timeZone: string) {
+  const match = /^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2})$/.exec(value);
+  if (!match) return NaN;
+  const [, y, mo, d, h, mi] = match;
+  const desired = Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi));
+  try {
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone, year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+    });
+    let instant = desired;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const values = Object.fromEntries(formatter.formatToParts(new Date(instant)).map(part => [part.type, part.value]));
+      const represented = Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day), Number(values.hour), Number(values.minute), Number(values.second));
+      instant -= represented - instant;
+    }
+    const values = Object.fromEntries(formatter.formatToParts(new Date(instant)).map(part => [part.type, part.value]));
+    return Number(values.year) === Number(y) && Number(values.month) === Number(mo) &&
+      Number(values.day) === Number(d) && Number(values.hour) === Number(h) &&
+      Number(values.minute) === Number(mi) ? instant : NaN;
+  } catch { return NaN; }
 }
 function money(value: number) {
   return new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(value);
@@ -52,11 +83,12 @@ export default function PublicBookPage() {
   const chosen = vehicles.find(vehicle => vehicle.id === vehicleId);
   const estimate = useMemo(() => {
     if (!startAt || !endAt) return null;
-    const start = new Date(startAt).getTime(), end = new Date(endAt).getTime();
+    const timeZone = business?.timezone || "Asia/Manila";
+    const start = wallClockEpoch(startAt, timeZone), end = wallClockEpoch(endAt, timeZone);
     if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
     const days = Math.max(1, Math.ceil((end - start) / 86_400_000));
     return { days, rental: chosen ? chosen.dailyRate * days : 0, deposit: chosen?.securityDeposit || 0 };
-  }, [startAt, endAt, chosen]);
+  }, [startAt, endAt, chosen, business?.timezone]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -93,7 +125,7 @@ export default function PublicBookPage() {
           <form onSubmit={submit} className="client-form">
             <label>Choose a vehicle<select required value={vehicleId} onChange={event => setVehicleId(event.target.value)}><option value="">Select an available vehicle</option>{vehicles.map(vehicle => <option key={vehicle.id} value={vehicle.id}>{vehicle.year || ""} {vehicle.make} {vehicle.model} · {money(vehicle.dailyRate)}/day</option>)}</select></label>
             {chosen && <div className="client-vehicle-summary"><div className="client-vehicle-icon">🚘</div><div><strong>{chosen.year ? chosen.year + " " : ""}{chosen.make} {chosen.model}</strong><span>{[chosen.type.replaceAll("_", " "), chosen.color, chosen.transmission, chosen.seats ? chosen.seats + " seats" : null].filter(Boolean).join(" · ")}</span><span>Pickup location: {chosen.branch?.name || "To be confirmed"}{chosen.branch?.address ? " · " + chosen.branch.address : ""}</span></div><b>{money(chosen.dailyRate)}<small>/day</small></b></div>}
-            <div className="client-fields-two"><label>Pickup date & time<input required type="datetime-local" min={localDateTime()} value={startAt} onChange={event => { setStartAt(event.target.value); if (endAt && event.target.value >= endAt) setEndAt(""); }}/></label><label>Return date & time<input required type="datetime-local" min={startAt || localDateTime(60)} value={endAt} onChange={event => setEndAt(event.target.value)}/></label></div>
+            <div className="client-fields-two"><label>Pickup date & time<input required type="datetime-local" min={localDateTime(business?.timezone || "Asia/Manila")} value={startAt} onChange={event => { setStartAt(event.target.value); if (endAt && event.target.value >= endAt) setEndAt(""); }}/></label><label>Return date & time<input required type="datetime-local" min={startAt || localDateTime(business?.timezone || "Asia/Manila", 60)} value={endAt} onChange={event => setEndAt(event.target.value)}/></label></div>
             <div className="client-section-head client-subhead"><span>02</span><div><h2>Your contact details</h2><p>We’ll use these details to coordinate your booking.</p></div></div>
             <label>Full name<input required minLength={2} maxLength={100} autoComplete="name" value={name} onChange={event => setName(event.target.value)} placeholder="Your full name"/></label>
             <div className="client-fields-two"><label>Email address<input required type="email" maxLength={254} autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="you@example.com"/></label><label>Mobile number<input required type="tel" minLength={7} maxLength={30} autoComplete="tel" value={phone} onChange={event => setPhone(event.target.value)} placeholder="+63 9XX XXX XXXX"/></label></div>

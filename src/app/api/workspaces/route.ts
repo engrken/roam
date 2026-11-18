@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { hasCurrentLegalAcceptance } from "@/lib/legal";
 
 export const runtime = "nodejs";
 
@@ -13,6 +14,7 @@ function makeSlug(value: string) {
 export async function POST(request: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Sign in to create a workspace." }, { status: 401 });
+  if (!hasCurrentLegalAcceptance(user.legalAcceptances)) return NextResponse.json({ error: "Accept the current Terms of Service and Privacy Policy before creating a workspace." }, { status: 403 });
   try {
     const body = await request.json();
     const name = typeof body.businessName === "string" ? body.businessName.trim() : "";

@@ -1,51 +1,123 @@
-import { ArrowRight, CalendarDays, CarFront, ShieldCheck, Sparkles } from "lucide-react";
+"use client";
 
-const capabilities = [
-  { icon: CarFront, title: "Fleet operations", description: "Organize motorcycles, cars, SUVs, vans, pickups, and more in one fleet workspace." },
-  { icon: CalendarDays, title: "Rental scheduling", description: "Plan reservations, check availability, and keep vehicle handovers organized." },
-  { icon: ShieldCheck, title: "Business-ready controls", description: "Build around tenant isolation, staff roles, and subscription-aware operations." }
+import { useState } from "react";
+import {
+  ArrowRight, Bike, BusFront, CalendarDays, Check, ChevronDown,
+  Clock3, Menu, Moon, ShieldCheck, Sun, Truck, X, CarFront,
+  ChartNoAxesCombined, Users, MapPin, WalletCards, Wrench
+} from "lucide-react";
+
+function Brand({ light = false }: { light?: boolean }) {
+  return <a className={`brand ${light ? "brand-light" : ""}`} href="/" aria-label="ROAM home">
+    <span className="brand-symbol" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M8 32V8h12.3c7.1 0 11.2 3.5 11.2 9.2 0 4.2-2.4 7.1-6.6 8.3L33 32h-9l-6.9-6.1h-1.5V32H8Zm7.6-12.4h4.5c2.4 0 3.7-.9 3.7-2.6s-1.3-2.6-3.7-2.6h-4.5v5.2Z" fill="currentColor"/><path d="m24 31 8-8" stroke="var(--brand-accent)" strokeWidth="3.2" strokeLinecap="round"/></svg></span>
+    <span className="brand-word">ROAM</span>
+  </a>;
+}
+
+const features = [
+  { icon: CarFront, title: "One fleet, every vehicle", text: "Manage motorcycles, scooters, cars, SUVs, MPVs, vans, pickups, buses, and commercial vehicles in one organized workspace." },
+  { icon: CalendarDays, title: "Bookings without the back-and-forth", text: "Keep reservations, rental periods, availability, and handovers visible so your team can stay in sync." },
+  { icon: Users, title: "Customers and teams, connected", text: "Keep customer records and staff access organized with role-aware tools for your rental operation." },
+  { icon: ChartNoAxesCombined, title: "Know how your business is moving", text: "Bring fleet activity, bookings, and business performance into a clearer operational picture." },
+  { icon: Wrench, title: "Keep every asset road-ready", text: "Track vehicle status and maintenance needs as part of your day-to-day fleet workflow." },
+  { icon: ShieldCheck, title: "Built with business boundaries", text: "A multi-tenant foundation designed to keep each rental business's workspace and records separate." }
+];
+
+const steps = [
+  ["01", "Set up your rental business", "Create your workspace, add branches, and invite your team."],
+  ["02", "Bring your fleet together", "Add your vehicles, rates, and availability in one place."],
+  ["03", "Manage the rental journey", "Organize bookings, customers, vehicle handovers, and returns."]
 ];
 
 export default function Home() {
-  return (
-    <main className="shell">
-      <nav className="nav">
-        <a className="brand" href="#"><span className="brand-mark">R</span><span>ROAM</span></a>
-        <span className="nav-note">RENTAL OPERATIONS PLATFORM</span>
-        <a className="nav-link" href="mailto:hello@roam.app">Contact <ArrowRight size={15} /></a>
-      </nav>
+  const [dark, setDark] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [faqOpen, setFaqOpen] = useState(0);
+  const faqs = [
+    ["What types of vehicles can ROAM manage?", "ROAM is being designed for private vehicle rental operators managing motorcycles, scooters, cars, SUVs, MPVs, vans, pickups, buses, trucks, and other rentable vehicle types."],
+    ["Can more than one rental business use ROAM?", "Yes. ROAM is planned as a multi-tenant SaaS platform. Each registered rental business will have its own workspace, users, and operational records."],
+    ["Will customers be able to make reservations online?", "A customer-facing booking experience is part of the product roadmap. Availability, booking confirmation, and payment workflows will be introduced in stages."],
+    ["Does ROAM support multiple branches?", "The platform foundation includes branches. The number of branches and vehicles available to each account will depend on its subscription plan."]
+  ];
 
-      <section className="hero">
+  return <main className={`site ${dark ? "theme-dark" : ""}`}>
+    <header className="site-header">
+      <div className="container nav-wrap">
+        <Brand />
+        <nav className={`main-nav ${menuOpen ? "nav-open" : ""}`} aria-label="Main navigation">
+          <a href="#platform" onClick={() => setMenuOpen(false)}>Platform</a>
+          <a href="#how-it-works" onClick={() => setMenuOpen(false)}>How it works</a>
+          <a href="#plans" onClick={() => setMenuOpen(false)}>Plans</a>
+          <a href="#faq" onClick={() => setMenuOpen(false)}>FAQs</a>
+          <a className="nav-mobile-cta" href="#contact" onClick={() => setMenuOpen(false)}>Get early access <ArrowRight size={15}/></a>
+        </nav>
+        <div className="nav-actions">
+          <button className="icon-button theme-toggle" onClick={() => setDark(!dark)} aria-label={dark ? "Switch to light theme" : "Switch to dark theme"} title={dark ? "Light theme" : "Dark theme"}>{dark ? <Sun size={18}/> : <Moon size={18}/>}</button>
+          <a className="button button-small button-dark" href="#contact">Get early access <ArrowRight size={15}/></a>
+          <button className="icon-button menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? "Close menu" : "Open menu"}>{menuOpen ? <X/> : <Menu/>}</button>
+        </div>
+      </div>
+    </header>
+
+    <section className="hero">
+      <div className="hero-grid container">
         <div className="hero-copy">
-          <div className="eyebrow"><Sparkles size={14} /> THE SMARTER WAY TO RUN RENTALS</div>
-          <h1>Every rental.<br /><span>One clear view.</span></h1>
-          <p className="lead">Manage your fleet, reservations, customers, and daily operations with one connected workspace built for rental businesses.</p>
+          <div className="eyebrow"><span className="eyebrow-dot"/> RENTAL OPERATIONS, REIMAGINED</div>
+          <h1>Move more.<br/><span>Manage smarter.</span></h1>
+          <p className="hero-lead">A clearer way to run your vehicle rental business. Bring your fleet, bookings, customers, and daily operations together in one connected platform.</p>
           <div className="hero-actions">
-            <a className="primary-button" href="mailto:hello@roam.app?subject=ROAM%20Early%20Access">Get early access <ArrowRight size={17} /></a>
-            <span className="availability-note">A new way to move your rental business forward.</span>
+            <a className="button button-primary" href="#contact">Get early access <ArrowRight size={17}/></a>
+            <a className="text-link" href="#platform">Explore the platform <span><ArrowRight size={16}/></span></a>
           </div>
-          <div className="trust-line"><span className="dot" /> BUILT FOR INDEPENDENT OPERATORS AND GROWING FLEETS</div>
+          <div className="hero-proof"><span className="proof-icon"><ShieldCheck size={16}/></span><span>Designed for independent operators and growing rental teams.</span></div>
         </div>
-        <div className="visual" aria-label="ROAM fleet overview preview">
-          <div className="visual-top"><span>YOUR OPERATIONS</span><span className="live"><i /> OVERVIEW</span></div>
-          <div className="metric-row">
-            <div className="metric"><small>FLEET WORKSPACE</small><strong>All in one</strong><span>Vehicles & branches</span></div>
-            <div className="metric"><small>RENTAL FLOW</small><strong>Connected</strong><span>Bookings to returns</span></div>
+        <div className="hero-art" aria-label="Illustration of a vehicle rental operations dashboard">
+          <div className="art-glow"/>
+          <div className="dashboard-card">
+            <div className="dash-top"><div><span className="dash-kicker">ROAM WORKSPACE</span><strong>Fleet overview</strong></div><span className="dash-avatar">R</span></div>
+            <div className="dash-stats">
+              <div><span>Fleet visibility</span><strong>All in one place</strong><small><i/> Organized by status</small></div>
+              <div><span>Rental workflow</span><strong>Connected</strong><small><i/> From booking to return</small></div>
+            </div>
+            <div className="fleet-panel">
+              <div className="fleet-panel-head"><strong>Vehicle categories</strong><span>FLEET MIX</span></div>
+              <div className="vehicle-line"><span className="vehicle-icon"><Bike size={17}/></span><span>Motorcycles & scooters</span><b>2-wheel</b></div>
+              <div className="vehicle-line"><span className="vehicle-icon"><CarFront size={17}/></span><span>Cars & SUVs</span><b>Personal</b></div>
+              <div className="vehicle-line"><span className="vehicle-icon"><BusFront size={17}/></span><span>Vans & utility vehicles</span><b>Commercial</b></div>
+              <div className="vehicle-line"><span className="vehicle-icon"><Truck size={17}/></span><span>Pickups, buses & trucks</span><b>More</b></div>
+            </div>
+            <div className="dash-bottom"><span><i/> WORKSPACE PREVIEW</span><span>MOVE MORE. ↗</span></div>
           </div>
-          <div className="fleet-card">
-            <div className="fleet-card-head"><span>Fleet categories</span><span>01 / 03</span></div>
-            <div className="fleet-bars"><div><span>Motorcycles & scooters</span><b>●</b></div><div className="bar"><i style={{width:"78%"}} /></div><div><span>Cars, SUVs & vans</span><b>●</b></div><div className="bar"><i style={{width:"62%"}} /></div><div><span>Utility & commercial</span><b>●</b></div><div className="bar"><i style={{width:"44%"}} /></div></div>
-          </div>
-          <div className="visual-foot"><span>MOVE MORE.</span><span>MANAGE SMARTER.</span></div>
-          <div className="orb orb-one" /><div className="orb orb-two" />
+          <div className="floating-chip chip-one"><span className="chip-check"><Check size={13}/></span><span><b>One connected view</b><small>Fleet and bookings</small></span></div>
+          <div className="floating-chip chip-two"><span className="chip-pin"><MapPin size={15}/></span><span><b>Multiple branches</b><small>Built to grow with you</small></span></div>
         </div>
-      </section>
+      </div>
+      <div className="hero-bottom container"><span>ONE WORKSPACE FOR YOUR RENTAL BUSINESS</span><span className="hero-bottom-line"/><span>PHILIPPINES-READY · ASIA/MANILA TIME</span></div>
+    </section>
 
-      <section className="capabilities">
-        <div className="section-heading"><span>ONE PLATFORM. MORE CONTROL.</span><h2>Built around the way rentals work.</h2></div>
-        <div className="capability-grid">{capabilities.map(({icon: Icon, title, description}) => <article className="capability" key={title}><div className="cap-icon"><Icon size={20} /></div><h3>{title}</h3><p>{description}</p></article>)}</div>
-      </section>
-      <footer><a className="brand footer-brand" href="#"><span className="brand-mark">R</span><span>ROAM</span></a><span>Rental Operations and Asset Management</span><span>© {new Date().getFullYear()} ROAM</span></footer>
-    </main>
-  );
+    <section className="vehicle-strip"><div className="container vehicle-strip-inner"><span>FROM TWO WHEELS</span><Bike/><span>TO EVERYDAY DRIVES</span><CarFront/><span>TO WORKHORSE FLEETS</span><Truck/><span>ONE ROAM WORKSPACE</span></div></section>
+
+    <section className="section section-platform" id="platform">
+      <div className="container">
+        <div className="section-intro"><div><div className="eyebrow">YOUR BUSINESS, IN BETTER ORDER</div><h2>Everything your rental operation needs to move forward.</h2></div><p>Spend less time switching between lists and messages. ROAM brings the essential parts of rental operations into a shared, structured workspace.</p></div>
+        <div className="feature-grid">{features.map(({icon: Icon,title,text},i)=><article className="feature-card" key={title}><div className="feature-top"><span className="feature-icon"><Icon size={20}/></span><span className="feature-number">0{i+1}</span></div><h3>{title}</h3><p>{text}</p></article>)}</div>
+      </div>
+    </section>
+
+    <section className="section how-section" id="how-it-works"><div className="container how-grid">
+      <div className="how-heading"><div className="eyebrow">A SIMPLE PLACE TO START</div><h2>From scattered operations to a smoother rental flow.</h2><p>ROAM is being built to make the everyday work of managing a rental fleet feel more connected and less complicated.</p><a href="#contact" className="text-link">Be part of early access <ArrowRight size={16}/></a></div>
+      <div className="steps">{steps.map(([n,t,d])=><div className="step" key={n}><span className="step-num">{n}</span><div><h3>{t}</h3><p>{d}</p></div><ArrowRight className="step-arrow" size={18}/></div>)}</div>
+    </div></section>
+
+    <section className="section plans-section" id="plans"><div className="container plans-inner">
+      <div className="plans-copy"><div className="eyebrow">ROOM TO GROW</div><h2>Start with what you have. Scale when you're ready.</h2><p>ROAM is planned with subscription options that can grow alongside your fleet and team. Plan details will be confirmed before public launch.</p><a className="button button-primary" href="#contact">Ask about early access <ArrowRight size={16}/></a></div>
+      <div className="plan-preview"><div className="plan-card"><span className="plan-label">STARTER</span><h3>Start simple.</h3><p>For independent operators getting their fleet organized.</p><ul><li><Check/> Essential fleet workspace</li><li><Check/> Booking and customer foundations</li><li><Check/> A clear place to manage operations</li></ul><span className="plan-status">PLAN DETAILS COMING SOON</span></div><div className="plan-card plan-featured"><span className="plan-label">GROWING BUSINESS</span><h3>Grow with confidence.</h3><p>For rental teams expanding vehicles, branches, and operations.</p><ul><li><Check/> Multi-branch foundations</li><li><Check/> Team and role management</li><li><Check/> Expanded operational capabilities</li></ul><span className="plan-status">PLAN DETAILS COMING SOON</span></div></div>
+    </div></section>
+
+    <section className="section faq-section" id="faq"><div className="container faq-grid"><div><div className="eyebrow">GOOD TO KNOW</div><h2>Questions before you get moving?</h2><p>Here are a few things to know about the ROAM platform as it takes shape.</p></div><div className="faq-list">{faqs.map(([q,a],i)=><div className={`faq-item ${faqOpen===i?"faq-active":""}`} key={q}><button onClick={()=>setFaqOpen(faqOpen===i?-1:i)} aria-expanded={faqOpen===i}><span>{q}</span><ChevronDown size={18}/></button>{faqOpen===i&&<p>{a}</p>}</div>)}</div></div></section>
+
+    <section className="contact-section" id="contact"><div className="container contact-card"><div className="contact-orbit"/><div className="eyebrow">YOUR NEXT MOVE STARTS HERE</div><h2>Ready to run rentals with more clarity?</h2><p>Be among the first to explore ROAM. Early access and launch announcements are coming soon.</p><a className="button button-light" href="mailto:?subject=ROAM%20Early%20Access%20Interest&body=I%20am%20interested%20in%20learning%20more%20about%20ROAM.">Register your interest <ArrowRight size={17}/></a><span className="contact-note">No commitment. Just a first look at what's next.</span></div></section>
+
+    <footer className="site-footer"><div className="container"><div className="footer-main"><div><Brand/><p>Rental Operations and Asset Management</p><span className="footer-tagline">Move More. Manage Smarter.</span></div><div className="footer-links"><div><b>EXPLORE</b><a href="#platform">Platform</a><a href="#how-it-works">How it works</a><a href="#plans">Plans</a><a href="#faq">FAQs</a></div><div><b>INFORMATION</b><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a><a href="#contact">Contact</a></div></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} ROAM. All rights reserved.</span><span>Built for the people who keep things moving.</span></div></div></footer>
+  </main>;
 }

@@ -22,6 +22,7 @@ export default function WorkspaceOverviewPage() {
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   useEffect(()=>{let live=true;fetch(`/api/workspaces/${encodeURIComponent(slug)}/overview`,{cache:"no-store"}).then(async r=>{const j=await r.json();if(!r.ok)throw new Error(j.error||"Unable to load workspace.");return j;}).then(j=>{if(live)setData(j);}).catch(e=>{if(live)setError(e instanceof Error?e.message:"Unable to load dashboard.");}).finally(()=>{if(live)setLoading(false);});return()=>{live=false;};},[slug]);
+  async function signOut(){await fetch("/api/auth/logout",{method:"POST"});router.replace("/login");router.refresh();}
   if(loading)return <main className="roam-loading">Loading your business overview…</main>;
   if(error||!data)return <main className="roam-loading"><h1>Workspace unavailable</h1><p>{error}</p><button className="roam-primary-btn" onClick={()=>router.replace("/workspace")}>Back to workspaces</button><button className="roam-quiet-btn" onClick={signOut}>Sign out</button></main>;
   const {workspace,metrics}=data;

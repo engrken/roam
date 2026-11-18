@@ -38,7 +38,6 @@ export default function PublicBookPage() {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
     fetch("/api/public/" + encodeURIComponent(slug) + "/bookings", { cache: "no-store" })
       .then(async response => {
         const body = await response.json();

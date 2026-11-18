@@ -1,0 +1,6 @@
+export const TERMS_VERSION = "2026-11-19";
+export const PRIVACY_VERSION = "2026-11-19";
+
+export function hasCurrentLegalAcceptance(acceptances: Array<{ termsVersion: string; privacyVersion: string }>) {
+  return acceptances.some((item) => item.termsVersion === TERMS_VERSION && item.privacyVersion === PRIVACY_VERSION);
+}

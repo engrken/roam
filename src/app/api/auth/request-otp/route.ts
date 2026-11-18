@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => null);
     const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+    const purpose = body?.purpose === "register" ? "register" : "login";
     if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
     }
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
         data: { consumedAt: new Date() },
       });
       return tx.emailOtp.create({
-        data: { email, codeHash: digest(email, code), expiresAt: new Date(Date.now() + 5 * 60 * 1000) },
+        data: { email, purpose, codeHash: digest(email, code), expiresAt: new Date(Date.now() + 5 * 60 * 1000) },
       });
     });
     otpId = otp.id;

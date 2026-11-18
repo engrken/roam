@@ -74,6 +74,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!["AVAILABLE","RESERVED","RENTED","MAINTENANCE","INACTIVE"].includes(body.status)) {
       return NextResponse.json({ error: "Choose a valid vehicle status." }, { status: 400 });
     }
+    const current = await prisma.vehicle.findFirst({ where: { id, tenantId: access.tenant.id }, select: { status: true } });
+    if (!current) return NextResponse.json({ error: "Vehicle not found." }, { status: 404 });
+    if (current.status === "INACTIVE" && body.status !== "INACTIVE") {
+      const plan = await prisma.subscription.findUnique({ where: { tenantId: access.tenant.id }, include: { plan: true } });
+      const activeCount = await prisma.vehicle.count({ where: { tenantId: access.tenant.id, status: { not: "INACTIVE" } } });
+      if (plan?.plan.maxVehicles != null && activeCount >= plan.plan.maxVehicles) {
+        return NextResponse.json({ error: `Your ${plan.plan.name} plan allows up to ${plan.plan.maxVehicles} active vehicles. Upgrade your plan to reactivate this vehicle.` }, { status: 403 });
+      }
+    }
     const result = await prisma.vehicle.updateMany({ where: { id, tenantId: access.tenant.id }, data: { status: body.status } });
     if (!result.count) return NextResponse.json({ error: "Vehicle not found." }, { status: 404 });
     return NextResponse.json({ vehicle: { id, status: body.status } });

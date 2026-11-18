@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 
       const existing = await tx.user.findUnique({ where: { email } });
       if (otp.purpose === "register" && existing) return { conflict: true as const };
-      if (otp.purpose === "login" && !existing) return null;
+      if (otp.purpose === "login" && !existing) return { missing: true as const };
       const account = existing ?? await tx.user.create({ data: { email } });
       await tx.session.create({
         data: { tokenHash, userId: account.id, expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) },
@@ -64,6 +64,9 @@ export async function POST(request: NextRequest) {
       return account;
     });
 
+    if (user && "missing" in user) {
+      return NextResponse.json({ error: "No ROAM account exists for this email. Create an account first." }, { status: 404 });
+    }
     if (user && "conflict" in user) {
       return NextResponse.json({ error: "An account already exists for this email. Please sign in instead." }, { status: 409 });
     }

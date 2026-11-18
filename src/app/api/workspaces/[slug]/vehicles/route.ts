@@ -68,11 +68,38 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (!canManageFleet(access.role)) return NextResponse.json({ error: "You do not have permission to manage the fleet." }, { status: 403 });
   const body = await request.json().catch(() => null);
   const id = typeof body?.id === "string" ? body.id : "";
-  const status = body?.status;
-  if (!id || !["AVAILABLE","RESERVED","RENTED","MAINTENANCE","INACTIVE"].includes(status)) {
-    return NextResponse.json({ error: "Choose a valid vehicle and status." }, { status: 400 });
+  if (!id) return NextResponse.json({ error: "Vehicle ID is required." }, { status: 400 });
+
+  if (typeof body.status === "string") {
+    if (!["AVAILABLE","RESERVED","RENTED","MAINTENANCE","INACTIVE"].includes(body.status)) {
+      return NextResponse.json({ error: "Choose a valid vehicle status." }, { status: 400 });
+    }
+    const result = await prisma.vehicle.updateMany({ where: { id, tenantId: access.tenant.id }, data: { status: body.status } });
+    if (!result.count) return NextResponse.json({ error: "Vehicle not found." }, { status: 404 });
+    return NextResponse.json({ vehicle: { id, status: body.status } });
   }
-  const result = await prisma.vehicle.updateMany({ where: { id, tenantId: access.tenant.id }, data: { status } });
-  if (!result.count) return NextResponse.json({ error: "Vehicle not found." }, { status: 404 });
-  return NextResponse.json({ vehicle: { id, status } });
+
+  const make = typeof body.make === "string" ? body.make.trim() : "";
+  const model = typeof body.model === "string" ? body.model.trim() : "";
+  const plateNumber = typeof body.plateNumber === "string" ? body.plateNumber.trim().toUpperCase() : "";
+  const dailyRate = Number(body.dailyRate);
+  const year = body.year === "" || body.year == null ? null : Number(body.year);
+  if (make.length < 2 || model.length < 1 || plateNumber.length < 2 || plateNumber.length > 20 || !types.includes(body.type) || !Number.isFinite(dailyRate) || dailyRate < 0 || (year !== null && (!Number.isInteger(year) || year < 1950 || year > new Date().getFullYear() + 1))) {
+    return NextResponse.json({ error: "Enter valid vehicle details and a daily rate." }, { status: 400 });
+  }
+  const branchId = typeof body.branchId === "string" && body.branchId ? body.branchId : null;
+  if (branchId && !await prisma.branch.findFirst({ where: { id: branchId, tenantId: access.tenant.id } })) {
+    return NextResponse.json({ error: "Choose a branch in this workspace." }, { status: 400 });
+  }
+  try {
+    const result = await prisma.vehicle.updateMany({ where: { id, tenantId: access.tenant.id }, data: {
+      type: body.type, make, model, plateNumber, year, branchId, dailyRate,
+      color: typeof body.color === "string" ? body.color.trim().slice(0, 40) : null,
+      securityDeposit: Number.isFinite(Number(body.securityDeposit)) && Number(body.securityDeposit) >= 0 ? Number(body.securityDeposit) : 0,
+    } });
+    if (!result.count) return NextResponse.json({ error: "Vehicle not found." }, { status: 404 });
+    return NextResponse.json({ vehicle: { id, make, model, plateNumber } });
+  } catch {
+    return NextResponse.json({ error: "A vehicle with this plate number may already exist in this workspace." }, { status: 409 });
+  }
 }

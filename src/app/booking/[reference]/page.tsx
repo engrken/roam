@@ -38,10 +38,21 @@ export default function CustomerBookingPage() {
 
   useEffect(() => {
     let active = true;
-    if (!token) return () => { active=false; };
-    refresh().catch(reason => { if(active) setError(reason instanceof Error ? reason.message : "Unable to load booking."); });
-    return () => { active=false; };
-  },[refresh,token]);
+    if (!token) return () => { active = false; };
+    fetch("/api/public/bookings/" + encodeURIComponent(reference), {
+      cache: "no-store",
+      headers: { Authorization: "Bearer " + token },
+    })
+      .then(async response => {
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "Unable to load booking.");
+        if (active) setData(body.booking);
+      })
+      .catch(reason => {
+        if (active) setError(reason instanceof Error ? reason.message : "Unable to load booking.");
+      });
+    return () => { active = false; };
+  }, [reference, token]);
 
   async function reload() {
     setRefreshing(true); setError("");
@@ -68,7 +79,7 @@ export default function CustomerBookingPage() {
     finally { setBusy(false); }
   }
 
-  if(!data) return <main className="client-page"><header className="client-topbar"><a className="client-brand" href="/"><span>R</span> ROAM</a><span>PRIVATE BOOKING PORTAL</span></header><div className="client-container"><section className="client-success client-loading-card"><div className="client-eyebrow">BOOKING PORTAL</div><h1>{error ? "We couldn’t open this booking" : "Loading your booking…"}</h1><p>{error || (!token ? "This private booking link is incomplete. Please open the original link from your booking confirmation." : "Please wait while we securely retrieve your booking details.")}</p>{error && <Link className="client-primary" href="/">Back to ROAM</Link>}</section></div></main>;
+  if(!data) return <main className="client-page"><header className="client-topbar"><Link className="client-brand" href="/"><span>R</span> ROAM</Link><span>PRIVATE BOOKING PORTAL</span></header><div className="client-container"><section className="client-success client-loading-card"><div className="client-eyebrow">BOOKING PORTAL</div><h1>{error ? "We couldn’t open this booking" : "Loading your booking…"}</h1><p>{error || (!token ? "This private booking link is incomplete. Please open the original link from your booking confirmation." : "Please wait while we securely retrieve your booking details.")}</p>{error && <Link className="client-primary" href="/">Back to ROAM</Link>}</section></div></main>;
 
   const statusLabel=statusText[data.status]||data.status.replaceAll("_"," ");
   const timeline=["PENDING","CONFIRMED","ACTIVE","COMPLETED"];

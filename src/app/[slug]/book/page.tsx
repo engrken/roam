@@ -40,7 +40,7 @@ function wallClockEpoch(value: string, timeZone: string) {
     for (let attempt = 0; attempt < 4; attempt += 1) {
       const values = Object.fromEntries(formatter.formatToParts(new Date(instant)).map(part => [part.type, part.value]));
       const represented = Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day), Number(values.hour), Number(values.minute), Number(values.second));
-      instant -= represented - instant;
+      instant = desired - (represented - instant);
     }
     const values = Object.fromEntries(formatter.formatToParts(new Date(instant)).map(part => [part.type, part.value]));
     return Number(values.year) === Number(y) && Number(values.month) === Number(mo) &&

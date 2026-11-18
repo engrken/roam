@@ -1,5 +1,6 @@
 import { NextRequest,NextResponse } from "next/server";
 import { handleUpload } from "@vercel/blob/client";
+import { head } from "@vercel/blob";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 export const runtime="nodejs";
@@ -20,7 +21,8 @@ export async function POST(request:NextRequest){
     const payload=JSON.parse(tokenPayload||"{}");
     const bookingId=String(payload.bookingId||"");const kind=String(payload.kind||"");
     if(!bookingId||!kind)throw new Error("Missing booking upload metadata.");
-    await prisma.bookingDocument.create({data:{bookingId,kind,pathname:blob.pathname,fileName:blob.pathname.split("/").pop()||"document",contentType:blob.contentType||"application/octet-stream",size:blob.size}});
+    const metadata = await head(blob.pathname);
+    await prisma.bookingDocument.create({data:{bookingId,kind,pathname:blob.pathname,fileName:blob.pathname.split("/").pop()||"document",contentType:metadata.contentType||blob.contentType||"application/octet-stream",size:metadata.size}});
    }
   });
   return NextResponse.json(result);

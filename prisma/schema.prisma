@@ -8,12 +8,12 @@ datasource db {
   directUrl = env("ROAMDB_DATABASE_URL_UNPOOLED")
 }
 
-enum TenantStatus { TRIAL ACTIVE SUSPENDED CANCELLED }
-enum SubscriptionTier { FREE PRO ENTERPRISE }
-enum MembershipRole { OWNER ADMIN MANAGER STAFF }
-enum VehicleStatus { AVAILABLE RESERVED RENTED MAINTENANCE INACTIVE }
-enum BookingStatus { PENDING CONFIRMED ACTIVE COMPLETED CANCELLED REJECTED }
-enum VehicleType { MOTORCYCLE SCOOTER SEDAN HATCHBACK SUV MPV VAN PICKUP BUS TRUCK OTHER }
+enum TenantStatus {\n  TRIAL\n  ACTIVE\n  SUSPENDED\n  CANCELLED\n}
+enum SubscriptionTier {\n  FREE\n  PRO\n  ENTERPRISE\n}
+enum MembershipRole {\n  OWNER\n  ADMIN\n  MANAGER\n  STAFF\n}
+enum VehicleStatus {\n  AVAILABLE\n  RESERVED\n  RENTED\n  MAINTENANCE\n  INACTIVE\n}
+enum BookingStatus {\n  PENDING\n  CONFIRMED\n  ACTIVE\n  COMPLETED\n  CANCELLED\n  REJECTED\n}
+enum VehicleType {\n  MOTORCYCLE\n  SCOOTER\n  SEDAN\n  HATCHBACK\n  SUV\n  MPV\n  VAN\n  PICKUP\n  BUS\n  TRUCK\n  OTHER\n}
 
 model Tenant {
   id           String       @id @default(cuid())

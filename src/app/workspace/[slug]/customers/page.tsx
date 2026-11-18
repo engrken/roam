@@ -27,7 +27,7 @@ export default function CustomersPage() {
    <label>Full name<input required minLength={2} maxLength={120} value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label>
    <label>Phone number<input required minLength={5} maxLength={30} value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/></label>
    <label>Email address<input type="email" maxLength={254} value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></label>
-   <label>Driver's license number<input maxLength={60} value={form.licenseNo} onChange={e=>setForm({...form,licenseNo:e.target.value.toUpperCase()})}/></label>
+   <label>Driver&apos;s license number<input maxLength={60} value={form.licenseNo} onChange={e=>setForm({...form,licenseNo:e.target.value.toUpperCase()})}/></label>
    <label>Address<input maxLength={300} value={form.address} onChange={e=>setForm({...form,address:e.target.value})}/></label>
   </div><button className="roam-primary-btn" disabled={busy}>{busy?"Saving…":editing?"Save changes":"Create customer"}</button></form>}
   <section className="roam-panel roam-table-panel"><div className="roam-panel-heading"><div><span className="roam-eyebrow">CUSTOMER REGISTER</span><h2>Customer records</h2></div><span className="roam-panel-total">{rows.length} records</span></div>

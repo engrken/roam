@@ -81,6 +81,7 @@ model Tenant {
   vehicles     Vehicle[]
   customers    Customer[]
   bookings     Booking[]
+  inspections  VehicleInspection[]
   subscription Subscription?
 }
 

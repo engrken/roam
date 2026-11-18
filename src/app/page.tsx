@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight, Bike, BusFront, CalendarDays, Check, ChevronDown,
   Clock3, Menu, Moon, ShieldCheck, Sun, Truck, X, CarFront,
@@ -32,7 +32,7 @@ const steps = [
 export default function Home() {
   const [dark, setDark] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [faqOpen, setFaqOpen] = useState(0);
+  const [faqOpen, setFaqOpen] = useState(0);\n\n  useEffect(() => {\n    if (localStorage.getItem("roam-theme") === "dark") setDark(true);\n  }, []);\n  useEffect(() => {\n    localStorage.setItem("roam-theme", dark ? "dark" : "light");\n  }, [dark]);
   const faqs = [
     ["What types of vehicles can ROAM manage?", "ROAM is being designed for private vehicle rental operators managing motorcycles, scooters, cars, SUVs, MPVs, vans, pickups, buses, trucks, and other rentable vehicle types."],
     ["Can more than one rental business use ROAM?", "Yes. ROAM is planned as a multi-tenant SaaS platform. Each registered rental business will have its own workspace, users, and operational records."],

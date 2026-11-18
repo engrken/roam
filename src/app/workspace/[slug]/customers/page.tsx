@@ -36,3 +36,4 @@ export default function CustomersPage() {
   </section><footer className="roam-footer">ROAM Customer Management <span>Customer records are visible only to authorized workspace managers.</span></footer>
  </main></div>;
 }
+

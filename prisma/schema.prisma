@@ -16,7 +16,9 @@ enum TenantStatus {
 }
 enum SubscriptionTier {
   FREE
+  STARTER
   PRO
+  BUSINESS
   ENTERPRISE
 }
 enum MembershipRole {
@@ -128,6 +130,7 @@ model Subscription {
   status             String           @default("active")
   currentPeriodStart DateTime?
   currentPeriodEnd   DateTime?
+  trialEndsAt        DateTime?
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
   tenant             Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)

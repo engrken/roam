@@ -24,18 +24,36 @@ export async function POST(request: NextRequest) {
     const slug = `${base}-${randomBytes(3).toString("hex")}`;
 
     const workspace = await prisma.$transaction(async (tx) => {
-      const freePlan = await tx.plan.upsert({
-        where: { tier: "FREE" },
-        update: {},
-        create: { tier: "FREE", name: "Free", monthlyPrice: 0, maxVehicles: 3, maxBranches: 1, maxStaff: 2 },
-      });
+      const plans = [
+        { tier: "STARTER" as const, name: "Starter", monthlyPrice: 99, maxVehicles: 3, maxBranches: 1, maxStaff: 2 },
+        { tier: "PRO" as const, name: "Pro", monthlyPrice: 499, maxVehicles: null, maxBranches: null, maxStaff: null },
+        { tier: "BUSINESS" as const, name: "Business", monthlyPrice: 999, maxVehicles: null, maxBranches: null, maxStaff: null },
+        { tier: "ENTERPRISE" as const, name: "Enterprise", monthlyPrice: 0, maxVehicles: null, maxBranches: null, maxStaff: null },
+      ];
+      const seededPlans = await Promise.all(plans.map((plan) => tx.plan.upsert({
+        where: { tier: plan.tier },
+        update: { name: plan.name, monthlyPrice: plan.monthlyPrice, maxVehicles: plan.maxVehicles, maxBranches: plan.maxBranches, maxStaff: plan.maxStaff, active: true },
+        create: plan,
+      })));
+      const starterPlan = seededPlans.find((plan) => plan.tier === "STARTER");
+      if (!starterPlan) throw new Error("Starter plan could not be initialized.");
+      const trialStartsAt = new Date();
+      const trialEndsAt = new Date(trialStartsAt.getTime() + 14 * 24 * 60 * 60 * 1000);
       const tenant = await tx.tenant.create({
         data: { name, slug, email: user.email, phone: phone || null },
       });
       await tx.membership.create({ data: { tenantId: tenant.id, userId: user.id, role: "OWNER" } });
       await tx.branch.create({ data: { tenantId: tenant.id, name: "Main Branch", code: "MAIN" } });
       await tx.subscription.create({
-        data: { tenantId: tenant.id, planId: freePlan.id, tier: "FREE", status: "active" },
+        data: {
+          tenantId: tenant.id,
+          planId: starterPlan.id,
+          tier: "STARTER",
+          status: "trialing",
+          currentPeriodStart: trialStartsAt,
+          currentPeriodEnd: trialEndsAt,
+          trialEndsAt,
+        },
       });
       return tenant;
     });

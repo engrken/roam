@@ -217,7 +217,6 @@ model EmailOtp {
   id         String   @id @default(cuid())
   email      String
   codeHash   String
-  purpose    String   @default("login")
   expiresAt  DateTime
   attempts   Int      @default(0)
   consumedAt DateTime?

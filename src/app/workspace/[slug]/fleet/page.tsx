@@ -6,7 +6,7 @@ import { Plus, Search, CarFront, ArrowLeft, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { WorkspaceNav } from "@/components/workspace-nav";
 
-type Vehicle={id:string;type:string;make:string;model:string;year:number|null;plateNumber:string;color:string|null;dailyRate:number;securityDeposit:number;status:string;branchName:string};
+type Vehicle={id:string;type:string;make:string;model:string;year:number|null;plateNumber:string;color:string|null;dailyRate:number;securityDeposit:number;status:string;branchId:string|null;branchName:string};
 type Branch={id:string;name:string;code:string|null};
 const types=["MOTORCYCLE","SCOOTER","SEDAN","HATCHBACK","SUV","MPV","VAN","PICKUP","BUS","TRUCK","OTHER"];
 const statuses=["AVAILABLE","RESERVED","RENTED","MAINTENANCE","INACTIVE"];

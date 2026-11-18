@@ -1,0 +1,40 @@
+name: ROAM CI
+
+on:
+  push:
+    branches: [backend-development]
+  pull_request:
+    branches: [main, backend-development]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Validate Prisma schema and generate client
+        run: npx prisma validate && npm run db:generate
+        env:
+          ROAMDB_POSTGRES_PRISMA_URL: postgresql://ci:ci@localhost:5432/roam
+          ROAMDB_DATABASE_URL_UNPOOLED: postgresql://ci:ci@localhost:5432/roam
+      - name: Type-check
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Production build
+        run: npm run build
+        env:
+          ROAMDB_POSTGRES_PRISMA_URL: postgresql://ci:ci@localhost:5432/roam
+          ROAMDB_DATABASE_URL_UNPOOLED: postgresql://ci:ci@localhost:5432/roam
+          AUTH_SECRET: ci-only-secret-not-for-deployment
+          SMTP_HOST: localhost
+          SMTP_PORT: "1025"
+          SMTP_USER: ci
+          SMTP_APP_PASSWORD: ci

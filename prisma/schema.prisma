@@ -80,6 +80,7 @@ model User {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   memberships Membership[]
+  sessions    Session[]
 }
 
 model Membership {
@@ -209,4 +210,28 @@ model BookingItem {
   vehicle   Vehicle  @relation(fields: [vehicleId], references: [id])
   @@unique([bookingId, vehicleId])
   @@index([vehicleId])
+}
+
+
+model EmailOtp {
+  id         String   @id @default(cuid())
+  email      String
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int      @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime @default(now())
+  @@index([email, createdAt])
+  @@index([expiresAt])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
 }

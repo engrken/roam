@@ -1,0 +1,28 @@
+import { NextRequest,NextResponse } from "next/server";
+import { handleUpload } from "@vercel/blob/client";
+import { createHash } from "node:crypto";
+import { prisma } from "@/lib/prisma";
+export const runtime="nodejs";
+const hash=(v:string)=>createHash("sha256").update(v).digest("hex");
+export async function POST(request:NextRequest){
+ try{
+  const body=await request.json();
+  const result=await handleUpload({body,request,
+   onBeforeGenerateToken:async(pathname,clientPayload)=>{
+    const payload=clientPayload?JSON.parse(clientPayload):{};
+    const reference=String(payload.reference||"");const token=String(payload.token||"");const kind=String(payload.kind||"");
+    if(!["DRIVERS_LICENSE_FRONT","DRIVERS_LICENSE_BACK","IDENTITY_DOCUMENT","OTHER_REQUIREMENT"].includes(kind)||token.length<20)throw new Error("Invalid document upload request.");
+    const booking=await prisma.booking.findFirst({where:{reference,publicTokenHash:hash(token)},select:{id:true}});
+    if(!booking)throw new Error("Booking access link is invalid.");
+    return {allowedContentTypes:["image/jpeg","image/png","image/webp","application/pdf"],maximumSizeInBytes:8*1024*1024,addRandomSuffix:true,tokenPayload:JSON.stringify({bookingId:booking.id,kind})};
+   },
+   onUploadCompleted:async({blob,tokenPayload})=>{
+    const payload=JSON.parse(tokenPayload||"{}");
+    const bookingId=String(payload.bookingId||"");const kind=String(payload.kind||"");
+    if(!bookingId||!kind)throw new Error("Missing booking upload metadata.");
+    await prisma.bookingDocument.create({data:{bookingId,kind,pathname:blob.pathname,fileName:blob.pathname.split("/").pop()||"document",contentType:blob.contentType||"application/octet-stream",size:blob.size}});
+   }
+  });
+  return NextResponse.json(result);
+ }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Unable to upload document."},{status:400});}
+}

@@ -40,6 +40,17 @@ enum BookingStatus {
   CANCELLED
   REJECTED
 }
+enum InspectionType {
+  HANDOVER
+  RETURN
+}
+enum FuelLevel {
+  EMPTY
+  QUARTER
+  HALF
+  THREE_QUARTERS
+  FULL
+}
 enum VehicleType {
   MOTORCYCLE
   SCOOTER
@@ -158,6 +169,7 @@ model Vehicle {
   tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branch          Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
   bookingItems    BookingItem[]
+  inspections     VehicleInspection[]
   @@unique([tenantId, plateNumber])
   @@index([tenantId, status])
   @@index([tenantId, branchId])
@@ -198,6 +210,7 @@ model Booking {
   items       BookingItem[]
   messages    BookingMessage[]
   documents   BookingDocument[]
+  inspections VehicleInspection[]
   publicTokenHash String? @unique
   @@unique([tenantId, reference])
   @@index([tenantId, startAt, endAt])
@@ -262,4 +275,39 @@ model BookingDocument {
   createdAt    DateTime @default(now())
   booking      Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   @@index([bookingId, reviewStatus])
+}
+
+
+model VehicleInspection {
+  id             String           @id @default(cuid())
+  tenantId       String
+  bookingId      String
+  vehicleId      String
+  type           InspectionType
+  odometerKm     Int
+  fuelLevel      FuelLevel
+  conditionNotes String
+  damageNotes    String?
+  inspectedAt    DateTime         @default(now())
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  tenant         Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking        Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  vehicle        Vehicle          @relation(fields: [vehicleId], references: [id])
+  photos         VehicleInspectionPhoto[]
+  @@unique([bookingId, vehicleId, type])
+  @@index([tenantId, inspectedAt])
+  @@index([vehicleId, inspectedAt])
+}
+
+model VehicleInspectionPhoto {
+  id           String           @id @default(cuid())
+  inspectionId String
+  pathname     String           @unique
+  fileName     String
+  contentType  String
+  size         Int
+  createdAt    DateTime         @default(now())
+  inspection   VehicleInspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  @@index([inspectionId, createdAt])
 }

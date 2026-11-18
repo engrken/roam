@@ -131,6 +131,21 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         }
       }
 
+      if (nextStatus === "ACTIVE" || nextStatus === "COMPLETED") {
+        const inspectionType = nextStatus === "ACTIVE" ? "HANDOVER" : "RETURN";
+        const completed = await tx.vehicleInspection.findMany({
+          where: { tenantId: access.tenant.id, bookingId: current.id, type: inspectionType },
+          select: { vehicleId: true },
+        });
+        const inspectedIds = new Set(completed.map((item) => item.vehicleId));
+        if (current.items.some((item) => !inspectedIds.has(item.vehicleId))) {
+          return {
+            error: "Complete a " + inspectionType.toLowerCase() + " inspection for every vehicle before changing this booking status.",
+            status: 409 as const,
+          };
+        }
+      }
+
       await tx.booking.update({ where: { id: current.id }, data: { status: nextStatus as never } });
       await tx.bookingMessage.create({
         data: {

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { upload } from "@vercel/blob/client";
 
 type Message = { id: string; sender: string; body: string; createdAt: string };

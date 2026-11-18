@@ -4,11 +4,9 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-const MANAGER_EMAIL = "kent.bsece@gmail.com";
-
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState(MANAGER_EMAIL);
+  const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [step, setStep] = useState<"email" | "code">("email");
   const [busy, setBusy] = useState(false);
@@ -46,7 +44,7 @@ export default function LoginPage() {
           <input type="email" required maxLength={254} autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} disabled={step === "code"} className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-400 disabled:opacity-70"/>
         </label>
         {step === "code" && <label className="block text-sm font-medium text-slate-300">Six-digit verification code
-          <input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={e=>setCode(e.target.value.replace(/\\D/g,"").slice(0,6))} className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-4 text-center text-2xl font-bold tracking-[.5em] text-white outline-none focus:border-cyan-400"/>
+          <input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,"").slice(0,6))} className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-4 text-center text-2xl font-bold tracking-[.5em] text-white outline-none focus:border-cyan-400"/>
         </label>}
         {message && <p role="status" className="rounded-xl bg-cyan-950/60 p-3 text-sm text-cyan-200">{message}</p>}
         {error && <p role="alert" className="rounded-xl bg-red-950/60 p-3 text-sm text-red-200">{error}</p>}

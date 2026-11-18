@@ -116,7 +116,7 @@ export default function Home() {
     </div></section>
 
     <section className="section plans-section" id="plans"><div className="container plans-inner">
-      <div className="plans-copy"><div className="eyebrow">ROOM TO GROW</div><h2>Start with what you have. Scale when you're ready.</h2><p>Start with the Free plan, organize your first vehicles and branch, then upgrade as your rental operation grows.</p><Link className="button button-primary" href="/register">Get started for free <ArrowRight size={16}/></Link></div>
+      <div className="plans-copy"><div className="eyebrow">ROOM TO GROW</div><h2>Start with what you have. Scale when you&apos;re ready.</h2><p>Start with the Free plan, organize your first vehicles and branch, then upgrade as your rental operation grows.</p><Link className="button button-primary" href="/register">Get started for free <ArrowRight size={16}/></Link></div>
       <div className="plan-preview"><div className="plan-card"><span className="plan-label">FREE PLAN</span><h3>Start simple.</h3><p>For independent operators getting their fleet organized.</p><ul><li><Check/> Essential fleet workspace</li><li><Check/> Booking and customer foundations</li><li><Check/> A clear place to manage operations</li></ul><span className="plan-status">FREE · UP TO 3 VEHICLES · 1 BRANCH</span></div><div className="plan-card plan-featured"><span className="plan-label">PAID PLANS</span><h3>Grow with confidence.</h3><p>For rental teams expanding vehicles, branches, and operations.</p><ul><li><Check/> Multi-branch foundations</li><li><Check/> Team and role management</li><li><Check/> Expanded operational capabilities</li></ul><span className="plan-status">PAID PLAN OPTIONS · COMING NEXT</span></div></div>
     </div></section>
 

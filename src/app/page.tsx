@@ -24,6 +24,30 @@ const features = [
   { icon: ShieldCheck, title: "Built with business boundaries", text: "A multi-tenant foundation designed to keep each rental business's workspace and records separate." }
 ];
 
+type PublicPlan = {
+  id: string;
+  tier: string;
+  name: string;
+  monthlyPrice: number;
+  maxVehicles: number | null;
+  maxBranches: number | null;
+  maxStaff: number | null;
+};
+
+function formatPlanPrice(value: number) {
+  return new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 2 }).format(value);
+}
+
+function formatPlanLimit(value: number | null, singular: string) {
+  const plural = singular === "branch" ? "branches" : singular === "staff account" ? "staff accounts" : singular + "s";
+  if (value === null) return "Unlimited " + plural;
+  return value + " " + (value === 1 ? singular : plural);
+}
+
+function describePlanCapacity(plan: PublicPlan) {
+  return `Includes ${formatPlanLimit(plan.maxVehicles, "vehicle")}, ${formatPlanLimit(plan.maxBranches, "branch")}, and ${formatPlanLimit(plan.maxStaff, "staff account")}.`;
+}
+
 const steps = [
   ["01", "Set up your rental business", "Create your workspace, add branches, and invite your team."],
   ["02", "Bring your fleet together", "Add your vehicles, rates, and availability in one place."],
@@ -34,6 +58,8 @@ export default function Home() {
   const [dark, setDark] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(0);
+  const [plans, setPlans] = useState<PublicPlan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
 
   useEffect(() => {
     const saved = localStorage.getItem("roam-theme");
@@ -42,16 +68,37 @@ export default function Home() {
     const frame = window.requestAnimationFrame(() => setDark(initial));
     return () => window.cancelAnimationFrame(frame);
   }, []);
+  useEffect(() => {
+    let active = true;
+    async function loadPlans() {
+      try {
+        const response = await fetch("/api/public/plans", { cache: "no-store" });
+        if (!response.ok) throw new Error("Unable to load plans.");
+        const body = await response.json();
+        if (active) setPlans(Array.isArray(body.plans) ? body.plans : []);
+      } catch {
+        if (active) setPlans([]);
+      } finally {
+        if (active) setPlansLoading(false);
+      }
+    }
+    void loadPlans();
+    return () => { active = false; };
+  }, []);
+
   function toggleTheme() {
     const next = !dark;
     setDark(next);
     localStorage.setItem("roam-theme", next ? "dark" : "light");
   }
+  const configuredPlanSummary = plans.map(plan => `${plan.name}: ${formatPlanPrice(plan.monthlyPrice)}/month (${describePlanCapacity(plan)})`).join("; ");
+  const configuredCapacitySummary = plans.map(plan => `${plan.name} — ${describePlanCapacity(plan)}`).join(" ");
   const faqs = [
     ["What types of vehicles can ROAM manage?", "ROAM is being designed for private vehicle rental operators managing motorcycles, scooters, cars, SUVs, MPVs, vans, pickups, buses, trucks, and other rentable vehicle types."],
     ["Can more than one rental business use ROAM?", "Yes. Each rental business gets its own workspace, team membership, and operational records."],
     ["How do I get started?", "Create an account using your email, verify your one-time code, then create your rental business workspace with a 14-day free trial."],
-    ["What happens after the free trial?", "Choose the plan that fits your rental operation: Starter at ₱49/month, Pro at ₱199/month, Business at ₱499/month, or Enterprise at ₱2,499/month"]
+    ["What happens after the free trial?", plans.length ? "Choose the plan that fits your rental operation: " + configuredPlanSummary + ". All active tiers include the same core ROAM tools." : "Our plan options are temporarily unavailable. Please check back shortly."],
+    ["What changes when I upgrade?", plans.length ? "You get more operating capacity based on the selected plan: " + configuredCapacitySummary + " The core feature set is included in every tier." : "Plan limits depend on the active plan configured by ROAM."]
   ];
 
   return <main className={`site ${dark ? "theme-dark" : ""}`}>
@@ -125,13 +172,34 @@ export default function Home() {
     </div></section>
 
     <section className="section plans-section" id="plans"><div className="container plans-inner">
-      <div className="plans-copy"><div className="eyebrow">SIMPLE, TRANSPARENT PRICING</div><h2>14 days to find your flow. Plans that grow with you.</h2><p>Try ROAM free for 14 days, then choose the subscription that matches your rental operation. Prices are billed monthly in Philippine pesos. Starter includes 1 vehicle, 1 branch and 1 staff account. Pro includes 3 vehicles, 1 branch and 1 staff account. Business includes 10 vehicles, 3 branches and 3 staff accounts. Enterprise includes unlimited vehicles, branches and staff.</p><Link className="btn button button-primary" href="/register">Start your 14-day free trial <ArrowRight size={16}/></Link><span className="pricing-note">No charge during your trial.</span></div>
+      <div className="plans-copy"><div className="eyebrow">SIMPLE, TRANSPARENT PRICING</div><h2>Start lean. Add capacity as your rental business grows.</h2><p>Every plan includes the core ROAM rental operations toolkit. Choose a tier based on how many vehicles, locations, and staff accounts your business needs. All prices are monthly and shown in Philippine pesos.</p><Link className="btn button button-primary" href="/register">Start your 14-day free trial <ArrowRight size={16}/></Link><span className="pricing-note">14 days free to get set up. No charge during your trial.</span></div>
       <div className="plan-preview plan-grid">
-        <div className="plan-card"><span className="plan-label">STARTER</span><h3>₱49 <small>/ month</small></h3><p>For a small rental setup.</p><ul><li><Check/> 1 vehicle</li><li><Check/> 1 branch</li><li><Check/> 1 staff account</li><li><Check/> Core fleet, booking and customer tools</li></ul><Link className="btn plan-choose" href="/register">Start free trial <ArrowRight size={14}/></Link></div>
-        <div className="plan-card plan-featured"><span className="plan-label">PRO</span><h3>₱199 <small>/ month</small></h3><p>For growing rental businesses.</p><ul><li><Check/> Up to 3 vehicles</li><li><Check/> 1 branch</li><li><Check/> 1 staff account</li><li><Check/> Fleet, booking and customer management</li></ul><Link className="btn plan-choose" href="/register">Start free trial <ArrowRight size={14}/></Link></div>
-        <div className="plan-card"><span className="plan-label">BUSINESS</span><h3>₱499 <small>/ month</small></h3><p>For established rental teams.</p><ul><li><Check/> Up to 10 vehicles</li><li><Check/> Up to 3 branches</li><li><Check/> Up to 3 staff accounts</li><li><Check/> Full rental operations workspace</li></ul><Link className="btn plan-choose" href="/register">Start free trial <ArrowRight size={14}/></Link></div>
-        <div className="plan-card"><span className="plan-label">ENTERPRISE</span><h3>₱2,499 <small>/ month</small></h3><p>For larger rental operations.</p><ul><li><Check/> Unlimited vehicles, branches and staff</li><li><Check/> Enterprise workspace access</li><li><Check/> Configured enterprise tier</li></ul><a className="btn plan-choose" href="#contact">Contact us <ArrowRight size={14}/></a></div>
+        {plansLoading ? <p className="plan-loading" role="status">Loading current plans…</p> : plans.length ? plans.map(plan => {
+          const featured = plan.tier === "PRO";
+          const isEnterprise = plan.tier === "ENTERPRISE";
+          return <article className={`plan-card ${featured ? "plan-featured" : ""}`} key={plan.id}>
+            <span className="plan-label">{plan.tier} · {plan.name.toUpperCase()}</span>
+            <h3>{formatPlanPrice(plan.monthlyPrice)} <small>/ month</small></h3>
+            <p>{describePlanCapacity(plan)} Choose the capacity that matches your rental operation.</p>
+            <ul>
+              <li><Check/> {formatPlanLimit(plan.maxVehicles, "vehicle")}</li>
+              <li><Check/> {formatPlanLimit(plan.maxBranches, "branch")}</li>
+              <li><Check/> {formatPlanLimit(plan.maxStaff, "staff account")}</li>
+              <li><Check/> All core ROAM features</li>
+            </ul>
+            <div className="plan-benefit">{describePlanCapacity(plan)} Higher limits give your operation more room to grow without changing the shared core feature set.</div>
+            {isEnterprise ? <a className="btn plan-choose" href="#contact">Contact us <ArrowRight size={14}/></a> : <Link className="btn plan-choose" href="/register">Start free trial <ArrowRight size={14}/></Link>}
+          </article>;
+        }) : <p className="plan-loading" role="status">Plan details are temporarily unavailable. Please check back shortly.</p>}
       </div>
+      <div className="plan-inclusions"><div className="plan-inclusions-heading"><div className="eyebrow">INCLUDED IN EVERY PLAN</div><h3>The tools to manage the full rental journey.</h3><p>Higher tiers increase your operating limits—not access to a different set of core tools.</p></div><div className="plan-inclusions-grid">
+        <article><span className="plan-inclusion-icon"><CarFront size={19}/></span><h4>Fleet and branch management</h4><p>Vehicle profiles, rental rates and deposits, availability and maintenance statuses, plus pickup branch records within your plan limits.</p></article>
+        <article><span className="plan-inclusion-icon"><CalendarDays size={19}/></span><h4>Online booking workflow</h4><p>A public booking page, incoming booking requests, availability review, and tools to confirm or reject requests.</p></article>
+        <article><span className="plan-inclusion-icon"><Users size={19}/></span><h4>Customer portal and communication</h4><p>Customer records, private booking links, status updates, document uploads and review, and customer messaging.</p></article>
+        <article><span className="plan-inclusion-icon"><ShieldCheck size={19}/></span><h4>Rental terms and inspections</h4><p>Customer acceptance of your rental terms, plus vehicle handover and return inspections with condition notes and photos.</p></article>
+        <article><span className="plan-inclusion-icon"><BarChart3 size={19}/></span><h4>Dashboard and reports</h4><p>Operational overview, booking activity, revenue summaries, date and branch filters, and CSV report export.</p></article>
+        <article><span className="plan-inclusion-icon"><Users size={19}/></span><h4>Team access and account tools</h4><p>Workspace roles, staff invitations, subscription overview, billing records, and plan-change requests.</p></article>
+      </div><p className="plan-limit-note">Vehicle, branch, and staff allowances are controlled by the active plan configuration. All active plans include the core features listed above; higher tiers provide greater operating capacity. Payment processing and automatic subscription renewals are not included.</p></div>
     </div></section>
 
     <section className="section faq-section" id="faq"><div className="container faq-grid"><div><div className="eyebrow">GOOD TO KNOW</div><h2>Questions before you get moving?</h2><p>Here are a few things to know about the ROAM platform as it takes shape.</p></div><div className="faq-list">{faqs.map(([q,a],i)=><div className={`faq-item ${faqOpen===i?"faq-active":""}`} key={q}><button onClick={()=>setFaqOpen(faqOpen===i?-1:i)} aria-expanded={faqOpen===i}><span>{q}</span><ChevronDown size={18}/></button>{faqOpen===i&&<p>{a}</p>}</div>)}</div></div></section>

@@ -19,14 +19,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       { licenseNo: { contains: q, mode: "insensitive" } },
     ] } : {}) },
     orderBy: { updatedAt: "desc" }, take: 200,
-    select: { id: true, name: true, email: true, phone: true, licenseNo: true, address: true, createdAt: true, updatedAt: true, _count: { select: { bookings: true } } },
+    select: { id: true, name: true, email: true, phone: true, licenseNo: true, address: true, createdAt: true, updatedAt: true, _count: { select: { bookings: true } }, bookings: { orderBy: { createdAt: "desc" }, take: 30, select: { id: true, reference: true, status: true, startAt: true, endAt: true, documents: { orderBy: { createdAt: "desc" }, select: { id: true, kind: true, fileName: true, contentType: true, size: true, reviewStatus: true, createdAt: true } } } } },
   });
   const totals = await prisma.booking.groupBy({
     by: ["customerId"], where: { tenantId: access.tenant.id, customerId: { in: customers.map(c => c.id) } },
     _sum: { totalAmount: true },
   });
   const lifetime = new Map(totals.map(x => [x.customerId, Number(x._sum.totalAmount || 0)]));
-  return NextResponse.json({ customers: customers.map(c => ({ ...c, bookingsCount: c._count.bookings, lifetimeValue: lifetime.get(c.id) || 0 })) });
+  return NextResponse.json({ customers: customers.map(c => ({ ...c, bookingsCount: c._count.bookings, lifetimeValue: lifetime.get(c.id) || 0, bookings: c.bookings.map(b => ({ ...b, documents: b.documents })) })) });
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {

@@ -282,3 +282,13 @@
 .roam-payment-check{display:block;color:var(--muted)}
 .roam-payment-check b{color:var(--ink)}
 @media(max-width:650px){.roam-workflow-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.roam-detail-actions{justify-content:flex-start}.roam-detail-actions .roam-secondary-btn{width:100%}}
+
+.roam-customer-upload-panel{display:grid;gap:12px;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
+.roam-customer-upload-panel>section{display:grid;gap:8px;padding-top:10px;border-top:1px solid var(--line)}
+.roam-customer-upload-booking{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12px}
+.roam-customer-upload-booking small,.roam-customer-upload-panel section>small{color:var(--muted)}
+.roam-customer-upload-row{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.roam-customer-upload-row>span:first-child{display:grid;gap:3px;min-width:0}
+.roam-customer-upload-row>span:first-child small{overflow-wrap:anywhere;color:var(--muted)}
+.roam-customer-upload-row a{font-size:12px;font-weight:700;color:var(--accent,#176b54)}
+@media(max-width:640px){.roam-customer-upload-row{align-items:flex-start}.roam-customer-upload-row a{width:100%}}

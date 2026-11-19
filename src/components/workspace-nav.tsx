@@ -21,7 +21,9 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
       <Link className={active === "bookings" ? "active" : ""} href={`/workspace/${slug}/bookings`}><CalendarDays size={18}/> Bookings</Link>
       <Link className={active === "branches" ? "active" : ""} href={"/workspace/" + slug + "/branches"}><MapPin size={18}/> Branches</Link>
       <Link className={active === "customers" ? "active" : ""} href={"/workspace/" + slug + "/customers"}><Users size={18}/> Customers</Link>
-      <Link className={active === "rental-terms" ? "active" : ""} href={`/workspace/${slug}/rental-terms`}><FileText size={18}/> Rental terms</Link>\n      <Link className={active === "help" ? "active" : ""} href={`/workspace/${slug}/help`}><BookOpen size={18}/> How-to guides</Link>\n      <Link href="/admin" className="roam-admin-link"><ShieldCheck size={18}/> Platform admin</Link>
+      <Link className={active === "rental-terms" ? "active" : ""} href={`/workspace/${slug}/rental-terms`}><FileText size={18}/> Rental terms</Link>
+      <Link className={active === "help" ? "active" : ""} href={`/workspace/${slug}/help`}><BookOpen size={18}/> How-to guides</Link>
+      <Link href="/admin" className="roam-admin-link"><ShieldCheck size={18}/> Platform admin</Link>
     </nav>
     <div className="roam-sidebar-bottom"><span className="roam-role">{role}</span><button onClick={signOut}><LogOut size={16}/> Sign out</button></div>
   </aside>;

@@ -225,3 +225,42 @@ export async function sendBookingAccessLink(input: {
     html: '<div style="background:#f3f6fb;padding:32px 16px;font-family:Arial,sans-serif;color:#172033;line-height:1.6"><div style="max-width:560px;margin:auto;background:#fff;border-radius:14px;padding:28px"><div style="font-size:22px;font-weight:800;letter-spacing:2px">ROAM</div><h2>Your booking access link</h2><p>We received a request to access booking <strong>' + safe(input.bookingReference) + '</strong>.</p><p style="margin:24px 0"><a href="' + safe(input.bookingUrl) + '" style="display:inline-block;background:#087e9b;color:#fff;text-decoration:none;padding:13px 20px;border-radius:8px;font-weight:700">View my booking</a></p><p style="font-size:13px;color:#66758a">This private link grants access to your booking. Keep it safe. If you did not request this, you can ignore this email.</p></div></div>',
   });
 }
+
+export async function sendTrialLifecycleEmail(input: {
+  recipient: string;
+  tenantName: string;
+  stage: "REMINDER" | "EXPIRED" | "READ_ONLY";
+  trialEndsAt: Date;
+  accountUrl: string;
+}) {
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  if (!from) throw new Error("Email sender is not configured.");
+  const safe = (value: string) => value.replace(/[&<>"']/g, character => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[character] || character);
+  const date = input.trialEndsAt.toLocaleDateString("en-PH", { timeZone: "Asia/Manila", dateStyle: "long" });
+  const content = {
+    REMINDER: {
+      subject: "Your ROAM trial ends in 3 days",
+      heading: "Your trial ends soon",
+      message: "Your 14-day ROAM trial ends on " + date + ". You will have a further 7-day grace period to request and arrange a paid plan. Your workspace remains operational during that grace period.",
+    },
+    EXPIRED: {
+      subject: "Your ROAM trial has ended",
+      heading: "Your trial has ended",
+      message: "Your trial ended on " + date + ". Your workspace remains fully operational during the 7-day grace period. Please review your subscription options before the grace period ends.",
+    },
+    READ_ONLY: {
+      subject: "Your ROAM workspace is now read-only",
+      heading: "Your grace period has ended",
+      message: "Your ROAM workspace is now read-only. You can still sign in and view existing bookings, customers, documents and financial records. Request a paid plan and wait for platform admin approval to restore editing access.",
+    },
+  }[input.stage];
+  await getTransport().sendMail({
+    from,
+    to: input.recipient,
+    subject: content.subject,
+    text: "Hello,\n\n" + content.message + "\n\nReview your account: " + input.accountUrl + "\n\nROAM",
+    html: '<div style="background:#f3f6fb;padding:32px 16px;font-family:Arial,sans-serif;color:#172033;line-height:1.6"><div style="max-width:560px;margin:auto;background:#fff;border-radius:14px;padding:28px"><div style="font-size:22px;font-weight:800;letter-spacing:2px">ROAM</div><h2>' + safe(content.heading) + '</h2><p>Hello ' + safe(input.tenantName) + ',</p><p>' + safe(content.message) + '</p><p style="margin:24px 0"><a href="' + safe(input.accountUrl) + '" style="display:inline-block;background:#087e9b;color:#fff;text-decoration:none;padding:13px 20px;border-radius:8px;font-weight:700">Open account & subscription</a></p><p style="font-size:13px;color:#66758a">Your existing business data is retained. ROAM does not automatically charge your payment method.</p></div></div>',
+  });
+}

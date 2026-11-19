@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { getTenantAccess, hasWorkspaceTier } from "@/lib/tenant-access";
+import { getTenantAccess, hasWorkspaceTier, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 import { sendTeamInvitation } from "@/lib/email";
 
@@ -59,6 +59,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace access denied." }, { status: 404 });
+  const writeBlock = workspaceWriteBlock(access);
+  if (writeBlock) return writeBlock;
   if (!await hasWorkspaceTier(access.tenant.id, "BUSINESS")) return NextResponse.json({ error: "Team management is available on the Business plan and above. Upgrade your workspace to continue." }, { status: 403 });
   if (!canManageTeam(access.role)) return NextResponse.json({ error: "Only workspace owners and admins can add team members." }, { status: 403 });
 
@@ -130,6 +132,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace access denied." }, { status: 404 });
+  const writeBlock = workspaceWriteBlock(access);
+  if (writeBlock) return writeBlock;
   if (!await hasWorkspaceTier(access.tenant.id, "BUSINESS")) return NextResponse.json({ error: "Team management is available on the Business plan and above. Upgrade your workspace to continue." }, { status: 403 });
   if (!canManageTeam(access.role)) return NextResponse.json({ error: "Only workspace owners and admins can change team roles." }, { status: 403 });
 
@@ -154,6 +158,8 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace access denied." }, { status: 404 });
+  const writeBlock = workspaceWriteBlock(access);
+  if (writeBlock) return writeBlock;
   if (!await hasWorkspaceTier(access.tenant.id, "BUSINESS")) return NextResponse.json({ error: "Team management is available on the Business plan and above. Upgrade your workspace to continue." }, { status: 403 });
   if (!canManageTeam(access.role)) return NextResponse.json({ error: "Only workspace owners and admins can remove team members." }, { status: 403 });
 

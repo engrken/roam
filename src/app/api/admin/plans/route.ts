@@ -87,7 +87,7 @@ export async function PATCH(request: NextRequest) {
     const subscription = await prisma.subscription.upsert({
       where: { tenantId },
       create: { tenantId, planId: plan.id, tier: plan.tier, status: "manual_review", currentPeriodStart: new Date() },
-      update: { planId: plan.id, tier: plan.tier, status: current?.status === "canceled" ? "manual_review" : current?.status || "manual_review" },
+      update: { planId: plan.id, tier: plan.tier, status: current?.status === "canceled" || current?.status === "trialing" ? "manual_review" : current?.status || "manual_review" },
       select: { tier: true, status: true, currentPeriodEnd: true },
     });
     await prisma.platformAuditLog.create({ data: {

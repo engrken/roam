@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTenantAccess } from "@/lib/tenant-access";
+import { getTenantAccess, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -16,6 +16,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace access denied." }, { status: 403 });
+  const writeBlock = workspaceWriteBlock(access);
+  if (writeBlock) return writeBlock;
   if (!["OWNER", "ADMIN"].includes(access.role)) return NextResponse.json({ error: "Only workspace owners and administrators can edit business settings." }, { status: 403 });
   const body = await request.json().catch(() => null);
   const name = typeof body?.name === "string" ? body.name.trim() : "";

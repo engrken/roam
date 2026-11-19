@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTenantAccess, canManageFleet } from "@/lib/tenant-access";
+import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -60,6 +60,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace access denied." }, { status: 404 });
+  const writeBlock = workspaceWriteBlock(access);
+  if (writeBlock) return writeBlock;
   if (!canManageFleet(access.role)) return NextResponse.json({ error: "You cannot record financial transactions." }, { status: 403 });
 
   const body = await request.json().catch(() => null);

@@ -39,7 +39,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   });
   const utilization = fleetTotal ? Math.round(((vehicleMap.rented || 0) + (vehicleMap.reserved || 0)) / fleetTotal * 100) : 0;
   return NextResponse.json({
-    workspace: { name: access.tenant.name, slug: access.tenant.slug, role: access.role, currency: access.tenant.currency },
+    workspace: { name: access.tenant.name, slug: access.tenant.slug, role: access.role, currency: access.tenant.currency, trial: access.tenant.subscription?.trialPolicyVersion === 1 && access.tenant.subscription.status === "trialing" ? { endsAt: access.tenant.subscription.trialEndsAt?.toISOString() || null, graceEndsAt: access.tenant.subscription.trialGraceEndsAt?.toISOString() || null, readOnly: access.trialReadOnly } : null },
     metrics: {
       totalVehicles: fleetTotal, availableVehicles: vehicleMap.available || 0, rentedVehicles: vehicleMap.rented || 0,
       reservedVehicles: vehicleMap.reserved || 0, maintenanceVehicles: vehicleMap.maintenance || 0,

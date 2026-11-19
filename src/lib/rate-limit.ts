@@ -18,7 +18,7 @@ export async function consumeRateLimit(
 
   return prisma.$transaction(async (tx) => {
     await tx.$queryRawUnsafe(
-      "SELECT pg_advisory_xact_lock(hashtext($1))",
+      "SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1))) AS advisory_lock",
       "rate-limit:" + scope + ":" + digest,
     );
     await tx.emailOtp.deleteMany({

@@ -35,7 +35,7 @@ export default function TeamPage() {
     }
   }, [slug]);
 
-  useEffect(() => { void load(); }, [load]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- load synchronizes this page with its API on mount.\n  useEffect(() => { void load(); }, [load]);
 
   async function addMember(event: FormEvent) {
     event.preventDefault();

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Activity, Building2, CarFront, ClipboardList, Download, RefreshCw, ShieldCheck, Users, Wallet } from "lucide-react";
+import { Activity, Building2, CarFront, ClipboardList, Download, RefreshCw, ShieldCheck, Users, Wallet, TrendingUp, Layers3 } from "lucide-react";
 
 type Tenant = {
   id: string; name: string; slug: string; email: string; phone: string | null; owner: { name: string | null; email: string } | null;
@@ -67,6 +67,39 @@ export default function AdminPage() {
     users: sum.users + tenant.counts.memberships,
     branches: sum.branches + tenant.counts.branches,
   }), { vehicles: 0, bookings: 0, users: 0, branches: 0 }), [tenants]);
+
+  const registrationTrend = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 6 }, (_, index) => {
+      const date = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+      const count = tenants.filter(tenant => {
+        const created = new Date(tenant.createdAt);
+        return created.getFullYear() === date.getFullYear() && created.getMonth() === date.getMonth();
+      }).length;
+      return { label: date.toLocaleDateString("en-PH", { month: "short" }), count };
+    });
+  }, [tenants]);
+  const maxRegistrations = Math.max(1, ...registrationTrend.map(item => item.count));
+  const planMix = useMemo(() => {
+    const tiers = ["STARTER", "PRO", "BUSINESS", "ENTERPRISE"];
+    const counts = tiers.map(tier => ({ tier, count: tenants.filter(tenant => tenant.subscription?.tier === tier).length }));
+    counts.push({ tier: "UNASSIGNED", count: tenants.filter(tenant => !tenant.subscription).length });
+    return counts;
+  }, [tenants]);
+  const statusMix = useMemo(() => [
+    { label: "Trial", key: "TRIAL", color: "#38bdf8", count: tenants.filter(t => t.status === "TRIAL").length },
+    { label: "Active", key: "ACTIVE", color: "#34d399", count: tenants.filter(t => t.status === "ACTIVE").length },
+    { label: "Suspended", key: "SUSPENDED", color: "#fbbf24", count: tenants.filter(t => t.status === "SUSPENDED").length },
+    { label: "Closed", key: "CANCELLED", color: "#fb7185", count: tenants.filter(t => t.status === "CANCELLED").length },
+  ], [tenants]);
+  const statusTotal = statusMix.reduce((sum, item) => sum + item.count, 0);
+  const statusGradient = statusTotal
+    ? `conic-gradient(${statusMix.map((item, index) => {
+        const start = statusMix.slice(0, index).reduce((sum, entry) => sum + entry.count, 0) / statusTotal * 100;
+        const end = start + item.count / statusTotal * 100;
+        return `${item.color} ${start}% ${end}%`;
+      }).join(", ")})`
+    : "conic-gradient(#64748b 0% 100%)";
 
   async function changeStatus(tenant: Tenant, status: string) {
     const action = status === "CANCELLED" ? "close access for" : status === "SUSPENDED" ? "suspend" : "activate";
@@ -148,6 +181,54 @@ export default function AdminPage() {
         <div className="mt-4 grid gap-3 sm:grid-cols-4">
           {(["TRIAL", "ACTIVE", "SUSPENDED", "CANCELLED"] as const).map(status => <button key={status} onClick={() => setStatusFilter(statusFilter === status ? "ALL" : status)} aria-pressed={statusFilter === status} className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left text-xs transition ${statusFilter === status ? "border-cyan-300/50 bg-cyan-300/10" : "border-white/10 bg-slate-900 hover:bg-white/5"}`}><span className="text-slate-300">{status}</span><b className="text-sm tabular-nums">{tenants.filter(t => t.status === status).length}</b></button>)}
         </div>
+      </section>
+
+      <section className="grid gap-4 pb-8 xl:grid-cols-3" aria-label="Platform analytics">
+        <article className="rounded-2xl border border-white/10 bg-slate-900 p-5 xl:col-span-2">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div><div className="flex items-center gap-2 text-cyan-300"><TrendingUp size={17}/><span className="text-xs font-bold tracking-[.16em]">GROWTH OVERVIEW</span></div><h2 className="mt-2 text-lg font-semibold">New workspaces</h2><p className="mt-1 text-xs text-slate-400">Tenant registrations by month · last 6 months</p></div>
+            <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] text-slate-400">Based on registration date</span>
+          </div>
+          <div className="mt-6 grid h-44 grid-cols-6 items-end gap-3 sm:gap-5">
+            {registrationTrend.map((item, index) => <div key={item.label + index} className="flex h-full min-w-0 flex-col items-center justify-end gap-2">
+              <span className="text-xs font-semibold tabular-nums text-slate-300">{item.count}</span>
+              <div className="flex h-28 w-full items-end overflow-hidden rounded-t-lg bg-slate-950/70"><div className="w-full rounded-t-lg bg-gradient-to-t from-cyan-600 to-cyan-300 transition-all" style={{ height: `${Math.max(item.count ? 8 : 2, item.count / maxRegistrations * 100)}%` }} /></div>
+              <span className="text-[10px] font-medium text-slate-500">{item.label}</span>
+            </div>)}
+          </div>
+        </article>
+        <article className="rounded-2xl border border-white/10 bg-slate-900 p-5">
+          <div className="flex items-center gap-2 text-cyan-300"><Activity size={17}/><span className="text-xs font-bold tracking-[.16em]">WORKSPACE HEALTH</span></div>
+          <h2 className="mt-2 text-lg font-semibold">Tenant status</h2><p className="mt-1 text-xs text-slate-400">Current access status across workspaces</p>
+          <div className="mt-5 flex items-center justify-center gap-5">
+            <div className="relative grid h-32 w-32 shrink-0 place-items-center rounded-full" style={{ background: statusGradient }}>
+              <div className="grid h-20 w-20 place-items-center rounded-full bg-slate-900"><strong className="text-2xl tabular-nums">{statusTotal}</strong><span className="text-[9px] uppercase tracking-wider text-slate-500">Tenants</span></div>
+            </div>
+            <div className="grid gap-2">
+              {statusMix.map(item => <div key={item.key} className="flex items-center gap-2 text-xs"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }}/><span className="text-slate-400">{item.label}</span><strong className="ml-auto tabular-nums">{item.count}</strong></div>)}
+            </div>
+          </div>
+        </article>
+        <article className="rounded-2xl border border-white/10 bg-slate-900 p-5 xl:col-span-2">
+          <div className="flex items-center gap-2 text-cyan-300"><Layers3 size={17}/><span className="text-xs font-bold tracking-[.16em]">SUBSCRIPTION MIX</span></div>
+          <h2 className="mt-2 text-lg font-semibold">Plan distribution</h2><p className="mt-1 text-xs text-slate-400">Workspaces by assigned plan · not a payment or revenue report</p>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            {planMix.map(item => <div key={item.tier}>
+              <div className="mb-2 flex items-center justify-between text-xs"><span className="font-medium text-slate-300">{item.tier === "UNASSIGNED" ? "No plan assigned" : item.tier}</span><strong className="tabular-nums">{item.count}</strong></div>
+              <div className="h-2 overflow-hidden rounded-full bg-slate-950/80"><div className="h-full rounded-full bg-gradient-to-r from-cyan-700 to-cyan-300" style={{ width: `${tenants.length ? item.count / tenants.length * 100 : 0}%` }}/></div>
+            </div>)}
+          </div>
+        </article>
+        <article className="rounded-2xl border border-white/10 bg-slate-900 p-5">
+          <div className="flex items-center gap-2 text-cyan-300"><CarFront size={17}/><span className="text-xs font-bold tracking-[.16em]">FLEET SNAPSHOT</span></div>
+          <h2 className="mt-2 text-lg font-semibold">Platform footprint</h2><p className="mt-1 text-xs text-slate-400">Operational records across all tenants</p>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className="rounded-xl bg-slate-950/70 p-3"><p className="text-[10px] uppercase tracking-wider text-slate-500">Vehicles</p><strong className="mt-1 block text-2xl tabular-nums">{totals.vehicles.toLocaleString()}</strong></div>
+            <div className="rounded-xl bg-slate-950/70 p-3"><p className="text-[10px] uppercase tracking-wider text-slate-500">Bookings</p><strong className="mt-1 block text-2xl tabular-nums">{totals.bookings.toLocaleString()}</strong></div>
+            <div className="rounded-xl bg-slate-950/70 p-3"><p className="text-[10px] uppercase tracking-wider text-slate-500">Branches</p><strong className="mt-1 block text-2xl tabular-nums">{totals.branches.toLocaleString()}</strong></div>
+            <div className="rounded-xl bg-slate-950/70 p-3"><p className="text-[10px] uppercase tracking-wider text-slate-500">Team members</p><strong className="mt-1 block text-2xl tabular-nums">{totals.users.toLocaleString()}</strong></div>
+          </div>
+        </article>
       </section>
 
       <section className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900">

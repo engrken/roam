@@ -88,6 +88,7 @@ export async function PATCH(request: NextRequest) {
     const reference = suppliedReference || "ROAM-SUB-" + randomBytes(8).toString("hex").toUpperCase();
     try {
       const result = await prisma.$transaction(async tx => {
+        await tx.$queryRawUnsafe("SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1))) AS advisory_lock", "subscription-payment:" + tenantId);
         const subscription = await tx.subscription.findUnique({
           where: { tenantId },
           include: { plan: { select: { name: true, monthlyPrice: true } }, tenant: { select: { currency: true } } },
@@ -111,16 +112,18 @@ export async function PATCH(request: NextRequest) {
           const referral = await tx.referral.findUnique({ where: { referredTenantId: tenantId } });
           if (referral && referral.status === "PENDING") {
             if (referral.registeredAt <= now && referral.expiresAt >= now) {
-              await tx.referral.update({
-                where: { id: referral.id },
+              const claim = await tx.referral.updateMany({
+                where: { id: referral.id, status: "PENDING", expiresAt: { gte: now } },
                 data: { status: "REWARDED", qualifiedAt: now, rewardedAt: now },
               });
-              periodEnd = addCalendarMonths(periodEnd, 1);
-              await grantReferralMonth(tx, referral.referrerTenantId);
-              referralReferrerTenantId = referral.referrerTenantId;
-              referralQualified = true;
+              if (claim.count === 1) {
+                periodEnd = addCalendarMonths(periodEnd, 1);
+                await grantReferralMonth(tx, referral.referrerTenantId);
+                referralReferrerTenantId = referral.referrerTenantId;
+                referralQualified = true;
+              }
             } else {
-              await tx.referral.update({ where: { id: referral.id }, data: { status: "EXPIRED" } });
+              await tx.referral.updateMany({ where: { id: referral.id, status: "PENDING" }, data: { status: "EXPIRED" } });
             }
           }
         }

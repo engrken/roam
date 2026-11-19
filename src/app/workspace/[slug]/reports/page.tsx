@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { BarChart3, Download, RefreshCw } from "lucide-react";
 import { WorkspaceNav } from "@/components/workspace-nav";
@@ -24,7 +24,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
       const response = await fetch("/api/workspaces/" + encodeURIComponent(slug) + "/reports?from=" + from + "&to=" + to, { cache: "no-store" });
@@ -34,7 +34,7 @@ export default function ReportsPage() {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to load reports.");
     } finally { setLoading(false); }
-  }
+  }, [from, slug, to]);
 
   useEffect(() => {
     let active = true;
@@ -44,7 +44,7 @@ export default function ReportsPage() {
     return () => { active = false; };
   }, [slug]);
 
-  useEffect(() => { void load(); }, [slug]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- load fetches the selected report range on entry and when filters change.\n  useEffect(() => { void load(); }, [load]);
 
   function exportCsv() {
     if (!report) return;

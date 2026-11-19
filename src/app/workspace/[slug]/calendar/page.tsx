@@ -55,7 +55,7 @@ export default function FleetCalendarPage() {
     } finally { setLoading(false); }
   }, [slug, from, to]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { let active = true; Promise.resolve().then(() => { if (active) void load(); }); return () => { active = false; }; }, [load]);
   const timeZone = data?.timeZone || "Asia/Manila";
   const title = new Intl.DateTimeFormat("en-PH", { month: "long", year: "numeric", timeZone }).format(new Date(dateKey(days[3]) + "T12:00:00Z"));
 

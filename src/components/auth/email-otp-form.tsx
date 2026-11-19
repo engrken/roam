@@ -16,6 +16,7 @@ export function EmailOtpForm({ mode = "login" }: { mode?: "login" | "register" }
   const [referralCode,setReferralCode]=useState("");
   const registering=mode==="register";
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- capture the referral query parameter before OTP submission.
   useEffect(()=>{
     const code=new URLSearchParams(window.location.search).get("ref")?.trim().toUpperCase() || "";
     if(code) setReferralCode(code);

@@ -69,10 +69,10 @@ export default function AdminPage() {
   }), { vehicles: 0, bookings: 0, users: 0, branches: 0 }), [tenants]);
 
   async function changeStatus(tenant: Tenant, status: string) {
-    const action = status === "CANCELLED" ? "cancel" : status === "SUSPENDED" ? "suspend" : "activate";
+    const action = status === "CANCELLED" ? "close access for" : status === "SUSPENDED" ? "suspend" : "activate";
     const detail = status === "ACTIVE" || status === "TRIAL"
       ? `Reactivate ${tenant.name}?`
-      : `${status === "CANCELLED" ? "Cancel" : "Suspend"} ${tenant.name}? Their workspace access will be blocked.`;
+      : `${status === "CANCELLED" ? "Close workspace access for" : "Suspend"} ${tenant.name}? This blocks workspace access. It does not process billing, payments or refunds.`;
     if (!window.confirm(detail)) return;
     setBusy(tenant.id); setError("");
     try {
@@ -127,7 +127,7 @@ export default function AdminPage() {
         <div><Link href="/" className="text-2xl font-black tracking-[.2em]">ROAM</Link><p className="mt-1 text-[11px] font-bold tracking-[.2em] text-cyan-400">PLATFORM CONTROL CENTER</p></div>
         <nav aria-label="Platform navigation" className="flex flex-wrap items-center gap-x-5 gap-y-3 text-sm">
           <Link href="/admin" aria-current="page" className="text-white">Overview</Link>
-          <Link href="/admin/plans" className="text-slate-400 hover:text-white">Plans & billing</Link>
+          <Link href="/admin/plans" className="text-slate-400 hover:text-white">Plans & subscriptions</Link>
           <Link href="/admin/audit-logs" className="text-slate-400 hover:text-white">Audit history</Link>
           <Link href="/workspace" className="text-slate-400 hover:text-white">My workspace</Link>
           <button onClick={signOut} className="text-cyan-300 hover:text-white">Sign out</button>
@@ -175,7 +175,7 @@ export default function AdminPage() {
               <div className="mt-3"><p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">Workspace access</p><div className="flex flex-wrap gap-2">
                 {tenant.status !== "ACTIVE" && <button disabled={busy===tenant.id} onClick={() => void changeStatus(tenant,"ACTIVE")} className="rounded-lg bg-emerald-400/15 px-3 py-2 text-[11px] font-semibold text-emerald-300 disabled:opacity-50">Activate</button>}
                 {tenant.status !== "SUSPENDED" && <button disabled={busy===tenant.id} onClick={() => void changeStatus(tenant,"SUSPENDED")} className="rounded-lg bg-amber-400/15 px-3 py-2 text-[11px] font-semibold text-amber-200 disabled:opacity-50">Suspend</button>}
-                {tenant.status !== "CANCELLED" && <button disabled={busy===tenant.id} onClick={() => void changeStatus(tenant,"CANCELLED")} className="rounded-lg bg-rose-400/15 px-3 py-2 text-[11px] font-semibold text-rose-200 disabled:opacity-50">Cancel</button>}
+                {tenant.status !== "CANCELLED" && <button disabled={busy===tenant.id} onClick={() => void changeStatus(tenant,"CANCELLED")} className="rounded-lg bg-rose-400/15 px-3 py-2 text-[11px] font-semibold text-rose-200 disabled:opacity-50">Close access</button>}
                 {busy===tenant.id && <span className="self-center text-[10px] text-slate-500">Saving…</span>}
               </div></div>
             </article>)}
@@ -204,7 +204,7 @@ export default function AdminPage() {
         <Link href="/admin/audit-logs" className="group rounded-2xl border border-white/10 bg-slate-900 p-5 hover:border-cyan-300/40"><ShieldCheck className="mb-4 text-cyan-300" size={21}/><h3 className="font-semibold">Audit history</h3><p className="mt-1 text-xs leading-5 text-slate-400">Review platform administrator actions and tenant changes.</p><span className="mt-4 inline-block text-xs font-semibold text-cyan-300">View audit trail →</span></Link>
         <div className="rounded-2xl border border-white/10 bg-slate-900 p-5"><Activity className="mb-4 text-cyan-300" size={21}/><h3 className="font-semibold">Platform operations</h3><p className="mt-1 text-xs leading-5 text-slate-400">Tenant access is controlled independently of subscription payment. Confirm billing outside ROAM until a payment provider is integrated.</p></div>
       </section>
-      <p className="mt-5 text-[11px] leading-5 text-slate-500">Suspended and cancelled tenants are blocked from workspace access. Reactivate only after reviewing the account. Plan prices are catalog metadata; ROAM does not currently charge cards or automatically renew subscriptions.</p>
+      <p className="mt-5 text-[11px] leading-5 text-slate-500">Suspended and closed tenants are blocked from workspace access. Closing access does not process billing, payments or refunds. Reactivate only after reviewing the account. Plan prices are catalog metadata; ROAM does not currently charge cards or automatically renew subscriptions.</p>
     </div>
   </main>;
 }

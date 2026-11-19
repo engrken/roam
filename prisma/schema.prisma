@@ -334,3 +334,19 @@ model LegalAcceptance {
   @@unique([userId, termsVersion, privacyVersion])
   @@index([userId, acceptedAt])
 }
+
+
+model PlatformAuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String
+  actorEmail  String
+  action      String
+  entityType  String
+  entityId    String
+  details     Json?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([entityType, entityId, createdAt])
+}

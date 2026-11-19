@@ -31,8 +31,8 @@ export default function PlatformPlansPage() {
 
   useEffect(() => { void load(); }, []);
 
-  function editPlan(id: string, field: keyof Plan, value: string | boolean) {
-    setPlans(items => items.map(plan => plan.id === id ? { ...plan, [field]: value } : plan));
+  function editPlan(id: string, field: keyof Plan, value: string | number | boolean) {
+    setPlans(items => items.map(plan => plan.id === id ? ({ ...plan, [field]: value } as Plan) : plan));
   }
 
   async function savePlan(plan: Plan) {

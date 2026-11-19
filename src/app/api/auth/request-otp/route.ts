@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null);
     const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
     const purpose = body?.purpose === "register" ? "register" : body?.purpose === "change-email" ? "change-email" : "login";
+    const referralCode = purpose === "register" && typeof body?.referralCode === "string" ? body.referralCode.trim().toUpperCase() : "";
     if (purpose === "change-email") {
       const currentUser = await getCurrentUser();
       if (!currentUser) return NextResponse.json({ error: "Sign in before changing your email." }, { status: 401 });
@@ -27,6 +28,13 @@ export async function POST(request: NextRequest) {
     }
     if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
+    }
+
+    if (referralCode) {
+      const referrer = await prisma.tenant.findUnique({ where: { referralCode }, select: { id: true, status: true } });
+      if (!referrer || ["SUSPENDED", "CANCELLED"].includes(referrer.status)) {
+        return NextResponse.json({ error: "That referral link is invalid or no longer available." }, { status: 400 });
+      }
     }
 
     const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
@@ -69,6 +77,7 @@ export async function POST(request: NextRequest) {
         data: {
           email,
           codeHash: purpose + ":" + digest(email, code),
+          referralCode: referralCode || null,
           expiresAt: new Date(now.getTime() + 5 * 60 * 1000),
         },
       });

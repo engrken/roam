@@ -97,11 +97,11 @@ export default function CustomerBookingPage() {
   return <main className="client-page">
     <header className="client-topbar"><Link href="/" className="client-brand"><span>R</span> ROAM</Link><span>PRIVATE BOOKING PORTAL</span></header>
     <div className="client-container">
-      <div className="client-portal-heading"><div><div className="client-eyebrow">{data.business.name}</div><h1>Your booking</h1><p>Reference <b>{data.reference}</b></p></div><div className="client-top-actions"><button className="client-refresh" onClick={copyBookingLink}>{linkCopied?"Copied link":"Copy booking link"}</button><button className="client-refresh" onClick={reload} disabled={refreshing}>{refreshing?"Refreshing…":"↻ Refresh status"}</button></div></div>
+      <div className="client-portal-heading"><div><div className="client-eyebrow">{data.business.name}</div><h1>Your booking</h1><p>Reference <b>{data.reference}</b></p></div><div className="client-top-actions" style={{display:"flex",gap:8,flexWrap:"wrap"}}><button className="client-refresh" onClick={copyBookingLink}>{linkCopied?"Copied link":"Copy booking link"}</button><button className="client-refresh" onClick={reload} disabled={refreshing}>{refreshing?"Refreshing…":"↻ Refresh status"}</button></div></div>
       {error && <div className="client-alert" role="alert">{error}</div>}{notice && <div className="client-notice" role="status">{notice}</div>}
       <section className="client-status-card"><div className="client-status-top"><div><span className="client-eyebrow">CURRENT STATUS</span><h2>{statusLabel}</h2></div><span className={"client-status-pill "+(cancelled?"is-muted":data.status==="COMPLETED"?"is-done":"")}>{data.status.replaceAll("_"," ")}</span></div>
         {cancelled ? <p className="client-status-note">Please contact the rental team if you need clarification or would like to discuss another date.</p> :
-        <div className="client-progress">{timeline.map((step,index)=><div key={step} className={"client-progress-step "+(currentIndex>=index?"is-reached":"")}><span>{currentIndex>index?"✓":index+1}</span><small>{statusText[step]}</small></div>)}</div>}
+        <div className="client-progress">{timeline.map((step,index)=><div key={step} className={"client-progress-step "+(currentIndex>=index?"is-reached":"")}><span>{currentIndex>index?"✓":index+1}</span><small>{step==="ACTIVE"?"Active · pending return":statusText[step]}</small></div>)}</div>}
       </section>
       <div className="client-portal-grid">
         <div className="client-portal-main">

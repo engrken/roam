@@ -1,6 +1,8 @@
+import { createHash, randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getTenantAccess } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
+import { sendTeamInvitation } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,13 +21,18 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   if (!access) return NextResponse.json({ error: "Workspace access denied." }, { status: 404 });
   if (!canManageTeam(access.role)) return NextResponse.json({ error: "Only workspace owners and admins can manage team access." }, { status: 403 });
 
-  const [memberships, subscription] = await Promise.all([
+  const [memberships, subscription, invitations] = await Promise.all([
     prisma.membership.findMany({
       where: { tenantId: access.tenant.id },
       orderBy: [{ role: "asc" }, { createdAt: "asc" }],
       include: { user: { select: { id: true, email: true, name: true } } },
     }),
     prisma.subscription.findUnique({ where: { tenantId: access.tenant.id }, include: { plan: { select: { name: true, maxStaff: true } } } }),
+    prisma.teamInvitation.findMany({
+      where: { tenantId: access.tenant.id, acceptedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, email: true, role: true, expiresAt: true, createdAt: true },
+    }),
   ]);
 
   return NextResponse.json({
@@ -43,6 +50,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       currentMembers: memberships.length,
     },
     actorRole: access.role,
+    invitations,
   });
 }
 
@@ -59,17 +67,43 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Enter an existing ROAM account email and a role you are allowed to assign." }, { status: 400 });
   }
 
-  const user = await prisma.user.findUnique({ where: { email }, select: { id: true, email: true, name: true } });
-  if (!user) return NextResponse.json({ error: "No ROAM account exists for that email. Ask the person to register before adding them." }, { status: 404 });
-
-  const [existing, subscription, memberCount] = await Promise.all([
-    prisma.membership.findUnique({ where: { tenantId_userId: { tenantId: access.tenant.id, userId: user.id } } }),
+  const [user, subscription, memberCount, pendingCount, pendingInvite] = await Promise.all([
+    prisma.user.findUnique({ where: { email }, select: { id: true, email: true, name: true } }),
     prisma.subscription.findUnique({ where: { tenantId: access.tenant.id }, include: { plan: { select: { name: true, maxStaff: true } } } }),
     prisma.membership.count({ where: { tenantId: access.tenant.id } }),
+    prisma.teamInvitation.count({ where: { tenantId: access.tenant.id, acceptedAt: null, expiresAt: { gt: new Date() } } }),
+    prisma.teamInvitation.findFirst({ where: { tenantId: access.tenant.id, email, acceptedAt: null, expiresAt: { gt: new Date() } } }),
   ]);
-  if (existing) return NextResponse.json({ error: "That user is already a member of this workspace." }, { status: 409 });
-  if (subscription?.plan.maxStaff != null && memberCount >= subscription.plan.maxStaff) {
-    return NextResponse.json({ error: `Your ${subscription.plan.name} plan allows ${subscription.plan.maxStaff} workspace members. Upgrade your plan to add another member.` }, { status: 403 });
+  if (user) {
+    const existing = await prisma.membership.findUnique({ where: { tenantId_userId: { tenantId: access.tenant.id, userId: user.id } } });
+    if (existing) return NextResponse.json({ error: "That user is already a member of this workspace." }, { status: 409 });
+  }
+  if (pendingInvite) return NextResponse.json({ error: "A valid invitation has already been sent to this email." }, { status: 409 });
+  if (subscription?.plan.maxStaff != null && memberCount + pendingCount >= subscription.plan.maxStaff) {
+    return NextResponse.json({ error: `Your ${subscription.plan.name} plan allows ${subscription.plan.maxStaff} workspace members, including pending invitations. Upgrade your plan to add another member.` }, { status: 403 });
+  }
+
+  if (!user) {
+    const token = randomBytes(32).toString("base64url");
+    const tokenHash = createHash("sha256").update(token).digest("hex");
+    const invitation = await prisma.teamInvitation.create({
+      data: {
+        tenantId: access.tenant.id, email, role: role as "ADMIN" | "MANAGER" | "STAFF",
+        tokenHash, invitedByUserId: access.user.id, expiresAt: new Date(Date.now() + 7 * 86400000),
+      },
+    });
+    try {
+      await sendTeamInvitation(email, access.tenant.name, role, request.nextUrl.origin + "/invite/" + token);
+    } catch (error) {
+      await prisma.teamInvitation.delete({ where: { id: invitation.id } }).catch(() => undefined);
+      console.error("Team invitation email failed", error);
+      return NextResponse.json({ error: "The invitation could not be emailed. Check the workspace email configuration and try again." }, { status: 503 });
+    }
+    return NextResponse.json({
+      invitation: { id: invitation.id, email, role: invitation.role, expiresAt: invitation.expiresAt },
+      invited: true,
+      message: "Invitation sent. The person must sign in or create a ROAM account using this email before accepting.",
+    }, { status: 201 });
   }
 
   try {
@@ -78,6 +112,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     });
     return NextResponse.json({
       member: { id: membership.id, userId: user.id, email: user.email, name: user.name, role: membership.role, joinedAt: membership.createdAt },
+      invited: false,
     }, { status: 201 });
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
@@ -117,8 +152,15 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   if (!access) return NextResponse.json({ error: "Workspace access denied." }, { status: 404 });
   if (!canManageTeam(access.role)) return NextResponse.json({ error: "Only workspace owners and admins can remove team members." }, { status: 403 });
 
+  const invitationId = request.nextUrl.searchParams.get("invitationId") || "";
+  if (invitationId) {
+    const invitation = await prisma.teamInvitation.findFirst({ where: { id: invitationId, tenantId: access.tenant.id, acceptedAt: null } });
+    if (!invitation) return NextResponse.json({ error: "Pending invitation not found." }, { status: 404 });
+    await prisma.teamInvitation.delete({ where: { id: invitation.id } });
+    return NextResponse.json({ invitationRevoked: true });
+  }
   const membershipId = request.nextUrl.searchParams.get("membershipId") || "";
-  if (!membershipId) return NextResponse.json({ error: "A team member is required." }, { status: 400 });
+  if (!membershipId) return NextResponse.json({ error: "A team member or invitation is required." }, { status: 400 });
   const target = await prisma.membership.findFirst({ where: { id: membershipId, tenantId: access.tenant.id } });
   if (!target) return NextResponse.json({ error: "Team member not found." }, { status: 404 });
   if (target.role === "OWNER" || (access.role === "ADMIN" && target.role === "ADMIN")) {

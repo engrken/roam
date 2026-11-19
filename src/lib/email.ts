@@ -82,6 +82,7 @@ export async function sendBookingReminder(input: {
   tenantName: string;
   bookingReference: string;
   reminderType: "PICKUP" | "RETURN" | "OVERDUE";
+  timeZone?: string;
   startAt: Date;
   endAt: Date;
 }) {
@@ -93,7 +94,7 @@ export async function sendBookingReminder(input: {
     OVERDUE: ["Your rental return is overdue", "Our records show your rental was due back on"],
   } as const;
   const [subject, lead] = labels[input.reminderType];
-  const dateTime = (value: Date) => value.toLocaleString("en-PH", { timeZone: "Asia/Manila", dateStyle: "long", timeStyle: "short" });
+  const dateTime = (value: Date) => value.toLocaleString("en-PH", { timeZone: input.timeZone || "Asia/Manila", dateStyle: "long", timeStyle: "short" });
   const safe = (value: string) => value.replace(/[&<>"']/g, (character) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
   })[character] || character);

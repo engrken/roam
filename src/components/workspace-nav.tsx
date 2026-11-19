@@ -41,6 +41,8 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [tier, setTier] = useState("FREE");
+  const [workspaceRole, setWorkspaceRole] = useState<string | null>(null);
+  const effectiveRole = workspaceRole || role;
   const [trial, setTrial] = useState<null | { endsAt: string | null; graceEndsAt: string | null; readOnly: boolean }>(null);
   const [selectedFeature, setSelectedFeature] = useState<FeatureKey | null>(null);
 
@@ -51,7 +53,7 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
         if (!response.ok) throw new Error("Unable to load plan access");
         return response.json();
       })
-      .then(data => { if (current && typeof data.tier === "string") setTier(data.tier); if (current) setTrial(data.trial || null); })
+      .then(data => { if (current && typeof data.tier === "string") setTier(data.tier); if (current && typeof data.role === "string") setWorkspaceRole(data.role); if (current) setTrial(data.trial || null); })
       .catch(() => { if (current) setTier("FREE"); });
     return () => { current = false; };
   }, [slug]);
@@ -79,7 +81,7 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
     {trial && <div role="status" style={{margin:"10px 12px",padding:"10px 12px",borderRadius:10,border:trial.readOnly?"1px solid #f59e0b":"1px solid #0891b2",background:trial.readOnly?"#fff7ed":"#ecfeff",color:"#164e63",fontSize:12,lineHeight:1.5}}>
       <strong style={{display:"block",color:trial.readOnly?"#9a3412":"#155e75"}}>{trial.readOnly?"Read-only · trial grace ended":"Starter trial"}</strong>
       <span>{trial.readOnly?"Existing records are available.":"Trial ends "+(trial.endsAt?new Date(trial.endsAt).toLocaleDateString("en-PH",{month:"short",day:"numeric"}):"soon")+". A 7-day grace period follows."}</span>
-      {role==="OWNER" ? <Link href={`/workspace/${slug}/account`} style={{display:"block",marginTop:5,fontWeight:700,color:"#0e7490"}}>Review subscription <ArrowUpRight size={12}/></Link> : <span style={{display:"block",marginTop:5}}>Ask your workspace owner about upgrading.</span>}
+      {effectiveRole==="OWNER" ? <Link href={`/workspace/${slug}/account`} style={{display:"block",marginTop:5,fontWeight:700,color:"#0e7490"}}>Review subscription <ArrowUpRight size={12}/></Link> : <span style={{display:"block",marginTop:5}}>Ask your workspace owner about upgrading.</span>}
     </div>}
     <nav className="roam-side-nav" id="roam-workspace-menu" aria-label="Workspace navigation" onClick={() => setMenuOpen(false)}>
       <Link className={active === "overview" ? "active" : ""} href={`/workspace/${slug}`}><LayoutDashboard size={18}/> Overview</Link>
@@ -93,12 +95,12 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
       <Link className={active === "rental-terms" ? "active" : ""} href={`/workspace/${slug}/rental-terms`}><FileText size={18}/> Rental terms</Link>
       {lockedItem("team", "Team & access", <UserCog size={18}/>)}
       <Link className={active === "settings" ? "active" : ""} href={`/workspace/${slug}/settings`}><UserCog size={18}/> Business settings</Link>
-      {role === "OWNER" && <Link className={active === "account" ? "active" : ""} href={`/workspace/${slug}/account`}><ShieldCheck size={18}/> Account & subscription</Link>}
+      {effectiveRole === "OWNER" && <Link className={active === "account" ? "active" : ""} href={`/workspace/${slug}/account`}><ShieldCheck size={18}/> Account & subscription</Link>}
       {lockedItem("reports", "Reports", <UserCog size={18}/>)}
       <Link className={active === "help" ? "active" : ""} href={`/workspace/${slug}/help`}><BookOpen size={18}/> How-to guides</Link>
       <Link href="/admin" className="roam-admin-link"><ShieldCheck size={18}/> Platform admin</Link>
     </nav>
-    <div className="roam-sidebar-bottom"><span className="roam-role">{role}</span><button onClick={signOut}><LogOut size={16}/> Sign out</button></div>
+    <div className="roam-sidebar-bottom"><span className="roam-role">{effectiveRole}</span><button onClick={signOut}><LogOut size={16}/> Sign out</button></div>
 
     {selectedFeature && <div className="roam-feature-lock-backdrop" onClick={() => setSelectedFeature(null)}>
       <section className="roam-feature-lock-dialog" role="dialog" aria-modal="true" aria-labelledby="roam-feature-lock-title" onClick={event => event.stopPropagation()}>

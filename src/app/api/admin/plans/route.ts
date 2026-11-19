@@ -130,9 +130,8 @@ export async function PATCH(request: NextRequest) {
               await tx.referral.updateMany({ where: { id: referral.id, status: "PENDING" }, data: { status: "EXPIRED" } });
             }
           }
-         else {
+        } else {
           await tx.referral.updateMany({ where: { referredTenantId: tenantId, status: "PENDING" }, data: { status: "EXPIRED" } });
-        }
         }
         const updated = await tx.subscription.update({
           where: { tenantId },

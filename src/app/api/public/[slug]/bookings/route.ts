@@ -44,7 +44,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     prisma.vehicle.findMany({
     where: {
       tenantId: tenant.id,
-      status: { in: ["AVAILABLE", "RESERVED"] },
+      status: requestedStart && requestedEnd ? { in: ["AVAILABLE", "RESERVED"] } : "AVAILABLE",
+      OR: [{ branchId: null }, { branch: { is: { isActive: true } } }],
       ...(branchId ? { branchId } : {}),
       ...(requestedStart && requestedEnd ? {
         bookingItems: {

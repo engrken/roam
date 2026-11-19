@@ -1,12 +1,13 @@
 import { NextRequest,NextResponse } from "next/server";
 import { handleUpload } from "@vercel/blob/client";
 import { head } from "@vercel/blob";
-import { getTenantAccess,canManageFleet } from "@/lib/tenant-access";
+import { getTenantAccess,canManageFleet,workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 export const runtime="nodejs";
 export async function POST(request:NextRequest,{params}:{params:Promise<{slug:string}>}){
  const {slug}=await params;const access=await getTenantAccess(slug);
  if(!access)return NextResponse.json({error:"Workspace access denied."},{status:404});
+ const writeBlock=workspaceWriteBlock(access);if(writeBlock)return writeBlock;
  if(!canManageFleet(access.role))return NextResponse.json({error:"You cannot upload inspection photos."},{status:403});
  try{
   const body=await request.json();

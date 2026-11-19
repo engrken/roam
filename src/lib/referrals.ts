@@ -13,13 +13,16 @@ export function addCalendarMonths(value: Date, months: number) {
 export async function grantReferralMonth(tx: Prisma.TransactionClient, tenantId: string) {
   const subscription = await tx.subscription.findUnique({
     where: { tenantId },
-    select: { status: true, currentPeriodEnd: true },
+    select: { status: true, currentPeriodEnd: true, referralCreditMonths: true },
   });
   if (!subscription) return "QUEUED" as const;
   if (subscription.status === "active" && subscription.currentPeriodEnd) {
     await tx.subscription.update({
       where: { tenantId },
-      data: { currentPeriodEnd: addCalendarMonths(subscription.currentPeriodEnd > new Date() ? subscription.currentPeriodEnd : new Date(), 1) },
+      data: {
+        currentPeriodEnd: addCalendarMonths(subscription.currentPeriodEnd > new Date() ? subscription.currentPeriodEnd : new Date(), 1 + subscription.referralCreditMonths),
+        referralCreditMonths: 0,
+      },
     });
     return "APPLIED" as const;
   }

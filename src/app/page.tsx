@@ -39,8 +39,9 @@ function formatPlanPrice(value: number) {
 }
 
 function formatPlanLimit(value: number | null, singular: string) {
-  if (value === null) return "Unlimited " + singular + "s";
-  return value + " " + singular + (value === 1 ? "" : "s");
+  const plural = singular === "branch" ? "branches" : singular === "staff account" ? "staff accounts" : singular + "s";
+  if (value === null) return "Unlimited " + plural;
+  return value + " " + (value === 1 ? singular : plural);
 }
 
 function describePlanCapacity(plan: PublicPlan) {

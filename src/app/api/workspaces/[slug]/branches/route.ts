@@ -47,6 +47,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace not found or access denied." }, { status: 404 });
+  const writeBlock = workspaceWriteBlock(access);
+  if (writeBlock) return writeBlock;
   if (!await hasWorkspaceTier(access.tenant.id, "PRO")) return NextResponse.json({ error: "Branch management is available on the Pro plan and above. Upgrade your workspace to continue." }, { status: 403 });
   if (!canManageFleet(access.role)) return NextResponse.json({ error: "You cannot manage branches." }, { status: 403 });
 
@@ -73,6 +75,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace not found or access denied." }, { status: 404 });
+  const writeBlock = workspaceWriteBlock(access);
+  if (writeBlock) return writeBlock;
   if (!await hasWorkspaceTier(access.tenant.id, "PRO")) return NextResponse.json({ error: "Branch management is available on the Pro plan and above. Upgrade your workspace to continue." }, { status: 403 });
   if (!canManageFleet(access.role)) return NextResponse.json({ error: "You cannot manage branches." }, { status: 403 });
 
@@ -121,6 +125,8 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace not found or access denied." }, { status: 404 });
+  const writeBlock = workspaceWriteBlock(access);
+  if (writeBlock) return writeBlock;
   if (!await hasWorkspaceTier(access.tenant.id, "PRO")) return NextResponse.json({ error: "Branch management is available on the Pro plan and above. Upgrade your workspace to continue." }, { status: 403 });
   if (!canManageFleet(access.role)) return NextResponse.json({ error: "You cannot manage branches." }, { status: 403 });
 

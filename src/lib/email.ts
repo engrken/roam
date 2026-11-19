@@ -221,7 +221,7 @@ export async function sendBookingAccessLink(input: {
       "If you did not request this, you can ignore this email.",
       "",
       "ROAM",
-    ].join("\\n"),
+    ].join("\n"),
     html: '<div style="background:#f3f6fb;padding:32px 16px;font-family:Arial,sans-serif;color:#172033;line-height:1.6"><div style="max-width:560px;margin:auto;background:#fff;border-radius:14px;padding:28px"><div style="font-size:22px;font-weight:800;letter-spacing:2px">ROAM</div><h2>Your booking access link</h2><p>We received a request to access booking <strong>' + safe(input.bookingReference) + '</strong>.</p><p style="margin:24px 0"><a href="' + safe(input.bookingUrl) + '" style="display:inline-block;background:#087e9b;color:#fff;text-decoration:none;padding:13px 20px;border-radius:8px;font-weight:700">View my booking</a></p><p style="font-size:13px;color:#66758a">This private link grants access to your booking. Keep it safe. If you did not request this, you can ignore this email.</p></div></div>',
   });
 }

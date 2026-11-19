@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       reference,
       customer: { email: { equals: email, mode: "insensitive" } },
     },
-    select: { reference: true, customer: { select: { email: true } } },
+    select: { reference: true, tenantId: true, customer: { select: { email: true } } },
   });
 
   if (booking?.customer.email) {
@@ -48,8 +48,8 @@ export async function POST(request: NextRequest) {
         bookingReference: reference,
         bookingUrl,
       });
-      await prisma.booking.updateMany({
-        where: { reference },
+      await prisma.booking.update({
+        where: { tenantId_reference: { tenantId: booking.tenantId, reference } },
         data: { publicTokenHash: hash(token) },
       });
     } catch (error) {

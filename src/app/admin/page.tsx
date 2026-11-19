@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Activity, Building2, CarFront, ClipboardList, Download, RefreshCw, ShieldCheck, Users, Wallet } from "lucide-react";
 
 type Tenant = {
-  id: string; name: string; slug: string; email: string; phone: string | null;
+  id: string; name: string; slug: string; email: string; phone: string | null; owner: { name: string | null; email: string } | null;
   status: string; createdAt: string;
   counts: { memberships: number; vehicles: number; branches: number; bookings: number };
   subscription: { tier: string; status: string; plan: string; currentPeriodEnd?: string | null } | null;
@@ -56,7 +56,7 @@ export default function AdminPage() {
     const needle = query.trim().toLowerCase();
     return tenants.filter(tenant => {
       const matchesStatus = statusFilter === "ALL" || tenant.status === statusFilter;
-      const matchesQuery = !needle || [tenant.name, tenant.slug, tenant.email, tenant.phone || ""].some(value => value.toLowerCase().includes(needle));
+      const matchesQuery = !needle || [tenant.name, tenant.slug, tenant.email, tenant.owner?.name || "", tenant.owner?.email || "", tenant.phone || ""].some(value => value.toLowerCase().includes(needle));
       return matchesStatus && matchesQuery;
     });
   }, [tenants, query, statusFilter]);
@@ -90,9 +90,9 @@ export default function AdminPage() {
 
   function exportTenants() {
     const rows = [
-      ["Business", "Workspace", "Owner email", "Phone", "Status", "Plan", "Subscription", "Vehicles", "Branches", "Users", "Bookings", "Registered"],
+      ["Business", "Workspace", "Business email", "Owner name", "Owner email", "Phone", "Status", "Plan", "Subscription", "Vehicles", "Branches", "Users", "Bookings", "Registered"],
       ...filteredTenants.map(tenant => [
-        tenant.name, tenant.slug, tenant.email, tenant.phone || "", tenant.status,
+        tenant.name, tenant.slug, tenant.email, tenant.owner?.name || "", tenant.owner?.email || "", tenant.phone || "", tenant.status,
         tenant.subscription?.plan || "", tenant.subscription?.status || "",
         tenant.counts.vehicles, tenant.counts.branches, tenant.counts.memberships,
         tenant.counts.bookings, new Date(tenant.createdAt).toISOString(),
@@ -164,7 +164,7 @@ export default function AdminPage() {
           <div className="grid gap-3 p-4 lg:hidden">
             {filteredTenants.map(tenant => <article key={tenant.id} className="rounded-xl border border-white/10 bg-slate-950/70 p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0"><h3 className="break-words font-semibold text-white">{tenant.name}</h3><p className="mt-1 break-all text-xs text-slate-400">{tenant.email}</p><p className="mt-1 break-all text-[11px] text-slate-500">{tenant.slug}{tenant.phone ? " · " + tenant.phone : ""}</p></div>
+                <div className="min-w-0"><Link href={"/admin/tenants/"+tenant.id} className="break-words font-semibold text-cyan-200 hover:text-cyan-100 hover:underline">{tenant.name}</Link><p className="mt-1 break-all text-xs text-slate-400">Business: {tenant.email}</p><p className="mt-1 break-all text-[11px] text-slate-500">Owner: {tenant.owner?.name || tenant.owner?.email || "Not assigned"}{tenant.owner?.name ? " · "+tenant.owner.email : ""}</p><p className="mt-1 break-all text-[11px] text-slate-500">{tenant.slug}{tenant.phone ? " · " + tenant.phone : ""}</p></div>
                 <span className={"inline-flex shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ring-1 ring-inset " + (statusStyle[tenant.status] || "bg-white/10 text-slate-300 ring-white/10")}>{tenant.status}</span>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3 border-y border-white/5 py-3 text-xs">
@@ -183,7 +183,7 @@ export default function AdminPage() {
           <div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[1050px] text-left text-sm">
             <thead className="bg-slate-950/70 text-[10px] uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-4">Business / owner</th><th className="px-5 py-4">Plan</th><th className="px-5 py-4">Workspace usage</th><th className="px-5 py-4">Status</th><th className="px-5 py-4">Registered</th><th className="px-5 py-4">Access controls</th></tr></thead>
             <tbody>{filteredTenants.map(tenant => <tr key={tenant.id} className="border-t border-white/5 align-top hover:bg-white/[.025]">
-              <td className="px-5 py-4"><p className="font-semibold text-white">{tenant.name}</p><p className="mt-1 text-xs text-slate-400">{tenant.email}</p><p className="mt-1 text-[11px] text-slate-500">{tenant.slug}{tenant.phone ? ` · ${tenant.phone}` : ""}</p></td>
+              <td className="px-5 py-4"><Link href={"/admin/tenants/"+tenant.id} className="font-semibold text-cyan-200 hover:underline">{tenant.name}</Link><p className="mt-1 text-xs text-slate-400">Business: {tenant.email}</p><p className="mt-1 text-xs text-slate-300">Owner: {tenant.owner?.name || tenant.owner?.email || "Not assigned"}</p>{tenant.owner?.name && <p className="mt-1 text-[11px] text-slate-500">{tenant.owner.email}</p>}<p className="mt-1 text-[11px] text-slate-500">{tenant.slug}{tenant.phone ? ` · ${tenant.phone}` : ""}</p></td>
               <td className="px-5 py-4"><p className="font-medium">{tenant.subscription?.plan || "No plan"}</p><p className="mt-1 text-xs text-slate-500">{tenant.subscription?.tier || "—"}</p><p className="mt-1 text-[10px] text-slate-500">{tenant.subscription?.status || "No subscription"}</p>{tenant.subscription?.currentPeriodEnd && <p className="mt-1 text-[10px] text-slate-500">Ends {new Date(tenant.subscription.currentPeriodEnd).toLocaleDateString("en-PH")}</p>}</td>
               <td className="px-5 py-4 text-xs text-slate-300"><p>{tenant.counts.vehicles} vehicles · {tenant.counts.branches} branches</p><p className="mt-1 text-slate-500">{tenant.counts.memberships} users · {tenant.counts.bookings} bookings</p></td>
               <td className="px-5 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ring-1 ring-inset ${statusStyle[tenant.status] || "bg-white/10 text-slate-300 ring-white/10"}`}>{tenant.status}</span></td>
@@ -191,7 +191,7 @@ export default function AdminPage() {
               <td className="px-5 py-4"><div className="flex flex-wrap gap-2">
                 {tenant.status !== "ACTIVE" && <button disabled={busy===tenant.id} onClick={() => void changeStatus(tenant,"ACTIVE")} className="rounded-lg bg-emerald-400/15 px-3 py-2 text-[11px] font-semibold text-emerald-300 disabled:opacity-50">Activate</button>}
                 {tenant.status !== "SUSPENDED" && <button disabled={busy===tenant.id} onClick={() => void changeStatus(tenant,"SUSPENDED")} className="rounded-lg bg-amber-400/15 px-3 py-2 text-[11px] font-semibold text-amber-200 disabled:opacity-50">Suspend</button>}
-                {tenant.status !== "CANCELLED" && <button disabled={busy===tenant.id} onClick={() => void changeStatus(tenant,"CANCELLED")} className="rounded-lg bg-rose-400/15 px-3 py-2 text-[11px] font-semibold text-rose-200 disabled:opacity-50">Cancel</button>}
+                {tenant.status !== "CANCELLED" && <button disabled={busy===tenant.id} onClick={() => void changeStatus(tenant,"CANCELLED")} className="rounded-lg bg-rose-400/15 px-3 py-2 text-[11px] font-semibold text-rose-200 disabled:opacity-50">Close access</button>}
                 {busy===tenant.id && <span className="self-center text-[10px] text-slate-500">Saving…</span>}
               </div></td>
             </tr>)}</tbody>

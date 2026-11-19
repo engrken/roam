@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { upload } from "@vercel/blob/client";
-import "../[slug]/book/booking-experience.css";
+import "../../[slug]/book/booking-experience.css";
 
 type Message = { id: string; sender: string; body: string; createdAt: string };
 type Document = { id: string; kind: string; fileName: string; reviewStatus: string; createdAt?: string };

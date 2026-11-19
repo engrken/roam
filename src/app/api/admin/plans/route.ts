@@ -92,6 +92,7 @@ export async function PATCH(request: NextRequest) {
           include: { plan: { select: { name: true } }, tenant: { select: { currency: true } } },
         });
         if (!subscription) throw new Error("SUBSCRIPTION_NOT_FOUND");
+        if (amount < Number(subscription.plan.monthlyPrice)) throw new Error("PAYMENT_BELOW_PLAN_PRICE");
         const previousPaidCount = await tx.billingRecord.count({ where: { tenantId, status: "PAID" } });
         const now = new Date();
         const record = await tx.billingRecord.create({
@@ -147,6 +148,7 @@ export async function PATCH(request: NextRequest) {
       }, { status: 201 });
     } catch (error) {
       if (error instanceof Error && error.message === "SUBSCRIPTION_NOT_FOUND") return NextResponse.json({ error: "Assign a subscription plan before recording payment." }, { status: 404 });
+      if (error instanceof Error && error.message === "PAYMENT_BELOW_PLAN_PRICE") return NextResponse.json({ error: "The verified payment must cover at least the current monthly plan price." }, { status: 400 });
       if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") return NextResponse.json({ error: "That payment reference has already been recorded." }, { status: 409 });
       console.error("Subscription payment confirmation failed", error);
       return NextResponse.json({ error: "Unable to record the subscription payment." }, { status: 500 });

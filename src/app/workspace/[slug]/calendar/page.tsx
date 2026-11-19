@@ -91,7 +91,7 @@ export default function FleetCalendarPage() {
                 const matches = data.bookings.filter(booking => booking.vehicleIds.includes(vehicle.id) && overlapsLocalDay(booking,key,timeZone));
                 return <div className={"roam-calendar-cell"+(key===dateKey(new Date())?" is-today":"")} key={vehicle.id+key}>
                   {vehicle.status==="MAINTENANCE" && <span className="roam-calendar-maintenance">Unavailable</span>}
-                  {matches.map(booking => <Link key={booking.id} href={`/workspace/${slug}/bookings`} className={"roam-calendar-booking "+booking.status.toLowerCase()} title={booking.customer+" · "+booking.reference}>
+                  {matches.map(booking => <Link key={booking.id} href={`/workspace/${slug}/bookings#${encodeURIComponent(booking.reference)}`} className={"roam-calendar-booking "+booking.status.toLowerCase()} title={booking.customer+" · "+booking.reference}>
                     <b>{booking.customer}</b><span>#{booking.reference}</span><small>{moneyDate(booking.startAt,timeZone)} – {moneyDate(booking.endAt,timeZone)}</small>
                   </Link>)}
                   {!matches.length && vehicle.status!=="MAINTENANCE" && <span className="roam-calendar-free">Available</span>}

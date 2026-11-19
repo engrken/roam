@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 export async function getTenantAccess(slug: string) {
   const user = await getCurrentUser();
   if (!user || !hasCurrentLegalAcceptance(user.legalAcceptances)) return null;
-  const tenant = await prisma.tenant.findUnique({ where: { slug }, select: { id: true, slug: true, name: true, status: true, currency: true, subscription: { select: { status: true, trialPolicyVersion: true, trialGraceEndsAt: true } } } });
+  const tenant = await prisma.tenant.findUnique({ where: { slug }, select: { id: true, slug: true, name: true, status: true, currency: true, subscription: { select: { status: true, trialPolicyVersion: true, trialEndsAt: true, trialGraceEndsAt: true } } } });
   if (!tenant || !["ACTIVE", "TRIAL"].includes(tenant.status)) return null;
   const membership = await prisma.membership.findUnique({
     where: { tenantId_userId: { tenantId: tenant.id, userId: user.id } },

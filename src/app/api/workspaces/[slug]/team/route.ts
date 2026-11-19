@@ -93,7 +93,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       },
     });
     try {
-      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\\/$/, "");
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\/$/, "");
       await sendTeamInvitation(email, access.tenant.name, role, appUrl + "/invite/" + token);
     } catch (error) {
       await prisma.teamInvitation.delete({ where: { id: invitation.id } }).catch(() => undefined);

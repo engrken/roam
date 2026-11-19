@@ -40,6 +40,11 @@ export async function PATCH(request: NextRequest) {
       select: { id: true, tier: true, name: true, monthlyPrice: true, maxVehicles: true, maxBranches: true, maxStaff: true, active: true },
     }).catch(() => null);
     if (!plan) return NextResponse.json({ error: "Plan not found. Create a workspace first to initialize the standard plans." }, { status: 404 });
+    await prisma.platformAuditLog.create({ data: {
+      actorUserId: admin.id, actorEmail: admin.email, action: "plan.updated",
+      entityType: "plan", entityId: plan.id,
+      details: { tier: plan.tier, name: plan.name, monthlyPrice: Number(plan.monthlyPrice), active: plan.active },
+    } });
     return NextResponse.json({ plan: { ...plan, monthlyPrice: Number(plan.monthlyPrice) } });
   }
   if (body?.action === "assign-plan") {
@@ -57,6 +62,10 @@ export async function PATCH(request: NextRequest) {
       update: { planId: plan.id, tier: plan.tier, status: current?.status === "canceled" ? "manual_review" : current?.status || "manual_review" },
       select: { tier: true, status: true, currentPeriodEnd: true },
     });
+    await prisma.platformAuditLog.create({ data: {
+      actorUserId: admin.id, actorEmail: admin.email, action: "tenant.plan.assigned",
+      entityType: "tenant", entityId: tenantId, details: { tier: subscription.tier, status: subscription.status },
+    } });
     return NextResponse.json({ subscription: { ...subscription, currentPeriodEnd: subscription.currentPeriodEnd?.toISOString() || null } });
   }
   return NextResponse.json({ error: "Unsupported management action." }, { status: 400 });

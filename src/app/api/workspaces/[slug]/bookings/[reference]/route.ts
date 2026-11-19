@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash, randomBytes } from "node:crypto";
 import { getTenantAccess, canManageFleet } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 import { sendBookingMessageNotification, sendBookingStatusNotification } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+const hashToken = (value: string) => createHash("sha256").update(value).digest("hex");
 
 const reservingStatuses = ["PENDING", "CONFIRMED", "ACTIVE"] as const;
 
@@ -36,6 +38,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
         },
       },
       messages: { orderBy: { createdAt: "asc" } },
+      payments: { select: { id: true, amount: true, kind: true, receivedAt: true } },
       documents: {
         orderBy: { createdAt: "desc" },
         select: { id: true, kind: true, fileName: true, contentType: true, size: true, reviewStatus: true, createdAt: true, reviewedAt: true },
@@ -56,6 +59,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       customer: booking.customer,
       vehicles: booking.items.map((item) => item.vehicle),
       messages: booking.messages,
+      payments: booking.payments.map((payment) => ({ ...payment, amount: Number(payment.amount) })),
       documents: booking.documents,
     },
   });
@@ -75,6 +79,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     select: { id: true, customer: { select: { name: true, email: true } } },
   });
   if (!booking) return NextResponse.json({ error: "Booking not found." }, { status: 404 });
+
+  if (body?.action === "shareLink") {
+    const token = randomBytes(32).toString("hex");
+    await prisma.booking.update({ where: { id: booking.id }, data: { publicTokenHash: hashToken(token) } });
+    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\\/$/, "");
+    return NextResponse.json({ url: baseUrl + "/booking/" + encodeURIComponent(reference) + "?token=" + token });
+  }
 
   if (typeof body?.message === "string") {
     const message = body.message.trim();
@@ -96,7 +107,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const result = await prisma.$transaction(async (tx) => {
       const current = await tx.booking.findFirst({
         where: { id: booking.id, tenantId: access.tenant.id },
-        select: { id: true, status: true, startAt: true, endAt: true, items: { select: { vehicleId: true } } },
+        select: { id: true, status: true, startAt: true, endAt: true, items: { select: { vehicleId: true } }, payments: { where: { kind: "PAYMENT" }, select: { id: true } }, documents: { where: { kind: "PAYMENT_EVIDENCE", reviewStatus: "APPROVED" }, select: { id: true } } },
       });
       if (!current) return { error: "Booking not found.", status: 404 as const };
 
@@ -106,6 +117,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           error: "Cannot change a " + current.status.toLowerCase() + " booking to " + nextStatus.toLowerCase() + ".",
           status: 409 as const,
         };
+      }
+
+      if (nextStatus === "CONFIRMED" && current.payments.length === 0 && current.documents.length === 0) {
+        return { error: "Before confirming, record a customer payment in Financials or approve the customer uploaded proof of payment.", status: 409 as const };
       }
 
       if (nextStatus === "CONFIRMED" || nextStatus === "ACTIVE") {
@@ -153,6 +168,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
 
       await tx.booking.update({ where: { id: current.id }, data: { status: nextStatus as never } });
+      for (const vehicleId of current.items.map((item) => item.vehicleId)) {
+        if (nextStatus === "CONFIRMED") {
+          await tx.vehicle.updateMany({ where: { id: vehicleId, tenantId: access.tenant.id, status: { in: ["AVAILABLE", "RESERVED"] } }, data: { status: "RESERVED" } });
+        } else if (nextStatus === "ACTIVE") {
+          await tx.vehicle.updateMany({ where: { id: vehicleId, tenantId: access.tenant.id, status: { in: ["AVAILABLE", "RESERVED", "RENTED"] } }, data: { status: "RENTED" } });
+        } else if (["COMPLETED", "CANCELLED", "REJECTED"].includes(nextStatus)) {
+          const otherActive = await tx.booking.findFirst({ where: { id: { not: current.id }, tenantId: access.tenant.id, status: "ACTIVE", items: { some: { vehicleId } } }, select: { id: true } });
+          const otherReserved = await tx.booking.findFirst({ where: { id: { not: current.id }, tenantId: access.tenant.id, status: "CONFIRMED", items: { some: { vehicleId } } }, select: { id: true } });
+          if (otherActive) await tx.vehicle.updateMany({ where: { id: vehicleId, tenantId: access.tenant.id, status: { in: ["RESERVED", "RENTED"] } }, data: { status: "RENTED" } });
+          else if (otherReserved) await tx.vehicle.updateMany({ where: { id: vehicleId, tenantId: access.tenant.id, status: { in: ["RESERVED", "RENTED"] } }, data: { status: "RESERVED" } });
+          else await tx.vehicle.updateMany({ where: { id: vehicleId, tenantId: access.tenant.id, status: { in: ["RESERVED", "RENTED"] } }, data: { status: "AVAILABLE" } });
+        }
+      }
       await tx.bookingMessage.create({
         data: {
           bookingId: current.id,

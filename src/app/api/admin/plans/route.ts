@@ -90,7 +90,7 @@ export async function PATCH(request: NextRequest) {
       const result = await prisma.$transaction(async tx => {
         const subscription = await tx.subscription.findUnique({
           where: { tenantId },
-          include: { plan: { select: { name: true } }, tenant: { select: { currency: true } } },
+          include: { plan: { select: { name: true, monthlyPrice: true } }, tenant: { select: { currency: true } } },
         });
         if (!subscription) throw new Error("SUBSCRIPTION_NOT_FOUND");
         if (amount < Number(subscription.plan.monthlyPrice)) throw new Error("PAYMENT_BELOW_PLAN_PRICE");

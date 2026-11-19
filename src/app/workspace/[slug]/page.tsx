@@ -86,7 +86,7 @@ export default function WorkspaceOverviewPage() {
         <div className="roam-action-grid">
           <article className="roam-action-card">
             <div><b>Pending requests</b><strong>{data.actionCenter.pendingCount}</strong></div>
-            {data.actionCenter.pendingItems.length ? data.actionCenter.pendingItems.slice(0,3).map(item=><button key={item.id} onClick={()=>router.push(`/workspace/${slug}/bookings`)}><span><b>{item.customer}</b><small>#{item.reference}</small></span><small>{new Date(item.startAt).toLocaleDateString("en-PH",{month:"short",day:"numeric"})}</small></button>) : <p>You're all caught up.</p>}
+            {data.actionCenter.pendingItems.length ? data.actionCenter.pendingItems.slice(0,3).map(item=><button key={item.id} onClick={()=>router.push(`/workspace/${slug}/bookings`)}><span><b>{item.customer}</b><small>#{item.reference}</small></span><small>{new Date(item.startAt).toLocaleDateString("en-PH",{month:"short",day:"numeric"})}</small></button>) : <p>You&apos;re all caught up.</p>}
           </article>
           <article className="roam-action-card">
             <div><b>Pickups today</b><strong>{data.actionCenter.pickupsToday.length}</strong></div>

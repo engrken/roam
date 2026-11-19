@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
         automationNotices: { none: { noticeType: "OVERDUE", status: "SENT" } },
       },
       orderBy: { endAt: "asc" },
-      select: { id: true, reference: true, startAt: true, endAt: true, tenant: { select: { name: true } }, customer: { select: { email: true } } },
+      select: { id: true, reference: true, startAt: true, endAt: true, tenant: { select: { name: true, timezone: true } }, customer: { select: { email: true } } },
       take: 200,
     }),
   ]);

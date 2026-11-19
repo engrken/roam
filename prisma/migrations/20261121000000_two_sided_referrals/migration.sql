@@ -1,4 +1,6 @@
 ALTER TABLE "Tenant" ADD COLUMN "referralCode" TEXT;
+UPDATE "Tenant" SET "referralCode" = upper(substr(md5("id" || clock_timestamp()::text), 1, 12)) WHERE "referralCode" IS NULL;
+ALTER TABLE "Tenant" ALTER COLUMN "referralCode" SET NOT NULL;
 CREATE UNIQUE INDEX "Tenant_referralCode_key" ON "Tenant"("referralCode");
 
 ALTER TABLE "User" ADD COLUMN "referredByTenantId" TEXT;

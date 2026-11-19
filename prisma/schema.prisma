@@ -108,6 +108,7 @@ model User {
   referredByTenantId String?
   referredByTenant Tenant? @relation("UserReferredByTenant", fields: [referredByTenantId], references: [id], onDelete: SetNull)
   referredReferral Referral? @relation("ReferralReferredOwner")
+  @@index([referredByTenantId])
 }
 
 model Membership {

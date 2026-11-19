@@ -152,3 +152,46 @@ export async function sendBookingStatusNotification(input: {
     html: '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:24px;color:#172033;line-height:1.6"><h2>' + safe(heading) + '</h2><p>Your booking with <strong>' + safe(input.tenantName) + '</strong> has been updated.</p><p><strong>Reference:</strong> ' + safe(input.bookingReference) + '<br/><strong>Pickup:</strong> ' + safe(format(input.startAt)) + '<br/><strong>Return:</strong> ' + safe(format(input.endAt)) + '</p><p>For private booking details or to message the rental team, please use the private booking link you received when you submitted your request.</p><p>Thank you,<br/>ROAM</p></div>',
   });
 }
+
+export async function sendBookingRequestReceived(input: {
+  recipient: string;
+  tenantName: string;
+  bookingReference: string;
+  startAt: Date;
+  endAt: Date;
+  bookingUrl: string;
+}) {
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  if (!from) throw new Error("Email sender is not configured.");
+  const safe = (value: string) => value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[character] || character);
+  const format = (value: Date) => value.toLocaleString("en-PH", {
+    timeZone: "Asia/Manila", dateStyle: "long", timeStyle: "short",
+  });
+  const pickup = format(input.startAt);
+  const returnAt = format(input.endAt);
+  const subject = "Booking request received · " + input.bookingReference;
+  await getTransport().sendMail({
+    from,
+    to: input.recipient,
+    subject,
+    text: [
+      "Hello,",
+      "",
+      "Your booking request has been received by " + input.tenantName + ". The rental team will review it and update you.",
+      "Booking reference: " + input.bookingReference,
+      "Pickup: " + pickup,
+      "Return: " + returnAt,
+      "",
+      "View your private booking, upload documents, and message the rental team:",
+      input.bookingUrl,
+      "",
+      "Keep this link private. Anyone with it can access your booking portal.",
+      "",
+      "Thank you,",
+      "ROAM",
+    ].join("\n"),
+    html: '<div style="background:#f3f6fb;padding:32px 16px;font-family:Arial,sans-serif;color:#172033;line-height:1.6"><div style="max-width:560px;margin:auto;background:#fff;border-radius:14px;padding:28px"><div style="font-size:22px;font-weight:800;letter-spacing:2px">ROAM</div><h2>Your booking request was received</h2><p>The rental team at <strong>' + safe(input.tenantName) + '</strong> will review your request and update you.</p><p><strong>Reference:</strong> ' + safe(input.bookingReference) + '<br/><strong>Pickup:</strong> ' + safe(pickup) + '<br/><strong>Return:</strong> ' + safe(returnAt) + '</p><p style="margin:24px 0"><a href="' + safe(input.bookingUrl) + '" style="display:inline-block;background:#087e9b;color:#fff;text-decoration:none;padding:13px 20px;border-radius:8px;font-weight:700">View my booking</a></p><p>You can use your private booking portal to view updates, upload documents, and message the rental team.</p><p style="font-size:13px;color:#66758a">Keep this link private. Anyone with it can access your booking portal.</p></div></div>',
+  });
+}

@@ -5,12 +5,14 @@ import { useParams } from "next/navigation";
 import { BarChart3, Download, RefreshCw } from "lucide-react";
 import { WorkspaceNav } from "@/components/workspace-nav";
 
+type Branch = { id: string; name: string; code: string | null };
+
 type Report = {
   range: { from: string; to: string };
   summary: { bookings: number; completed: number; cancelled: number; pending: number; confirmed: number; active: number; rejected: number; completedRevenue: number; openBookingValue: number; fleetCount: number };
   statusCounts: Record<string, number>;
   daily: { date: string; bookings: number; completed: number; revenue: number }[];
-  bookings: { reference: string; customer: string; status: string; startAt: string; endAt: string; totalAmount: number }[];
+  bookings: { reference: string; customer: string; status: string; startAt: string; endAt: string; totalAmount: number; branch: string }[];
 };
 
 const money = (value: number, currency: string) => new Intl.NumberFormat("en-PH", { style: "currency", currency }).format(value);
@@ -20,6 +22,8 @@ export default function ReportsPage() {
   const [from, setFrom] = useState(() => new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10));
   const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [report, setReport] = useState<Report | null>(null);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [branchId, setBranchId] = useState("");
   const [currency, setCurrency] = useState("PHP");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -27,17 +31,22 @@ export default function ReportsPage() {
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const response = await fetch("/api/workspaces/" + encodeURIComponent(slug) + "/reports?from=" + from + "&to=" + to, { cache: "no-store" });
+      const query = new URLSearchParams({ from, to });
+      if (branchId) query.set("branchId", branchId);
+      const response = await fetch("/api/workspaces/" + encodeURIComponent(slug) + "/reports?" + query.toString(), { cache: "no-store" });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Unable to load reports.");
       setReport(body);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to load reports.");
     } finally { setLoading(false); }
-  }, [from, slug, to]);
+  }, [branchId, from, slug, to]);
 
   useEffect(() => {
     let active = true;
+    fetch("/api/workspaces/" + encodeURIComponent(slug) + "/branches", { cache: "no-store" })
+      .then(response => response.json()).then(body => { if (active) setBranches(Array.isArray(body.branches) ? body.branches : []); })
+      .catch(() => undefined);
     fetch("/api/workspaces/" + encodeURIComponent(slug) + "/overview", { cache: "no-store" })
       .then(response => response.json()).then(body => { if (active && body.workspace?.currency) setCurrency(body.workspace.currency); })
       .catch(() => undefined);
@@ -64,8 +73,8 @@ export default function ReportsPage() {
     <main className="roam-main">
       <header className="roam-topbar"><div><span className="roam-eyebrow">BUSINESS INSIGHTS</span><h1>Operational reports</h1><p>Review booking activity and completed booking value for a selected period.</p></div><div className="roam-topbar-actions"><button className="roam-secondary-btn" onClick={() => void load()}><RefreshCw size={15}/> Refresh</button></div></header>
       <section className="roam-panel">
-        <div className="roam-panel-heading"><div><span className="roam-eyebrow">REPORT PERIOD</span><h2>Date range</h2></div><BarChart3 size={22}/></div>
-        <div className="roam-form-grid"><label>From<input type="date" value={from} max={to} onChange={event => setFrom(event.target.value)}/></label><label>To<input type="date" value={to} min={from} onChange={event => setTo(event.target.value)}/></label><div className="roam-settings-actions"><button className="roam-primary-btn" onClick={() => void load()} disabled={loading}>Apply dates</button></div></div>
+        <div className="roam-panel-heading"><div><span className="roam-eyebrow">REPORT FILTERS</span><h2>Date range and location</h2></div><BarChart3 size={22}/></div>
+        <div className="roam-form-grid"><label>Branch<select value={branchId} onChange={event => setBranchId(event.target.value)}><option value="">All branches</option>{branches.map(branch => <option key={branch.id} value={branch.id}>{branch.name}{branch.code ? " (" + branch.code + ")" : ""}</option>)}</select></label><label>From<input type="date" value={from} max={to} onChange={event => setFrom(event.target.value)}/></label><label>To<input type="date" value={to} min={from} onChange={event => setTo(event.target.value)}/></label><div className="roam-settings-actions"><button className="roam-primary-btn" onClick={() => void load()} disabled={loading}>Apply dates</button></div></div>
       </section>
       {error && <p className="roam-error" role="alert">{error}</p>}
       {loading ? <p className="roam-muted">Loading report…</p> : s && <>
@@ -79,7 +88,7 @@ export default function ReportsPage() {
         </section>
         <section className="roam-panel roam-table-panel">
           <div className="roam-panel-heading"><div><span className="roam-eyebrow">DETAIL</span><h2>Bookings in period</h2></div><button className="roam-secondary-btn" onClick={exportCsv}><Download size={15}/> Export CSV</button></div>
-          {report.bookings.length ? <div className="roam-table-scroll"><table className="roam-table"><thead><tr><th>Reference</th><th>Customer</th><th>Status</th><th>Start</th><th>End</th><th>Amount</th></tr></thead><tbody>{report.bookings.map(item => <tr key={item.reference}><td>{item.reference}</td><td>{item.customer}</td><td>{item.status}</td><td>{new Date(item.startAt).toLocaleDateString()}</td><td>{new Date(item.endAt).toLocaleDateString()}</td><td>{money(item.totalAmount,currency)}</td></tr>)}</tbody></table></div> : <div className="roam-empty"><BarChart3 size={28}/><b>No bookings in this period</b><span>Try a different date range.</span></div>}
+          {report.bookings.length ? <div className="roam-table-scroll"><table className="roam-table"><thead><tr><th>Reference</th><th>Customer</th><th>Branch</th><th>Status</th><th>Start</th><th>End</th><th>Amount</th></tr></thead><tbody>{report.bookings.map(item => <tr key={item.reference}><td>{item.reference}</td><td>{item.customer}</td><td>{item.branch}</td><td>{item.status}</td><td>{new Date(item.startAt).toLocaleDateString()}</td><td>{new Date(item.endAt).toLocaleDateString()}</td><td>{money(item.totalAmount,currency)}</td></tr>)}</tbody></table></div> : <div className="roam-empty"><BarChart3 size={28}/><b>No bookings in this period</b><span>Try a different date range.</span></div>}
         </section>
       </>}
       <p className="roam-settings-footnote">Completed booking value is based on completed bookings whose start date falls within the selected period. This is an operational report, not an accounting statement or proof of payment collection.</p>

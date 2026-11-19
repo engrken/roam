@@ -17,7 +17,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
     return NextResponse.json({ error: "Choose a valid calendar date range." }, { status: 400 });
   }
-  const timeZone = access.tenant.timezone || "Asia/Manila";
+  const tenantSettings = await prisma.tenant.findUnique({ where: { id: access.tenant.id }, select: { timezone: true } });
+  const timeZone = tenantSettings?.timezone || "Asia/Manila";
   const startAt = rentalDateTimeToUtc(from + "T00:00", timeZone);
   const endDate = new Date(to + "T12:00:00.000Z");
   if (!startAt || !Number.isFinite(endDate.getTime())) {

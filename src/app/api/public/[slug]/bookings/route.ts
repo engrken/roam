@@ -167,7 +167,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: result.conflict }, { status: 409 });
     }
 
-    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\\/$/, "");
+    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\/+$/, "");
     const bookingUrl = baseUrl + "/booking/" + encodeURIComponent(reference) + "?token=" + encodeURIComponent(token);
     let emailNotification: "attempted" | "failed" = "attempted";
     try {

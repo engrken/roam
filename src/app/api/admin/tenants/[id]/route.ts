@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { getPlatformAdmin } from "@/lib/platform-admin";
 import { prisma } from "@/lib/prisma";
 
@@ -58,7 +59,7 @@ export async function PATCH(request: NextRequest, { params }: Context) {
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
 
-  const data: Record<string, string | null> = {};
+  const data: Prisma.TenantUpdateInput = {};
   if (body.name !== undefined) {
     if (typeof body.name !== "string" || body.name.trim().length < 2 || body.name.trim().length > 120) return NextResponse.json({ error: "Business name must be between 2 and 120 characters." }, { status: 400 });
     data.name = body.name.trim();
@@ -91,10 +92,11 @@ export async function PATCH(request: NextRequest, { params }: Context) {
       const before = await tx.tenant.findUnique({ where: { id }, select: { name: true, email: true, phone: true, currency: true, timezone: true, status: true } });
       if (!before) throw new Error("TENANT_NOT_FOUND");
       const tenant = await tx.tenant.update({ where: { id }, data });
-      const changes = Object.fromEntries(Object.keys(data).map(key => [key, {
-        from: before[key as keyof typeof before],
-        to: tenant[key as keyof typeof tenant],
-      }]));
+      const changes: Record<string, { from: string | null; to: string | null }> = {};
+      for (const key of Object.keys(data)) {
+        const field = key as keyof typeof before;
+        changes[key] = { from: before[field], to: tenant[field] };
+      }
       await tx.platformAuditLog.create({ data: {
         actorUserId: admin.id, actorEmail: admin.email,
         action: data.status ? "tenant.profile_and_access.updated" : "tenant.profile.updated",

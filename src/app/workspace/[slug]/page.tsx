@@ -21,6 +21,7 @@ export default function WorkspaceOverviewPage() {
   const [data,setData]=useState<Overview|null>(null);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
+  const [showGettingStarted,setShowGettingStarted]=useState(true);
   useEffect(()=>{let live=true;fetch(`/api/workspaces/${encodeURIComponent(slug)}/overview`,{cache:"no-store"}).then(async r=>{const j=await r.json();if(!r.ok)throw new Error(j.error||"Unable to load workspace.");return j;}).then(j=>{if(live)setData(j);}).catch(e=>{if(live)setError(e instanceof Error?e.message:"Unable to load dashboard.");}).finally(()=>{if(live)setLoading(false);});return()=>{live=false;};},[slug]);
   async function signOut(){await fetch("/api/auth/logout",{method:"POST"});router.replace("/login");router.refresh();}
   if(loading)return <main className="roam-loading">Loading your business overview…</main>;
@@ -31,6 +32,28 @@ export default function WorkspaceOverviewPage() {
     <WorkspaceNav slug={slug} name={workspace.name} role={workspace.role} active="overview"/>
     <main className="roam-main">
       <header className="roam-topbar"><div><span className="roam-eyebrow">BUSINESS OVERVIEW</span><h1>Good day. Here&apos;s your operation.</h1><p>Your fleet and rental activity at a glance.</p></div><div className="roam-topbar-actions"><span className="roam-date-pill"><CalendarDays size={15}/>{new Date().toLocaleDateString("en-PH",{weekday:"short",month:"short",day:"numeric"})}</span><button className="roam-primary-btn" onClick={()=>router.push(`/workspace/${slug}/fleet`)}>Manage fleet <ArrowUpRight size={16}/></button></div></header>
+      {showGettingStarted && <section className="roam-panel roam-getting-started">
+        <div className="roam-panel-heading">
+          <div><span className="roam-eyebrow">NEW TO ROAM?</span><h2>Getting started with your rental workspace</h2></div>
+          <button className="roam-quiet-btn" onClick={()=>setShowGettingStarted(false)} aria-label="Dismiss getting started guide">Dismiss</button>
+        </div>
+        <p className="roam-guide-description">Follow these steps to prepare your business before sharing your booking page with customers.</p>
+        <div className="roam-guide-steps">
+          <button className="roam-guide-step" onClick={()=>router.push(`/workspace/${slug}/branches`)}>
+            <span className="roam-guide-number">01</span><span><b>Set up your pickup branch</b><small>Confirm your branch name, address and customer pickup details.</small></span><ArrowUpRight size={17}/>
+          </button>
+          <button className="roam-guide-step" onClick={()=>router.push(`/workspace/${slug}/fleet`)}>
+            <span className="roam-guide-number">02</span><span><b>Add your vehicles</b><small>Enter each vehicle, its daily rate, deposit and availability.</small></span><ArrowUpRight size={17}/>
+          </button>
+          <button className="roam-guide-step" onClick={()=>router.push(`/workspace/${slug}/rental-terms`)}>
+            <span className="roam-guide-number">03</span><span><b>Review your rental terms</b><small>Set the conditions customers must accept when requesting a booking.</small></span><ArrowUpRight size={17}/>
+          </button>
+          <button className="roam-guide-step" onClick={()=>router.push(`/workspace/${slug}/help#getting-started`)}>
+            <span className="roam-guide-number">04</span><span><b>Read the complete setup guide</b><small>See step-by-step instructions for bookings, inspections and team access.</small></span><ArrowUpRight size={17}/>
+          </button>
+        </div>
+        <div className="roam-guide-footer"><span>{metrics.totalVehicles > 0 ? "Your fleet has been started." : "Tip: add at least one available vehicle before sharing your booking page."}</span><button className="roam-link-btn" onClick={()=>router.push(`/workspace/${slug}/bookings`)}>Go to bookings <ArrowUpRight size={14}/></button></div>
+      </section>}
       <section className="roam-metric-grid">
         <article className="roam-metric-card"><div className="roam-metric-icon"><CarFront/></div><span>Total fleet</span><strong>{metrics.totalVehicles}</strong><small>{metrics.availableVehicles} available now</small></article>
         <article className="roam-metric-card"><div className="roam-metric-icon"><CalendarDays/></div><span>Active bookings</span><strong>{metrics.activeBookings}</strong><small>{metrics.pendingBookings} pending confirmation</small></article>

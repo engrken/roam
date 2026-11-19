@@ -58,9 +58,9 @@ export default function ReportsPage() {
 
   function exportCsv() {
     if (!report) return;
-    const safe = (value: string) => /^[=+@\\-\\t\\r]/.test(value) ? "'" + value : value;
+    const safe = (value: string) => /^[=+\-@\t\r]/.test(value) ? "'" + value : value;
     const rows = [["Reference", "Customer", "Branch", "Status", "Start", "End", "Amount"], ...report.bookings.map(item => [item.reference, item.customer, item.branch, item.status, item.startAt, item.endAt, String(item.totalAmount)])];
-    const csv = rows.map(row => row.map(value => '"' + safe(value).replace(/"/g, '""') + '"').join(",")).join("\\r\\n");
+    const csv = rows.map(row => row.map(value => '"' + safe(value).replace(/"/g, '""') + '"').join(",")).join("\r\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");

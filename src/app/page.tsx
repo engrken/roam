@@ -38,7 +38,9 @@ export default function Home() {
   useEffect(() => {
     const saved = localStorage.getItem("roam-theme");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    setDark(saved === "dark" || (saved !== "light" && prefersDark));
+    const initial = saved === "dark" || (saved !== "light" && prefersDark);
+    const frame = window.requestAnimationFrame(() => setDark(initial));
+    return () => window.cancelAnimationFrame(frame);
   }, []);
   function toggleTheme() {
     const next = !dark;

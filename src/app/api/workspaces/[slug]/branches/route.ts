@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTenantAccess, canManageFleet } from "@/lib/tenant-access";
+import { getTenantAccess, canManageFleet, hasWorkspaceTier } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -32,6 +32,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace not found or access denied." }, { status: 404 });
+  if (!await hasWorkspaceTier(access.tenant.id, "PRO")) return NextResponse.json({ error: "Branch management is available on the Pro plan and above. Upgrade your workspace to continue." }, { status: 403 });
 
   const includeInactive = request.nextUrl.searchParams.get("includeInactive") === "1";
   const branches = await prisma.branch.findMany({
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace not found or access denied." }, { status: 404 });
+  if (!await hasWorkspaceTier(access.tenant.id, "PRO")) return NextResponse.json({ error: "Branch management is available on the Pro plan and above. Upgrade your workspace to continue." }, { status: 403 });
   if (!canManageFleet(access.role)) return NextResponse.json({ error: "You cannot manage branches." }, { status: 403 });
 
   const body = await request.json().catch(() => null) as BranchBody | null;
@@ -71,6 +73,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace not found or access denied." }, { status: 404 });
+  if (!await hasWorkspaceTier(access.tenant.id, "PRO")) return NextResponse.json({ error: "Branch management is available on the Pro plan and above. Upgrade your workspace to continue." }, { status: 403 });
   if (!canManageFleet(access.role)) return NextResponse.json({ error: "You cannot manage branches." }, { status: 403 });
 
   const body = await request.json().catch(() => null) as BranchBody | null;
@@ -118,6 +121,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace not found or access denied." }, { status: 404 });
+  if (!await hasWorkspaceTier(access.tenant.id, "PRO")) return NextResponse.json({ error: "Branch management is available on the Pro plan and above. Upgrade your workspace to continue." }, { status: 403 });
   if (!canManageFleet(access.role)) return NextResponse.json({ error: "You cannot manage branches." }, { status: 403 });
 
   const id = request.nextUrl.searchParams.get("id") || "";

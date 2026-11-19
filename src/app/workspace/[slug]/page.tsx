@@ -10,6 +10,9 @@ type Overview = {
   metrics: { totalVehicles:number; availableVehicles:number; rentedVehicles:number; reservedVehicles:number; maintenanceVehicles:number; activeBookings:number; pendingBookings:number; completedBookings:number; customers:number; branches:number; utilization:number; completedValue30d:number; collected30d:number; outstandingBalance:number; bookings7d:number };
   actionCenter: {
     pendingCount:number;
+    pickupCount:number;
+    returnCount:number;
+    overdueCount:number;
     pendingItems:{id:string;reference:string;customer:string;startAt:string;endAt:string;totalAmount?:number}[];
     pickupsToday:{id:string;reference:string;customer:string;startAt:string;endAt:string}[];
     returnsToday:{id:string;reference:string;customer:string;startAt:string;endAt:string}[];
@@ -89,15 +92,15 @@ export default function WorkspaceOverviewPage() {
             {data.actionCenter.pendingItems.length ? data.actionCenter.pendingItems.slice(0,3).map(item=><button key={item.id} onClick={()=>router.push(`/workspace/${slug}/bookings`)}><span><b>{item.customer}</b><small>#{item.reference}</small></span><small>{new Date(item.startAt).toLocaleDateString("en-PH",{month:"short",day:"numeric"})}</small></button>) : <p>You&apos;re all caught up.</p>}
           </article>
           <article className="roam-action-card">
-            <div><b>Pickups today</b><strong>{data.actionCenter.pickupsToday.length}</strong></div>
+            <div><b>Pickups today</b><strong>{data.actionCenter.pickupCount}</strong></div>
             {data.actionCenter.pickupsToday.length ? data.actionCenter.pickupsToday.slice(0,3).map(item=><button key={item.id} onClick={()=>router.push(`/workspace/${slug}/bookings`)}><span><b>{item.customer}</b><small>#{item.reference}</small></span><small>{new Date(item.startAt).toLocaleTimeString("en-PH",{hour:"numeric",minute:"2-digit"})}</small></button>) : <p>No scheduled pickups today.</p>}
           </article>
           <article className="roam-action-card">
-            <div><b>Returns today</b><strong>{data.actionCenter.returnsToday.length}</strong></div>
+            <div><b>Returns today</b><strong>{data.actionCenter.returnCount}</strong></div>
             {data.actionCenter.returnsToday.length ? data.actionCenter.returnsToday.slice(0,3).map(item=><button key={item.id} onClick={()=>router.push(`/workspace/${slug}/bookings`)}><span><b>{item.customer}</b><small>#{item.reference}</small></span><small>{new Date(item.endAt).toLocaleTimeString("en-PH",{hour:"numeric",minute:"2-digit"})}</small></button>) : <p>No scheduled returns today.</p>}
           </article>
-          <article className={"roam-action-card"+(data.actionCenter.overdueReturns.length?" roam-action-warning":"")}>
-            <div><b>Overdue returns</b><strong>{data.actionCenter.overdueReturns.length}</strong></div>
+          <article className={"roam-action-card"+(data.actionCenter.overdueCount?" roam-action-warning":"")}>
+            <div><b>Overdue returns</b><strong>{data.actionCenter.overdueCount}</strong></div>
             {data.actionCenter.overdueReturns.length ? data.actionCenter.overdueReturns.slice(0,3).map(item=><button key={item.id} onClick={()=>router.push(`/workspace/${slug}/bookings`)}><span><b>{item.customer}</b><small>#{item.reference}</small></span><small>Past due</small></button>) : <p>No overdue returns.</p>}
           </article>
         </div>

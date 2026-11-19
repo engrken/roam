@@ -103,3 +103,52 @@ export async function sendBookingReminder(input: {
     html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#172033;line-height:1.6"><h2>${safe(subject)}</h2><p>${safe(lead)} <strong>${safe(dateTime(input.reminderType === "PICKUP" ? input.startAt : input.endAt))}</strong>.</p><p><strong>Booking:</strong> ${safe(input.bookingReference)}<br/><strong>Rental business:</strong> ${safe(input.tenantName)}</p><p>If you have questions or need to coordinate a change, please contact the rental business directly.</p><p>Thank you,<br/>ROAM</p></div>`,
   });
 }
+
+
+export async function sendBookingStatusNotification(input: {
+  recipient: string;
+  tenantName: string;
+  bookingReference: string;
+  status: string;
+  startAt: Date;
+  endAt: Date;
+}) {
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  if (!from) throw new Error("Email sender is not configured.");
+  const labels: Record<string, string> = {
+    PENDING: "Booking request received",
+    CONFIRMED: "Your booking is confirmed",
+    ACTIVE: "Your rental is now in progress",
+    COMPLETED: "Your rental has been completed",
+    CANCELLED: "Your booking has been cancelled",
+    REJECTED: "Your booking request was not approved",
+  };
+  const heading = labels[input.status] || "Your booking has been updated";
+  const safe = (value: string) => value.replace(/[&<>\"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[character] || character);
+  const format = (value: Date) => value.toLocaleString("en-PH", {
+    timeZone: "Asia/Manila", dateStyle: "long", timeStyle: "short",
+  });
+  const text = [
+    "Hello,",
+    "",
+    heading + ".",
+    "Booking reference: " + input.bookingReference,
+    "Rental business: " + input.tenantName,
+    "Pickup: " + format(input.startAt),
+    "Return: " + format(input.endAt),
+    "",
+    "For private booking details or to message the rental team, please use the private booking link you received when you submitted your request.",
+    "",
+    "Thank you.",
+    "ROAM",
+  ].join("\n");
+  await getTransport().sendMail({
+    from,
+    to: input.recipient,
+    subject: heading + " · " + input.bookingReference,
+    text,
+    html: '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:24px;color:#172033;line-height:1.6"><h2>' + safe(heading) + '</h2><p>Your booking with <strong>' + safe(input.tenantName) + '</strong> has been updated.</p><p><strong>Reference:</strong> ' + safe(input.bookingReference) + '<br/><strong>Pickup:</strong> ' + safe(format(input.startAt)) + '<br/><strong>Return:</strong> ' + safe(format(input.endAt)) + '</p><p>For private booking details or to message the rental team, please use the private booking link you received when you submitted your request.</p><p>Thank you,<br/>ROAM</p></div>',
+  });
+}

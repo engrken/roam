@@ -31,7 +31,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   });
 
   return NextResponse.json({
-    business: { name: tenant.name, phone: tenant.phone, currency: tenant.currency, timezone: tenant.timezone, rentalTerms: tenant.rentalTerms?.trim() || "The rental business will confirm the rental agreement, payment arrangements, deposit, permitted use, cancellation terms and vehicle return requirements before handover.", rentalTermsVersion: hash(tenant.rentalTerms?.trim() || "The rental business will confirm the rental agreement, payment arrangements, deposit, permitted use, cancellation terms and vehicle return requirements before handover.") },
+    business: { name: tenant.name, phone: tenant.phone, currency: tenant.currency, timezone: tenant.timezone, rentalTerms: tenant.rentalTerms?.trim() || "", rentalTermsVersion: hash(tenant.rentalTerms?.trim() || "") },
     vehicles: vehicles.map((vehicle) => ({
       ...vehicle,
       dailyRate: Number(vehicle.dailyRate),
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   const phone = typeof body?.phone === "string" ? body.phone.trim() : "";
   const vehicleId = typeof body?.vehicleId === "string" ? body.vehicleId : "";
-  const rentalTerms = tenant.rentalTerms?.trim() || "The rental business will confirm the rental agreement, payment arrangements, deposit, permitted use, cancellation terms and vehicle return requirements before handover.";
+  const rentalTerms = tenant.rentalTerms?.trim() || "";\n  if (!rentalTerms) return NextResponse.json({ error: "This rental business has not published its rental terms yet. Please contact the business directly." }, { status: 409 });
   const rentalTermsVersion = hash(rentalTerms);
   if (body?.acceptedRentalTerms !== true || body?.rentalTermsVersion !== rentalTermsVersion) {
     return NextResponse.json({ error: "Please review and accept the current rental terms before submitting your request." }, { status: 400 });

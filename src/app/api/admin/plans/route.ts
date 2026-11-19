@@ -1,6 +1,8 @@
+import { randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getPlatformAdmin } from "@/lib/platform-admin";
 import { prisma } from "@/lib/prisma";
+import { addCalendarMonths, grantReferralMonth } from "@/lib/referrals";
 
 export const runtime = "nodejs";
 
@@ -74,6 +76,81 @@ export async function PATCH(request: NextRequest) {
       details: { requestId: change.id, currentTier: change.currentTier, requestedTier: change.requestedTier },
     } });
     return NextResponse.json({ request: { id: reviewed.id, status: reviewed.status }, message: decision === "APPROVED" ? "Plan changed. Subscription remains in manual billing review until payment is confirmed." : "Subscription change request rejected." });
+  }
+  if (body?.action === "record-subscription-payment") {
+    const tenantId = typeof body.tenantId === "string" ? body.tenantId : "";
+    const amount = Number(body.amount);
+    const suppliedReference = typeof body.reference === "string" ? body.reference.trim().slice(0, 100) : "";
+    if (!tenantId || !Number.isFinite(amount) || amount <= 0 || amount > 100000000) {
+      return NextResponse.json({ error: "Enter a valid tenant and a verified payment amount greater than zero." }, { status: 400 });
+    }
+    const reference = suppliedReference || "ROAM-SUB-" + randomBytes(8).toString("hex").toUpperCase();
+    try {
+      const result = await prisma.$transaction(async tx => {
+        const subscription = await tx.subscription.findUnique({
+          where: { tenantId },
+          include: { plan: { select: { name: true } }, tenant: { select: { currency: true } } },
+        });
+        if (!subscription) throw new Error("SUBSCRIPTION_NOT_FOUND");
+        const previousPaidCount = await tx.billingRecord.count({ where: { tenantId, status: "PAID" } });
+        const now = new Date();
+        const record = await tx.billingRecord.create({
+          data: {
+            tenantId, description: "Subscription payment · " + subscription.plan.name,
+            reference, amount, currency: subscription.tenant.currency || "PHP",
+            status: "PAID", issuedAt: now, paidAt: now,
+          },
+        });
+        const periodStart = subscription.currentPeriodEnd && subscription.currentPeriodEnd > now ? subscription.currentPeriodEnd : now;
+        let periodEnd = addCalendarMonths(periodStart, 1 + subscription.referralCreditMonths);
+        let referralQualified = false;
+        if (previousPaidCount === 0) {
+          const referral = await tx.referral.findUnique({ where: { referredTenantId: tenantId } });
+          if (referral && referral.status === "PENDING") {
+            if (referral.registeredAt <= now && referral.expiresAt >= now) {
+              await tx.referral.update({
+                where: { id: referral.id },
+                data: { status: "REWARDED", qualifiedAt: now, rewardedAt: now },
+              });
+              periodEnd = addCalendarMonths(periodEnd, 1);
+              await grantReferralMonth(tx, referral.referrerTenantId);
+              referralQualified = true;
+            } else {
+              await tx.referral.update({ where: { id: referral.id }, data: { status: "EXPIRED" } });
+            }
+          }
+        }
+        const updated = await tx.subscription.update({
+          where: { tenantId },
+          data: {
+            status: "active", currentPeriodStart: periodStart, currentPeriodEnd: periodEnd,
+            referralCreditMonths: 0,
+          },
+          select: { tier: true, status: true, currentPeriodStart: true, currentPeriodEnd: true },
+        });
+        await tx.platformAuditLog.create({
+          data: {
+            actorUserId: admin.id, actorEmail: admin.email, action: "tenant.subscription.payment.confirmed",
+            entityType: "tenant", entityId: tenantId,
+            details: { billingRecordId: record.id, reference, amount, currency: subscription.tenant.currency || "PHP", referralQualified },
+          },
+        });
+        return { record, subscription: updated, referralQualified };
+      });
+      return NextResponse.json({
+        payment: { id: result.record.id, reference: result.record.reference, amount: Number(result.record.amount), paidAt: result.record.paidAt?.toISOString() || null },
+        subscription: { ...result.subscription, currentPeriodStart: result.subscription.currentPeriodStart?.toISOString() || null, currentPeriodEnd: result.subscription.currentPeriodEnd?.toISOString() || null },
+        referralQualified: result.referralQualified,
+        message: result.referralQualified
+          ? "Payment recorded. Referral qualified: one free month has been credited to both workspaces."
+          : "Payment recorded and subscription activated.",
+      }, { status: 201 });
+    } catch (error) {
+      if (error instanceof Error && error.message === "SUBSCRIPTION_NOT_FOUND") return NextResponse.json({ error: "Assign a subscription plan before recording payment." }, { status: 404 });
+      if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") return NextResponse.json({ error: "That payment reference has already been recorded." }, { status: 409 });
+      console.error("Subscription payment confirmation failed", error);
+      return NextResponse.json({ error: "Unable to record the subscription payment." }, { status: 500 });
+    }
   }
   if (body?.action === "assign-plan") {
     const tenantId = typeof body.tenantId === "string" ? body.tenantId : "";

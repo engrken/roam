@@ -79,7 +79,7 @@ export default function CustomerBookingPage() {
     finally { setBusy(false); }
   }
 
-  if(!data) return <main className="client-page"><header className="client-topbar"><Link className="client-brand" href="/"><span>R</span> ROAM</Link><span>PRIVATE BOOKING PORTAL</span></header><div className="client-container"><section className="client-success client-loading-card"><div className="client-eyebrow">BOOKING PORTAL</div><h1>{error ? "We couldn’t open this booking" : "Loading your booking…"}</h1><p>{error || (!token ? "This private booking link is incomplete. Please open the original link from your booking confirmation." : "Please wait while we securely retrieve your booking details.")}</p>{error && <Link className="client-primary" href="/">Back to ROAM</Link>}</section></div></main>;
+  if(!data) return <main className="client-page"><header className="client-topbar"><Link className="client-brand" href="/"><span>R</span> ROAM</Link><div className="client-topbar-links"><span>PRIVATE BOOKING PORTAL</span><Link href="/help">Booking help</Link></div></header><div className="client-container"><section className="client-success client-loading-card"><div className="client-eyebrow">BOOKING PORTAL</div><h1>{error ? "We couldn’t open this booking" : "Loading your booking…"}</h1><p>{error || (!token ? "This private booking link is incomplete. Please open the original link from your booking confirmation." : "Please wait while we securely retrieve your booking details.")}</p>{error && <Link className="client-primary" href="/">Back to ROAM</Link>}</section></div></main>;
 
   const statusLabel=statusText[data.status]||data.status.replaceAll("_"," ");
   const timeline=["PENDING","CONFIRMED","ACTIVE","COMPLETED"];

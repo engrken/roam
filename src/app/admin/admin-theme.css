@@ -123,3 +123,24 @@
 @media (prefers-reduced-motion: reduce) {
   .roam-admin-theme-root { transition: none; }
 }
+
+/* Keep tenant-directory copy and access actions readable on the light row surface. */
+.roam-admin-theme-root[data-theme="light"] table thead th {
+  color: #46566d !important;
+}
+.roam-admin-theme-root[data-theme="light"] table tbody td {
+  color: #344256 !important;
+}
+.roam-admin-theme-root[data-theme="light"] table tbody td .text-slate-300,
+.roam-admin-theme-root[data-theme="light"] table tbody td .text-slate-400,
+.roam-admin-theme-root[data-theme="light"] table tbody td .text-slate-500,
+.roam-admin-theme-root[data-theme="light"] table tbody td .text-slate-600 {
+  color: #46566d !important;
+}
+.roam-admin-theme-root[data-theme="light"] table tbody td a {
+  color: #066f86 !important;
+}
+.roam-admin-theme-root[data-theme="light"] table tbody td .text-emerald-300,
+.roam-admin-theme-root[data-theme="light"] table tbody td .text-emerald-400 { color: #047857 !important; }
+.roam-admin-theme-root[data-theme="light"] table tbody td .text-amber-200 { color: #92400e !important; }
+.roam-admin-theme-root[data-theme="light"] table tbody td .text-rose-200 { color: #be123c !important; }

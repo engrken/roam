@@ -59,6 +59,39 @@ export async function PATCH(request: NextRequest, { params }: Context) {
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
 
+  if (body.action === "transfer-owner") {
+    const targetMembershipId = typeof body.targetMembershipId === "string" ? body.targetMembershipId : "";
+    if (!targetMembershipId) return NextResponse.json({ error: "Choose an existing workspace member." }, { status: 400 });
+    try {
+      const result = await prisma.$transaction(async tx => {
+        const target = await tx.membership.findFirst({
+          where: { id: targetMembershipId, tenantId: id },
+          include: { user: { select: { id: true, email: true, name: true } } },
+        });
+        if (!target) throw new Error("TARGET_NOT_FOUND");
+        if (target.role === "OWNER") throw new Error("ALREADY_OWNER");
+        const previousOwners = await tx.membership.findMany({
+          where: { tenantId: id, role: "OWNER" },
+          include: { user: { select: { email: true } } },
+        });
+        await tx.membership.updateMany({ where: { tenantId: id, role: "OWNER" }, data: { role: "ADMIN" } });
+        await tx.membership.update({ where: { id: target.id }, data: { role: "OWNER" } });
+        await tx.platformAuditLog.create({ data: {
+          actorUserId: admin.id, actorEmail: admin.email, action: "tenant.owner.transferred",
+          entityType: "tenant", entityId: id,
+          details: { previousOwners: previousOwners.map(owner => owner.user.email), newOwner: target.user.email, newOwnerUserId: target.userId },
+        } });
+        return { email: target.user.email, name: target.user.name, previousOwners: previousOwners.map(owner => owner.user.email) };
+      });
+      return NextResponse.json({ owner: result });
+    } catch (error) {
+      if (error instanceof Error && error.message === "TARGET_NOT_FOUND") return NextResponse.json({ error: "That user is not a member of this workspace." }, { status: 404 });
+      if (error instanceof Error && error.message === "ALREADY_OWNER") return NextResponse.json({ error: "That member is already a workspace owner." }, { status: 409 });
+      console.error("Platform tenant ownership transfer failed", error);
+      return NextResponse.json({ error: "Unable to transfer workspace ownership." }, { status: 500 });
+    }
+  }
+
   const data: Prisma.TenantUpdateInput = {};
   if (body.name !== undefined) {
     if (typeof body.name !== "string" || body.name.trim().length < 2 || body.name.trim().length > 120) return NextResponse.json({ error: "Business name must be between 2 and 120 characters." }, { status: 400 });

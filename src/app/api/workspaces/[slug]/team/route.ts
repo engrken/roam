@@ -64,7 +64,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   const role = typeof body?.role === "string" ? body.role : "STAFF";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || !allowedRoles(access.role).includes(role)) {
-    return NextResponse.json({ error: "Enter an existing ROAM account email and a role you are allowed to assign." }, { status: 400 });
+    return NextResponse.json({ error: "Enter a valid email address and a role you are allowed to assign." }, { status: 400 });
   }
 
   const [user, subscription, memberCount, pendingCount, pendingInvite] = await Promise.all([
@@ -93,7 +93,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       },
     });
     try {
-      await sendTeamInvitation(email, access.tenant.name, role, request.nextUrl.origin + "/invite/" + token);
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\\/$/, "");
+      await sendTeamInvitation(email, access.tenant.name, role, appUrl + "/invite/" + token);
     } catch (error) {
       await prisma.teamInvitation.delete({ where: { id: invitation.id } }).catch(() => undefined);
       console.error("Team invitation email failed", error);

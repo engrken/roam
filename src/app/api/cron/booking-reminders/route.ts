@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
       data: [{ bookingId: booking.id, noticeKey, noticeType: booking.type, scheduledFor: booking.scheduledFor }],
       skipDuplicates: true,
     });
+    // Recover a claim abandoned by a timed-out or interrupted cron invocation.
     const staleProcessingBefore = new Date(now.getTime() - 10 * 60 * 1000);
     const claim = await prisma.bookingAutomationNotice.updateMany({
       where: {

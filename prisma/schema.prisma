@@ -265,6 +265,7 @@ model EmailOtp {
   expiresAt  DateTime
   attempts   Int      @default(0)
   consumedAt DateTime?
+  referralCode String?
   createdAt  DateTime @default(now())
   @@index([email, createdAt])
   @@index([expiresAt])

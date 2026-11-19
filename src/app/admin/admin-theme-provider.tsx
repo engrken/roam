@@ -9,7 +9,7 @@ export default function AdminThemeProvider({ children }: Readonly<{ children: Re
   const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("roam-admin-theme");
+    const saved = window.localStorage.getItem("roam-theme");
     const preferred = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
     const initial: Theme = saved === "light" || saved === "dark" ? saved : preferred;
     const frame = window.requestAnimationFrame(() => setTheme(initial));
@@ -21,7 +21,7 @@ export default function AdminThemeProvider({ children }: Readonly<{ children: Re
   function toggleTheme() {
     const next: Theme = theme === "dark" ? "light" : "dark";
     setTheme(next);
-    window.localStorage.setItem("roam-admin-theme", next);
+    window.localStorage.setItem("roam-theme", next);
     document.documentElement.dataset.adminTheme = next;
     document.documentElement.style.colorScheme = next;
   }

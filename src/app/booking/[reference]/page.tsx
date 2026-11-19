@@ -24,6 +24,9 @@ export default function CustomerBookingPage() {
   const [message,setMessage] = useState("");
   const [kind,setKind] = useState("DRIVERS_LICENSE_FRONT");
   const [file,setFile] = useState<File|null>(null);
+  const [attachmentFile,setAttachmentFile] = useState<File|null>(null);
+  const [attachmentKind,setAttachmentKind] = useState("MESSAGE_ATTACHMENT");
+  const [linkCopied,setLinkCopied] = useState(false);
   const [error,setError] = useState("");
   const [notice,setNotice] = useState("");
   const [busy,setBusy] = useState(false);

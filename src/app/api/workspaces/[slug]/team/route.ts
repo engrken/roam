@@ -74,7 +74,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   try {
     const membership = await prisma.membership.create({
-      data: { tenantId: access.tenant.id, userId: user.id, role },
+      data: { tenantId: access.tenant.id, userId: user.id, role: role as "ADMIN" | "MANAGER" | "STAFF" },
     });
     return NextResponse.json({
       member: { id: membership.id, userId: user.id, email: user.email, name: user.name, role: membership.role, joinedAt: membership.createdAt },
@@ -107,7 +107,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: "You do not have permission to change this member's role." }, { status: 403 });
   }
 
-  const membership = await prisma.membership.update({ where: { id: membershipId }, data: { role } });
+  const membership = await prisma.membership.update({ where: { id: membershipId }, data: { role: role as "ADMIN" | "MANAGER" | "STAFF" } });
   return NextResponse.json({ member: { id: membership.id, role: membership.role } });
 }
 

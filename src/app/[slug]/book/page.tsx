@@ -10,7 +10,7 @@ type Vehicle = {
   dailyRate: number; securityDeposit: number;
   branch: { name: string; address: string | null } | null;
 };
-type Business = { name: string; phone: string | null; timezone: string; currency?: string };
+type Business = { name: string; phone: string | null; timezone: string; currency?: string; rentalTerms: string; rentalTermsVersion: string };
 
 function localDateTime(timeZone: string, offsetMinutes = 0) {
   const date = new Date(Date.now() + offsetMinutes * 60_000);
@@ -62,7 +62,7 @@ export default function PublicBookPage() {
   const [phone, setPhone] = useState("");
   const [startAt, setStartAt] = useState("");
   const [endAt, setEndAt] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [acceptedRentalTerms, setAcceptedRentalTerms] = useState(false);\n  const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [booking, setBooking] = useState<{ reference: string; accessToken: string } | null>(null);
@@ -97,7 +97,7 @@ export default function PublicBookPage() {
     try {
       const response = await fetch("/api/public/" + encodeURIComponent(slug) + "/bookings", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone, vehicleId, startAt, endAt }),
+        body: JSON.stringify({ name, email, phone, vehicleId, startAt, endAt, acceptedRentalTerms, rentalTermsVersion: business?.rentalTermsVersion }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Unable to submit your request.");
@@ -129,8 +129,8 @@ export default function PublicBookPage() {
             <div className="client-section-head client-subhead"><span>02</span><div><h2>Your contact details</h2><p>We’ll use these details to coordinate your booking.</p></div></div>
             <label>Full name<input required minLength={2} maxLength={100} autoComplete="name" value={name} onChange={event => setName(event.target.value)} placeholder="Your full name"/></label>
             <div className="client-fields-two"><label>Email address<input required type="email" maxLength={254} autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="you@example.com"/></label><label>Mobile number<input required type="tel" minLength={7} maxLength={30} autoComplete="tel" value={phone} onChange={event => setPhone(event.target.value)} placeholder="+63 9XX XXX XXXX"/></label></div>
-            <button className="client-primary client-submit" disabled={busy || !estimate}>{busy ? "Sending request…" : "Send booking request"} <span>→</span></button>
-            <p className="client-privacy">Your details are shared with this rental business only to process your booking request.</p>
+            <section className="client-rental-terms"><div><strong>Rental terms and conditions</strong><p>These are set by {business?.name || "the rental business"}. Please read them before sending your request.</p></div><div className="client-rental-terms-copy">{business?.rentalTerms || "The rental business will confirm the rental agreement, payment arrangements, deposit, permitted use, cancellation terms and vehicle return requirements before handover."}</div><label className="client-terms-check"><input type="checkbox" required checked={acceptedRentalTerms} onChange={event => setAcceptedRentalTerms(event.target.checked)}/><span>I have read and agree to the rental terms and conditions provided by this rental business.</span></label></section>\n            <button className="client-primary client-submit" disabled={busy || !estimate || !acceptedRentalTerms}>{busy ? "Sending request…" : "Send booking request"} <span>→</span></button>
+            <p className="client-privacy">Your details are shared with this rental business only to process your booking request. ROAM platform <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy Policy</Link> also apply to use of this service.</p>
           </form>}
         </section>
         <aside className="client-summary-card"><div className="client-summary-top"><span>YOUR ESTIMATE</span><span className="client-secure">● PRIVATE & SECURE</span></div>

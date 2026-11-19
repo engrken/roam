@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -28,7 +29,9 @@ export async function POST(request: NextRequest) {
     }
 
     const [storedPurpose, storedDigest] = otp.codeHash.includes(":") ? otp.codeHash.split(":", 2) : ["login", otp.codeHash];
-    const purpose = storedPurpose === "register" ? "register" : "login";
+    const purpose = storedPurpose === "register" ? "register" : storedPurpose === "change-email" ? "change-email" : "login";
+    const currentUser = purpose === "change-email" ? await getCurrentUser() : null;
+    if (purpose === "change-email" && !currentUser) return NextResponse.json({ error: "Sign in before changing your email." }, { status: 401 });
     const expected = Buffer.from(storedDigest, "hex");
     const actual = Buffer.from(codeDigest(email, code), "hex");
     const matches = expected.length === actual.length && timingSafeEqual(expected, actual);
@@ -57,6 +60,11 @@ export async function POST(request: NextRequest) {
       if (consumed.count !== 1) return null;
 
       const existing = await tx.user.findUnique({ where: { email } });
+      if (purpose === "change-email") {
+        if (!currentUser) return { missingSession: true as const };
+        if (existing && existing.id !== currentUser.id) return { conflict: true as const };
+        return tx.user.update({ where: { id: currentUser.id }, data: { email } });
+      }
       if (purpose === "register" && existing) return { conflict: true as const };
       if (purpose === "login" && !existing) return { missing: true as const };
       const account = existing ?? await tx.user.create({ data: { email } });
@@ -66,6 +74,7 @@ export async function POST(request: NextRequest) {
       return account;
     });
 
+    if (user && "missingSession" in user) return NextResponse.json({ error: "Your sign-in session expired. Sign in again and retry." }, { status: 401 });
     if (user && "missing" in user) {
       return NextResponse.json({ error: "No ROAM account exists for this email. Create an account first." }, { status: 404 });
     }
@@ -77,10 +86,10 @@ export async function POST(request: NextRequest) {
     }
 
     const response = NextResponse.json({
-      message: "Signed in successfully.",
+      message: purpose === "change-email" ? "Sign-in email updated successfully." : "Signed in successfully.",
       user: { id: user.id, email: user.email },
     });
-    response.cookies.set("roam_session", token, {
+    if (purpose !== "change-email") response.cookies.set("roam_session", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

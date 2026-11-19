@@ -264,3 +264,32 @@ export async function sendTrialLifecycleEmail(input: {
     html: '<div style="background:#f3f6fb;padding:32px 16px;font-family:Arial,sans-serif;color:#172033;line-height:1.6"><div style="max-width:560px;margin:auto;background:#fff;border-radius:14px;padding:28px"><div style="font-size:22px;font-weight:800;letter-spacing:2px">ROAM</div><h2>' + safe(content.heading) + '</h2><p>Hello ' + safe(input.tenantName) + ',</p><p>' + safe(content.message) + '</p><p style="margin:24px 0"><a href="' + safe(input.accountUrl) + '" style="display:inline-block;background:#087e9b;color:#fff;text-decoration:none;padding:13px 20px;border-radius:8px;font-weight:700">Open account & subscription</a></p><p style="font-size:13px;color:#66758a">Your existing business data is retained. ROAM does not automatically charge your payment method.</p></div></div>',
   });
 }
+
+
+export async function sendReferralRewardEmail(input: {
+  recipient: string;
+  businessName: string;
+  referredBusinessName: string;
+  accountUrl: string;
+}) {
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  if (!from) throw new Error("Email sender is not configured.");
+  const safe = (value: string) => value.replace(/[&<>"']/g, character => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[character] || character);
+  const subject = "You earned one month free on ROAM!";
+  const text = [
+    "Good news!",
+    "",
+    "Your referral with " + input.referredBusinessName + " has qualified. Your workspace, " + input.businessName + ", has received one free month of ROAM.",
+    "",
+    "Your referral partner also received one free month.",
+    "View your account and subscription: " + input.accountUrl,
+    "",
+    "Thank you for helping more rental businesses discover ROAM.",
+  ].join("\n");
+  await getTransport().sendMail({
+    from, to: input.recipient, subject, text,
+    html: '<div style="background:#f3f6fb;padding:32px 16px;font-family:Arial,sans-serif;color:#172033;line-height:1.6"><div style="max-width:540px;margin:auto;background:#fff;border-radius:14px;padding:28px"><div style="font-size:22px;font-weight:800;letter-spacing:2px">ROAM</div><h2>You earned one month free!</h2><p>Your referral with <strong>' + safe(input.referredBusinessName) + '</strong> has qualified. Your workspace, <strong>' + safe(input.businessName) + '</strong>, has received one free month of ROAM.</p><p>Your referral partner also received one free month.</p><p style="margin:24px 0"><a href="' + safe(input.accountUrl) + '" style="display:inline-block;background:#087e9b;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:700">View account & subscription</a></p><p style="font-size:13px;color:#66758a">Thank you for helping more rental businesses discover ROAM.</p></div></div>',
+  });
+}

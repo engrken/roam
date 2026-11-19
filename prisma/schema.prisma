@@ -88,6 +88,10 @@ model Tenant {
   subscription Subscription?
   invitations  TeamInvitation[]
   billingRecords BillingRecord[]
+  referralCode String @unique
+  referralsSent Referral[] @relation("ReferralReferrer")
+  referralReceived Referral? @relation("ReferralReferredTenant")
+  referredUsers User[] @relation("UserReferredByTenant")
   rentalPayments RentalPayment[]
   subscriptionChangeRequests SubscriptionChangeRequest[]
 }
@@ -101,6 +105,10 @@ model User {
   memberships Membership[]
   sessions    Session[]
   legalAcceptances LegalAcceptance[]
+  referredByTenantId String?
+  referredByTenant Tenant? @relation("UserReferredByTenant", fields: [referredByTenantId], references: [id], onDelete: SetNull)
+  referredReferral Referral? @relation("ReferralReferredOwner")
+  @@index([referredByTenantId])
 }
 
 model Membership {
@@ -142,6 +150,7 @@ model Subscription {
   trialReminderSentAt DateTime?
   trialExpiredNoticeSentAt DateTime?
   trialReadOnlyNoticeSentAt DateTime?
+  referralCreditMonths Int @default(0)
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
   tenant             Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -256,6 +265,7 @@ model EmailOtp {
   expiresAt  DateTime
   attempts   Int      @default(0)
   consumedAt DateTime?
+  referralCode String?
   createdAt  DateTime @default(now())
   @@index([email, createdAt])
   @@index([expiresAt])
@@ -378,6 +388,27 @@ model PlatformAuditLog {
   @@index([entityType, entityId, createdAt])
 }
 
+
+
+model Referral {
+  id                 String   @id @default(cuid())
+  referrerTenantId   String
+  referredTenantId   String   @unique
+  referredOwnerUserId String  @unique
+  code               String
+  status             String   @default("PENDING")
+  registeredAt       DateTime
+  expiresAt          DateTime
+  qualifiedAt        DateTime?
+  rewardedAt         DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  referrerTenant     Tenant   @relation("ReferralReferrer", fields: [referrerTenantId], references: [id], onDelete: Cascade)
+  referredTenant     Tenant   @relation("ReferralReferredTenant", fields: [referredTenantId], references: [id], onDelete: Cascade)
+  referredOwner      User     @relation("ReferralReferredOwner", fields: [referredOwnerUserId], references: [id], onDelete: Cascade)
+  @@index([referrerTenantId, status, createdAt])
+  @@index([status, expiresAt])
+}
 
 model BillingRecord {
   id          String   @id @default(cuid())

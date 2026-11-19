@@ -14,7 +14,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     prisma.tenant.findUnique({
       where: { id: access.tenant.id },
       select: {
-        id: true, name: true, email: true, phone: true, status: true, createdAt: true,
+        id: true, name: true, email: true, phone: true, status: true, createdAt: true, referralCode: true,
+        referralsSent: { orderBy: { createdAt: "desc" }, take: 50, select: { id: true, status: true, registeredAt: true, expiresAt: true, qualifiedAt: true, rewardedAt: true, referredTenant: { select: { name: true } } } },
+        referralReceived: { select: { status: true, registeredAt: true, expiresAt: true, qualifiedAt: true, rewardedAt: true, referrerTenant: { select: { name: true } } } },
         subscription: { include: { plan: { select: { name: true, monthlyPrice: true, maxVehicles: true, maxBranches: true, maxStaff: true } } } },
       },
     }),
@@ -25,12 +27,27 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   if (!tenant) return NextResponse.json({ error: "Workspace not found." }, { status: 404 });
   return NextResponse.json({
     user: { id: access.user.id, name: access.user.name, email: access.user.email },
-    tenant: { ...tenant, createdAt: tenant.createdAt.toISOString() },
+    tenant: {
+      id: tenant.id, name: tenant.name, email: tenant.email, phone: tenant.phone, status: tenant.status,
+      createdAt: tenant.createdAt.toISOString(), referralCode: tenant.referralCode,
+      referralsSent: tenant.referralsSent.map(item => ({
+        id: item.id, referredBusiness: item.referredTenant.name, status: item.status,
+        registeredAt: item.registeredAt.toISOString(), expiresAt: item.expiresAt.toISOString(),
+        qualifiedAt: item.qualifiedAt?.toISOString() || null, rewardedAt: item.rewardedAt?.toISOString() || null,
+      })),
+      referralReceived: tenant.referralReceived ? {
+        status: tenant.referralReceived.status, registeredAt: tenant.referralReceived.registeredAt.toISOString(),
+        expiresAt: tenant.referralReceived.expiresAt.toISOString(), qualifiedAt: tenant.referralReceived.qualifiedAt?.toISOString() || null,
+        rewardedAt: tenant.referralReceived.rewardedAt?.toISOString() || null,
+        referrerBusiness: tenant.referralReceived.referrerTenant.name,
+      } : null,
+    },
     subscription: tenant.subscription ? {
       tier: tenant.subscription.tier, status: tenant.subscription.status,
       currentPeriodStart: tenant.subscription.currentPeriodStart?.toISOString() || null,
       currentPeriodEnd: tenant.subscription.currentPeriodEnd?.toISOString() || null,
       trialEndsAt: tenant.subscription.trialEndsAt?.toISOString() || null,
+      referralCreditMonths: tenant.subscription.referralCreditMonths,
       plan: { ...tenant.subscription.plan, monthlyPrice: Number(tenant.subscription.plan.monthlyPrice) },
     } : null,
     plans: plans.map(plan => ({ ...plan, monthlyPrice: Number(plan.monthlyPrice) })),

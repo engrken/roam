@@ -67,7 +67,11 @@ export async function POST(request: NextRequest) {
       }
       if (purpose === "register" && existing) return { conflict: true as const };
       if (purpose === "login" && !existing) return { missing: true as const };
-      const account = existing ?? await tx.user.create({ data: { email } });
+      const referrer = purpose === "register" && otp.referralCode
+        ? await tx.tenant.findUnique({ where: { referralCode: otp.referralCode }, select: { id: true, status: true } })
+        : null;
+      if (otp.referralCode && (!referrer || ["SUSPENDED", "CANCELLED"].includes(referrer.status))) return { invalidReferral: true as const };
+      const account = existing ?? await tx.user.create({ data: { email, referredByTenantId: referrer?.id || null } });
       await tx.session.create({
         data: { tokenHash, userId: account.id, expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) },
       });
@@ -77,6 +81,9 @@ export async function POST(request: NextRequest) {
     if (user && "missingSession" in user) return NextResponse.json({ error: "Your sign-in session expired. Sign in again and retry." }, { status: 401 });
     if (user && "missing" in user) {
       return NextResponse.json({ error: "No ROAM account exists for this email. Create an account first." }, { status: 404 });
+    }
+    if (user && "invalidReferral" in user) {
+      return NextResponse.json({ error: "The referral link is no longer valid. Request a new sign-in code without it." }, { status: 400 });
     }
     if (user && "conflict" in user) {
       return NextResponse.json({ error: "An account already exists for this email. Please sign in instead." }, { status: 409 });

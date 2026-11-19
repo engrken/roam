@@ -11,8 +11,12 @@ import { WorkspaceNav } from "@/components/workspace-nav";
 
 type AccountData = {
   user: { id: string; name: string | null; email: string };
-  tenant: { name: string; email: string; phone: string | null; status: string; createdAt: string };
-  subscription: null | { tier: string; status: string; currentPeriodStart: string | null; currentPeriodEnd: string | null; trialEndsAt: string | null; plan: { name: string; monthlyPrice: number; maxVehicles: number | null; maxBranches: number | null; maxStaff: number | null } };
+  tenant: {
+    name: string; email: string; phone: string | null; status: string; createdAt: string; referralCode: string;
+    referralsSent: { id: string; referredBusiness: string; status: string; registeredAt: string; expiresAt: string; qualifiedAt: string | null; rewardedAt: string | null }[];
+    referralReceived: null | { status: string; registeredAt: string; expiresAt: string; qualifiedAt: string | null; rewardedAt: string | null; referrerBusiness: string };
+  };
+  subscription: null | { tier: string; status: string; currentPeriodStart: string | null; currentPeriodEnd: string | null; trialEndsAt: string | null; referralCreditMonths: number; plan: { name: string; monthlyPrice: number; maxVehicles: number | null; maxBranches: number | null; maxStaff: number | null } };
   plans: { tier: string; name: string; monthlyPrice: number; maxVehicles: number | null; maxBranches: number | null; maxStaff: number | null }[];
   billingRecords: { id: string; description: string; reference: string | null; amount: number; currency: string; status: string; issuedAt: string; dueAt: string | null; paidAt: string | null }[];
   requests: { id: string; currentTier: string; requestedTier: string; status: string; createdAt: string }[];
@@ -38,6 +42,7 @@ export default function AccountPage() {
   const [emailCode, setEmailCode] = useState("");
   const [emailStep, setEmailStep] = useState(false);
   const [emailBusy, setEmailBusy] = useState(false);
+  const [referralCopied, setReferralCopied] = useState(false);
 
   async function load() {
     const response = await fetch("/api/workspaces/" + encodeURIComponent(slug) + "/account", { cache: "no-store" });
@@ -59,6 +64,19 @@ export default function AccountPage() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [slug]);
+
+  async function copyReferralLink() {
+    if (!data?.tenant.referralCode) return;
+    const link = window.location.origin + "/register?ref=" + encodeURIComponent(data.tenant.referralCode);
+    try {
+      await navigator.clipboard.writeText(link);
+      setReferralCopied(true);
+      window.setTimeout(() => setReferralCopied(false), 2200);
+      setNotice("Your referral link has been copied.");
+    } catch {
+      setError("Unable to copy the referral link. Please try again.");
+    }
+  }
 
   async function requestChange() {
     if (!selectedTier) return;
@@ -197,6 +215,23 @@ export default function AccountPage() {
         <section className="roam-panel roam-account-section" id="business-profile">
           <div className="roam-account-section-heading"><div><span className="roam-eyebrow">WORKSPACE DETAILS</span><h2>Business information</h2><p>These details identify your rental business to customers and are separate from your personal sign-in email.</p></div><span className="roam-account-heading-icon"><Building2 size={20}/></span></div>
           <div className="roam-account-business-card"><div className="roam-account-business-mark"><Building2 size={21}/></div><div className="roam-account-business-copy"><strong>{data.tenant.name}</strong><span>{data.tenant.email}</span><span>{data.tenant.phone || "No business phone added"}</span></div><a className="roam-secondary-button" href={"/workspace/" + encodeURIComponent(slug) + "/settings"}>Edit business details <ArrowUpRight size={15}/></a></div>
+        </section>
+
+        <section className="roam-panel roam-account-section" id="referrals">
+          <div className="roam-account-section-heading"><div><span className="roam-eyebrow">GROW WITH ROAM</span><h2>Refer a rental business</h2><p>Invite another rental business to ROAM and earn a free month together.</p></div><span className="roam-account-heading-icon"><Sparkles size={20}/></span></div>
+          <div className="roam-account-business-card">
+            <div className="roam-account-business-mark"><Sparkles size={21}/></div>
+            <div className="roam-account-business-copy"><strong>Give one month. Get one month.</strong><span>Share your unique referral link with a new ROAM customer.</span><span>When they create their account and complete their first paid subscription within 30 days of registration, both workspaces receive one free month.</span></div>
+            <button className="roam-secondary-button" type="button" onClick={copyReferralLink}>{referralCopied ? "Copied!" : "Copy referral link"} <ArrowUpRight size={15}/></button>
+          </div>
+          <div className="roam-account-referral-code"><span>Your referral code</span><strong>{data.tenant.referralCode}</strong></div>
+          {subscription && subscription.referralCreditMonths > 0 && <p className="roam-account-referral-note"><strong>{subscription.referralCreditMonths} free month{subscription.referralCreditMonths === 1 ? "" : "s"} waiting to be applied.</strong> Your referral credit will extend your next verified paid subscription.</p>}
+          {data.tenant.referralReceived && <p className="roam-account-referral-note">You joined through {data.tenant.referralReceived.referrerBusiness}. Referral status: <strong>{titleCase(data.tenant.referralReceived.status)}</strong>{data.tenant.referralReceived.status === "PENDING" ? " · Qualifying payment deadline " + date(data.tenant.referralReceived.expiresAt) : ""}</p>}
+          <div className="roam-account-history">
+            <h3>Your referrals</h3>
+            {data.tenant.referralsSent.length ? <div className="roam-table-wrap"><table><thead><tr><th>Business</th><th>Registered</th><th>Payment deadline</th><th>Status</th></tr></thead><tbody>{data.tenant.referralsSent.map(item=><tr key={item.id}><td>{item.referredBusiness}</td><td>{date(item.registeredAt)}</td><td>{date(item.expiresAt)}</td><td><span className={"roam-account-table-status " + statusClass(item.status)}>{titleCase(item.status)}</span></td></tr>)}</tbody></table></div> : <p className="roam-account-plan-caption">No referrals yet. Copy your link and share it with another rental business.</p>}
+          </div>
+          <p className="roam-account-disclaimer"><ShieldCheck size={15}/> A referral qualifies only after the new workspace&apos;s first paid subscription payment is verified by ROAM. Both one-month rewards are applied automatically after qualification. Self-referrals and duplicate claims are not eligible.</p>
         </section>
 
         <section className="roam-panel roam-account-section" id="billing-history">

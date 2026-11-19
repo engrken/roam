@@ -19,6 +19,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const name = typeof body.businessName === "string" ? body.businessName.trim() : "";
     const phone = typeof body.phone === "string" ? body.phone.trim() : "";
+    const requestedReferralCode = typeof body.referralCode === "string" ? body.referralCode.trim().toUpperCase() : "";
+    const manualReferrer = requestedReferralCode && !user.referredByTenantId
+      ? await prisma.tenant.findUnique({ where: { referralCode: requestedReferralCode }, select: { id: true, status: true, memberships: { where: { role: "OWNER" }, select: { userId: true }, take: 1 } } })
+      : null;
+    if (requestedReferralCode && !user.referredByTenantId && (!manualReferrer || ["SUSPENDED", "CANCELLED"].includes(manualReferrer.status) || manualReferrer.memberships[0]?.userId === user.id)) {
+      return NextResponse.json({ error: "That referral code is invalid or cannot be used by this account." }, { status: 400 });
+    }
     if (name.length < 2 || name.length > 100) {
       return NextResponse.json({ error: "Business name must be between 2 and 100 characters." }, { status: 400 });
     }
@@ -43,10 +50,33 @@ export async function POST(request: NextRequest) {
       const trialEndsAt = new Date(trialStartsAt.getTime() + 14 * 24 * 60 * 60 * 1000);
       const trialGraceEndsAt = new Date(trialEndsAt.getTime() + 7 * 24 * 60 * 60 * 1000);
       const tenant = await tx.tenant.create({
-        data: { name, slug, email: user.email, phone: phone || null },
+        data: { name, slug, email: user.email, phone: phone || null, referralCode: randomBytes(6).toString("hex").toUpperCase() },
       });
       await tx.membership.create({ data: { tenantId: tenant.id, userId: user.id, role: "OWNER" } });
       await tx.branch.create({ data: { tenantId: tenant.id, name: "Main Branch", code: "MAIN" } });
+      const account = await tx.user.findUnique({ where: { id: user.id }, select: { createdAt: true, referredByTenantId: true } });
+      const attributedReferrerId = account?.referredByTenantId || manualReferrer?.id || null;
+      if (account && attributedReferrerId) {
+        const [referrer, existingReferral] = await Promise.all([
+          tx.tenant.findUnique({ where: { id: attributedReferrerId }, select: { id: true, referralCode: true, status: true, memberships: { where: { role: "OWNER" }, select: { userId: true }, take: 1 } } }),
+          tx.referral.findUnique({ where: { referredOwnerUserId: user.id }, select: { id: true } }),
+        ]);
+        if (referrer && referrer.status !== "SUSPENDED" && referrer.status !== "CANCELLED"
+          && referrer.memberships[0]?.userId !== user.id && !existingReferral && account.createdAt) {
+          const expiresAt = new Date(account.createdAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+          await tx.referral.create({
+            data: {
+              referrerTenantId: referrer.id,
+              referredTenantId: tenant.id,
+              referredOwnerUserId: user.id,
+              code: referrer.referralCode || "",
+              registeredAt: account.createdAt,
+              expiresAt,
+              status: expiresAt > new Date() ? "PENDING" : "EXPIRED",
+            },
+          });
+        }
+      }
       await tx.subscription.create({
         data: {
           tenantId: tenant.id,

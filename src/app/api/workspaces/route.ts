@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
       if (!starterPlan) throw new Error("Starter plan could not be initialized.");
       const trialStartsAt = new Date();
       const trialEndsAt = new Date(trialStartsAt.getTime() + 14 * 24 * 60 * 60 * 1000);
+      const trialGraceEndsAt = new Date(trialEndsAt.getTime() + 7 * 24 * 60 * 60 * 1000);
       const tenant = await tx.tenant.create({
         data: { name, slug, email: user.email, phone: phone || null },
       });
@@ -55,6 +56,8 @@ export async function POST(request: NextRequest) {
           currentPeriodStart: trialStartsAt,
           currentPeriodEnd: trialEndsAt,
           trialEndsAt,
+          trialPolicyVersion: 1,
+          trialGraceEndsAt,
         },
       });
       return tenant;

@@ -5,11 +5,13 @@ import Link from "next/link";
 import { ArrowLeft, Save, RefreshCw, Layers3 } from "lucide-react";
 
 type Plan = { id: string; tier: string; name: string; monthlyPrice: number; maxVehicles: number | null; maxBranches: number | null; maxStaff: number | null; active: boolean };
+type SubscriptionRequest = { id: string; tenantId: string; tenantName: string; tenantSlug: string; currentTier: string; requestedTier: string; status: string; createdAt: string };
 type Tenant = { id: string; name: string; slug: string; subscription: { tier: string; status: string; currentPeriodEnd: string | null; trialEndsAt: string | null } | null };
 
 export default function PlatformPlansPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [subscriptionRequests, setSubscriptionRequests] = useState<SubscriptionRequest[]>([]);
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
@@ -22,7 +24,7 @@ export default function PlatformPlansPage() {
       const response = await fetch("/api/admin/plans", { cache: "no-store" });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Unable to load plans.");
-      setPlans(body.plans || []); setTenants(body.tenants || []);
+      setPlans(body.plans || []); setTenants(body.tenants || []); setSubscriptionRequests(body.subscriptionRequests || []);
       const firstActiveTier = (body.plans || []).find((plan: Plan) => plan.active)?.tier || "";
       setAssignments(Object.fromEntries((body.tenants || []).map((tenant: Tenant) => [
         tenant.id,
@@ -78,6 +80,18 @@ export default function PlatformPlansPage() {
     } finally { setBusy(""); }
   }
 
+  async function reviewRequest(item: SubscriptionRequest, decision: "approve" | "reject") {
+    const action = decision === "approve" ? "approve" : "reject";
+    if (!window.confirm((decision === "approve" ? "Approve" : "Reject") + " the " + item.currentTier + " → " + item.requestedTier + " request for " + item.tenantName + "?")) return;
+    setBusy(item.id); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/admin/plans", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "review-subscription-request", requestId: item.id, decision: action }) });
+      const body = await response.json(); if (!response.ok) throw new Error(body.error || "Unable to review request.");
+      setNotice(body.message); await load();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to review request."); }
+    finally { setBusy(""); }
+  }
+
   return <main className="min-h-screen bg-slate-950 px-5 py-10 text-slate-100"><div className="mx-auto max-w-7xl">
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-6"><div><div className="flex flex-wrap gap-4"><Link href="/admin" className="inline-flex items-center gap-2 text-sm text-cyan-300"><ArrowLeft size={15}/> Platform console</Link><Link href="/admin/audit-logs" className="text-sm text-cyan-300">Audit history</Link></div><p className="mt-4 text-xs font-bold tracking-[.2em] text-cyan-400">PLATFORM CONFIGURATION</p><h1 className="mt-2 text-3xl font-bold">Plans & subscriptions</h1><p className="mt-2 text-sm text-slate-400">Configure plan allowances and manually assign a plan to a tenant.</p></div><button onClick={() => void load()} className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm"><RefreshCw size={15}/> Refresh</button></header>
     {error && <p role="alert" className="mt-5 rounded-xl bg-red-950/60 p-3 text-sm text-red-200">{error}</p>}
@@ -90,6 +104,9 @@ export default function PlatformPlansPage() {
           <div className="mt-4 grid grid-cols-3 gap-2">{([["maxVehicles","Vehicles"],["maxBranches","Branches"],["maxStaff","Staff"]] as const).map(([field,label])=><label key={field} className="text-xs text-slate-400">{label}<input type="number" min="1" placeholder="Unlimited" className="mt-1 w-full rounded-lg border border-white/10 bg-slate-950 px-2 py-2 text-sm text-white" value={plan[field] ?? ""} onChange={event => editPlan(plan.id,field,event.target.value === "" ? "" : Number(event.target.value))}/></label>)}</div>
           <button disabled={busy===plan.id} onClick={() => void savePlan(plan)} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-cyan-400 px-4 py-2 text-sm font-bold text-slate-950 disabled:opacity-50"><Save size={15}/>{busy===plan.id ? "Saving…" : "Save plan"}</button>
         </article>)}</div> : <p className="rounded-xl border border-white/10 p-5 text-sm text-slate-400">No plans have been initialized yet. Create a workspace to initialize the standard plans.</p>}
+      </section>
+      <section className="border-t border-white/10 py-8"><h2 className="mb-4 text-xl font-semibold">Tenant subscription requests</h2>
+        {subscriptionRequests.length ? <div className="overflow-x-auto rounded-2xl border border-white/10 bg-slate-900"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-slate-950/70 text-xs uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-4">Tenant</th><th className="px-5 py-4">Current tier</th><th className="px-5 py-4">Requested tier</th><th className="px-5 py-4">Requested</th><th className="px-5 py-4">Review</th></tr></thead><tbody>{subscriptionRequests.map(item=><tr key={item.id} className="border-t border-white/5"><td className="px-5 py-4"><b>{item.tenantName}</b><p className="text-xs text-slate-500">{item.tenantSlug}</p></td><td className="px-5 py-4">{item.currentTier}</td><td className="px-5 py-4">{item.requestedTier}</td><td className="px-5 py-4">{new Date(item.createdAt).toLocaleDateString()}</td><td className="px-5 py-4"><div className="flex gap-2"><button disabled={busy===item.id} onClick={()=>void reviewRequest(item,"approve")} className="rounded-lg bg-emerald-400 px-3 py-2 font-semibold text-slate-950 disabled:opacity-50">Approve</button><button disabled={busy===item.id} onClick={()=>void reviewRequest(item,"reject")} className="rounded-lg border border-rose-400/40 px-3 py-2 text-rose-200 disabled:opacity-50">Reject</button></div></td></tr>)}</tbody></table></div> : <p className="rounded-xl border border-white/10 bg-slate-900 p-5 text-sm text-slate-400">No pending tenant subscription requests.</p>}
       </section>
       <section className="border-t border-white/10 py-8"><h2 className="mb-4 text-xl font-semibold">Tenant plan assignment</h2>
         {tenants.length === 0 ? <p className="rounded-xl border border-white/10 bg-slate-900 p-5 text-sm text-slate-400">No tenant workspaces are available for plan assignment yet.</p> : <>

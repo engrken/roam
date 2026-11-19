@@ -1,22 +1,118 @@
 "use client";
-import {useCallback,useEffect,useState,FormEvent} from "react";
-import {useParams,useSearchParams} from "next/navigation";
-import {upload} from "@vercel/blob/client";
-type Data={reference:string;status:string;startAt:string;endAt:string;totalAmount:number;business:{name:string;phone:string|null};messages:{id:string;sender:string;body:string;createdAt:string}[];documents:{id:string;kind:string;fileName:string;reviewStatus:string}[]};
-export default function CustomerBookingPage(){
- const {reference}=useParams<{reference:string}>();const query=useSearchParams();const token=query.get("token")||"";
- const [data,setData]=useState<Data|null>(null);const [message,setMessage]=useState("");const [kind,setKind]=useState("DRIVERS_LICENSE_FRONT");const [file,setFile]=useState<File|null>(null);const [error,setError]=useState("");const [busy,setBusy]=useState(false);
- const refresh=useCallback(async()=>{const r=await fetch("/api/public/bookings/"+encodeURIComponent(reference),{cache:"no-store",headers:{Authorization:"Bearer "+token}});const d=await r.json();if(!r.ok)throw new Error(d.error);setData(d.booking);},[reference,token]);
- useEffect(()=>{let active=true;if(!token){Promise.resolve().then(()=>{if(active)setError("This private booking link is incomplete.");});}else{Promise.resolve().then(()=>active?refresh():undefined).catch(e=>{if(active)setError(e instanceof Error?e.message:"Unable to load booking.");});}return()=>{active=false;};},[refresh,token]);
- async function send(e:FormEvent){e.preventDefault();setBusy(true);setError("");try{const r=await fetch("/api/public/bookings/"+encodeURIComponent(reference),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,message})});const d=await r.json();if(!r.ok)throw new Error(d.error);setMessage("");await refresh();}catch(e){setError(e instanceof Error?e.message:"Unable to send message.");}finally{setBusy(false);}}
- async function sendFile(e:FormEvent){e.preventDefault();if(!file)return;setBusy(true);setError("");try{await upload(file.name,file,{access:"private",handleUploadUrl:"/api/public/bookings/upload",clientPayload:JSON.stringify({reference,token,kind})});setFile(null);await refresh();}catch(e){setError(e instanceof Error?e.message:"Unable to upload document.");}finally{setBusy(false);}}
- if(!data)return <main style={{maxWidth:760,margin:"40px auto",padding:24,fontFamily:"Arial"}}><h1>Booking portal</h1><p>{error||"Loading booking…"}</p></main>;
- return <main style={{maxWidth:760,margin:"40px auto",padding:24,fontFamily:"Arial,sans-serif",color:"#18332d"}}>
- <h1>{data.business.name} · Booking {data.reference}</h1><p>Status: <b>{data.status}</b></p><p>{new Date(data.startAt).toLocaleString()} — {new Date(data.endAt).toLocaleString()}</p><p>Estimated rental: ₱{data.totalAmount.toLocaleString()}</p>
- {error&&<p role="alert" style={{color:"#b42318"}}>{error}</p>}
- <section style={{padding:18,border:"1px solid #ddd",borderRadius:10,marginTop:20}}><h2>Required documents</h2><p>Upload clear photos or PDFs. Accepted: JPG, PNG, WebP or PDF, up to 8 MB each. Files are stored privately.</p>
- <form onSubmit={sendFile} style={{display:"flex",gap:10,flexWrap:"wrap"}}><select value={kind} onChange={e=>setKind(e.target.value)}><option value="DRIVERS_LICENSE_FRONT">Driver’s license — front</option><option value="DRIVERS_LICENSE_BACK">Driver’s license — back</option><option value="IDENTITY_DOCUMENT">Government ID</option><option value="OTHER_REQUIREMENT">Other requirement</option></select><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={e=>setFile(e.target.files?.[0]||null)}/><button disabled={busy||!file}>Upload</button></form>
- {data.documents.map(d=><p key={d.id}>{d.kind.replaceAll("_"," ")} · {d.fileName} · {d.reviewStatus}</p>)}</section>
- <section style={{padding:18,border:"1px solid #ddd",borderRadius:10,marginTop:20}}><h2>Messages with rental team</h2>{data.messages.map(m=><p key={m.id}><b>{m.sender==="CUSTOMER"?"You":m.sender==="SYSTEM"?"ROAM":"Rental team"}:</b> {m.body}<br/><small>{new Date(m.createdAt).toLocaleString()}</small></p>)}<form onSubmit={send}><textarea required maxLength={2000} value={message} onChange={e=>setMessage(e.target.value)} placeholder="Ask about pickup, requirements, payment or return…" style={{display:"block",width:"100%",minHeight:90,padding:10}}/><button disabled={busy||!message.trim()}>Send message</button></form></section>
- </main>
+
+import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { upload } from "@vercel/blob/client";
+
+type Message = { id: string; sender: string; body: string; createdAt: string };
+type Document = { id: string; kind: string; fileName: string; reviewStatus: string; createdAt?: string };
+type Data = {
+  reference: string; status: string; startAt: string; endAt: string; totalAmount: number; rentalTermsSnapshot?: string | null; rentalTermsAcceptedAt?: string | null;
+  business: { name: string; phone: string | null }; customer?: { name: string };
+  messages: Message[]; documents: Document[];
+};
+const statusText: Record<string,string> = { PENDING:"Request received", CONFIRMED:"Booking confirmed", ACTIVE:"Rental in progress", COMPLETED:"Rental completed", CANCELLED:"Booking cancelled", REJECTED:"Request not approved" };
+const docText: Record<string,string> = { PENDING:"Awaiting review", APPROVED:"Approved", REJECTED:"Needs a new upload" };
+function money(value:number) { return new Intl.NumberFormat("en-PH",{style:"currency",currency:"PHP",maximumFractionDigits:0}).format(value); }
+
+export default function CustomerBookingPage() {
+  const { reference } = useParams<{ reference: string }>();
+  const query = useSearchParams();
+  const token = query.get("token") || "";
+  const [data,setData] = useState<Data|null>(null);
+  const [message,setMessage] = useState("");
+  const [kind,setKind] = useState("DRIVERS_LICENSE_FRONT");
+  const [file,setFile] = useState<File|null>(null);
+  const [error,setError] = useState("");
+  const [notice,setNotice] = useState("");
+  const [busy,setBusy] = useState(false);
+  const [refreshing,setRefreshing] = useState(false);
+
+  const refresh = useCallback(async () => {
+    const response = await fetch("/api/public/bookings/"+encodeURIComponent(reference),{cache:"no-store",headers:{Authorization:"Bearer "+token}});
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error || "Unable to load booking.");
+    setData(body.booking);
+  },[reference,token]);
+
+  useEffect(() => {
+    let active = true;
+    if (!token) return () => { active = false; };
+    fetch("/api/public/bookings/" + encodeURIComponent(reference), {
+      cache: "no-store",
+      headers: { Authorization: "Bearer " + token },
+    })
+      .then(async response => {
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "Unable to load booking.");
+        if (active) setData(body.booking);
+      })
+      .catch(reason => {
+        if (active) setError(reason instanceof Error ? reason.message : "Unable to load booking.");
+      });
+    return () => { active = false; };
+  }, [reference, token]);
+
+  async function reload() {
+    setRefreshing(true); setError("");
+    try { await refresh(); } catch(reason) { setError(reason instanceof Error ? reason.message : "Unable to refresh booking."); }
+    finally { setRefreshing(false); }
+  }
+  async function send(event:FormEvent) {
+    event.preventDefault(); setBusy(true); setError(""); setNotice("");
+    try {
+      const response=await fetch("/api/public/bookings/"+encodeURIComponent(reference),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,message})});
+      const body=await response.json(); if(!response.ok) throw new Error(body.error || "Unable to send message.");
+      setMessage(""); setNotice("Your message has been sent."); await refresh();
+    } catch(reason) { setError(reason instanceof Error?reason.message:"Unable to send message."); }
+    finally { setBusy(false); }
+  }
+  async function sendFile(event:FormEvent) {
+    event.preventDefault(); if(!file) return;
+    if(file.size>8*1024*1024){setError("Please choose a file smaller than 8 MB.");return;}
+    setBusy(true); setError(""); setNotice("");
+    try {
+      await upload(file.name,file,{access:"private",handleUploadUrl:"/api/public/bookings/upload",clientPayload:JSON.stringify({reference,token,kind})});
+      setFile(null); setNotice("Document uploaded. The rental team can now review it."); await refresh();
+    } catch(reason) { setError(reason instanceof Error?reason.message:"Unable to upload document."); }
+    finally { setBusy(false); }
+  }
+
+  if(!data) return <main className="client-page"><header className="client-topbar"><Link className="client-brand" href="/"><span>R</span> ROAM</Link><div className="client-topbar-links"><span>PRIVATE BOOKING PORTAL</span><Link href="/help">Booking help</Link></div></header><div className="client-container"><section className="client-success client-loading-card"><div className="client-eyebrow">BOOKING PORTAL</div><h1>{error ? "We couldn’t open this booking" : "Loading your booking…"}</h1><p>{error || (!token ? "This private booking link is incomplete. Please open the original link from your booking confirmation." : "Please wait while we securely retrieve your booking details.")}</p>{error && <Link className="client-primary" href="/">Back to ROAM</Link>}</section></div></main>;
+
+  const statusLabel=statusText[data.status]||data.status.replaceAll("_"," ");
+  const timeline=["PENDING","CONFIRMED","ACTIVE","COMPLETED"];
+  const currentIndex=timeline.indexOf(data.status);
+  const cancelled=["CANCELLED","REJECTED"].includes(data.status);
+  return <main className="client-page">
+    <header className="client-topbar"><Link href="/" className="client-brand"><span>R</span> ROAM</Link><span>PRIVATE BOOKING PORTAL</span></header>
+    <div className="client-container">
+      <div className="client-portal-heading"><div><div className="client-eyebrow">{data.business.name}</div><h1>Your booking</h1><p>Reference <b>{data.reference}</b></p></div><button className="client-refresh" onClick={reload} disabled={refreshing}>{refreshing?"Refreshing…":"↻ Refresh status"}</button></div>
+      {error && <div className="client-alert" role="alert">{error}</div>}{notice && <div className="client-notice" role="status">{notice}</div>}
+      <section className="client-status-card"><div className="client-status-top"><div><span className="client-eyebrow">CURRENT STATUS</span><h2>{statusLabel}</h2></div><span className={"client-status-pill "+(cancelled?"is-muted":data.status==="COMPLETED"?"is-done":"")}>{data.status.replaceAll("_"," ")}</span></div>
+        {cancelled ? <p className="client-status-note">Please contact the rental team if you need clarification or would like to discuss another date.</p> :
+        <div className="client-progress">{timeline.map((step,index)=><div key={step} className={"client-progress-step "+(currentIndex>=index?"is-reached":"")}><span>{currentIndex>index?"✓":index+1}</span><small>{statusText[step]}</small></div>)}</div>}
+      </section>
+      <div className="client-portal-grid">
+        <div className="client-portal-main">
+          <section className="client-panel"><div className="client-panel-heading"><div><span className="client-eyebrow">YOUR RENTAL</span><h2>Booking details</h2></div><span className="client-reference-mini">{data.reference}</span></div>
+            <div className="client-detail-grid"><div><small>PICKUP</small><strong>{new Date(data.startAt).toLocaleString("en-PH",{dateStyle:"medium",timeStyle:"short"})}</strong></div><div><small>RETURN</small><strong>{new Date(data.endAt).toLocaleString("en-PH",{dateStyle:"medium",timeStyle:"short"})}</strong></div><div><small>ESTIMATED RENTAL</small><strong>{money(data.totalAmount)}</strong></div><div><small>BOOKED UNDER</small><strong>{data.customer?.name || "Customer"}</strong></div></div>
+          </section>
+          {data.rentalTermsSnapshot && <section className="client-panel"><div className="client-panel-heading"><div><span className="client-eyebrow">RENTAL AGREEMENT</span><h2>Terms you accepted</h2></div></div><div className="client-rental-terms-copy">{data.rentalTermsSnapshot}</div>{data.rentalTermsAcceptedAt && <p className="client-panel-copy">Accepted on {new Date(data.rentalTermsAcceptedAt).toLocaleString("en-PH",{dateStyle:"medium",timeStyle:"short"})}.</p>}</section>}
+          <section className="client-panel"><div className="client-panel-heading"><div><span className="client-eyebrow">DOCUMENT CHECKLIST</span><h2>Your documents</h2></div><span className="client-count">{data.documents.length} uploaded</span></div>
+            <p className="client-panel-copy">Upload clear photos or PDFs. Accepted formats: JPG, PNG, WebP, PDF. Maximum 8 MB per file.</p>
+            <form onSubmit={sendFile} className="client-upload-form"><label>Document type<select value={kind} onChange={event=>setKind(event.target.value)}><option value="DRIVERS_LICENSE_FRONT">Driver’s license — front</option><option value="DRIVERS_LICENSE_BACK">Driver’s license — back</option><option value="IDENTITY_DOCUMENT">Government-issued ID</option><option value="OTHER_REQUIREMENT">Other requirement</option></select></label><label className="client-file-picker"><span>{file ? file.name : "Choose a file"}</span><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={event=>setFile(event.target.files?.[0]||null)}/></label><button className="client-primary" disabled={busy||!file}>{busy?"Uploading…":"Upload document"} <span>↑</span></button></form>
+            {data.documents.length ? <div className="client-document-list">{data.documents.map(document=><div key={document.id}><span className="client-doc-icon">▤</span><span className="client-doc-name"><b>{document.kind.replaceAll("_"," ")}</b><small>{document.fileName}</small></span><span className={"client-doc-status status-"+document.reviewStatus.toLowerCase()}>{docText[document.reviewStatus]||document.reviewStatus}</span></div>)}</div> : <div className="client-empty-inline">No documents uploaded yet. Add the documents requested by the rental team.</div>}
+          </section>
+          <section className="client-panel"><div className="client-panel-heading"><div><span className="client-eyebrow">DIRECT COMMUNICATION</span><h2>Messages</h2></div><span className="client-count">{data.messages.length} updates</span></div>
+            <div className="client-message-list">{data.messages.length ? data.messages.map(item=><article key={item.id} className={"client-message "+(item.sender==="CUSTOMER"?"from-customer":"")}><div><b>{item.sender==="CUSTOMER"?"You":item.sender==="SYSTEM"?"ROAM":"Rental team"}</b><time>{new Date(item.createdAt).toLocaleString("en-PH",{dateStyle:"medium",timeStyle:"short"})}</time></div><p>{item.body}</p></article>) : <p className="client-empty-inline">No messages yet.</p>}</div>
+            <form onSubmit={send} className="client-message-form"><label htmlFor="client-message">Send a message to the rental team</label><textarea id="client-message" required maxLength={2000} value={message} onChange={event=>setMessage(event.target.value)} placeholder="Ask about pickup, requirements, payment or return…"/><div><small>{message.length}/2,000 characters</small><button className="client-primary" disabled={busy||!message.trim()}>{busy?"Sending…":"Send message"} <span>→</span></button></div></form>
+          </section>
+        </div>
+        <aside className="client-portal-side"><section className="client-panel client-help-panel"><span className="client-eyebrow">NEED HELP?</span><h2>Talk to the rental team.</h2><p>For changes to your booking, pickup instructions, or urgent questions, contact the business directly.</p>{data.business.phone ? <a className="client-primary" href={"tel:"+data.business.phone}>Call {data.business.phone} <span>↗</span></a> : <p className="client-panel-copy">Send a message through this portal and the team will get back to you.</p>}</section><div className="client-security-note">🔒 <span><b>Your link is private</b><small>Anyone with this unique link can view this booking. Keep it to yourself.</small></span></div></aside>
+      </div>
+      <footer className="client-footer">Powered by <b>ROAM</b> · Your rental, in one place.</footer>
+    </div>
+  </main>;
 }

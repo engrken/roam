@@ -14,7 +14,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const { slug } = await params;
   const tenant = await prisma.tenant.findUnique({
     where: { slug },
-    select: { id: true, name: true, phone: true, currency: true, timezone: true, status: true },
+    select: { id: true, name: true, phone: true, currency: true, timezone: true, status: true, rentalTerms: true },
   });
   if (!tenant || !["ACTIVE", "TRIAL"].includes(tenant.status)) {
     return NextResponse.json({ error: "Rental business not found." }, { status: 404 });
@@ -31,7 +31,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   });
 
   return NextResponse.json({
-    business: { name: tenant.name, phone: tenant.phone, currency: tenant.currency, timezone: tenant.timezone },
+    business: { name: tenant.name, phone: tenant.phone, currency: tenant.currency, timezone: tenant.timezone, rentalTerms: tenant.rentalTerms?.trim() || "", rentalTermsVersion: hash(tenant.rentalTerms?.trim() || "") },
     vehicles: vehicles.map((vehicle) => ({
       ...vehicle,
       dailyRate: Number(vehicle.dailyRate),
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const body = await request.json().catch(() => null);
   const tenant = await prisma.tenant.findUnique({
     where: { slug },
-    select: { id: true, status: true, timezone: true },
+    select: { id: true, status: true, timezone: true, rentalTerms: true },
   });
 
   if (!tenant || !["ACTIVE", "TRIAL"].includes(tenant.status)) {
@@ -56,6 +56,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   const phone = typeof body?.phone === "string" ? body.phone.trim() : "";
   const vehicleId = typeof body?.vehicleId === "string" ? body.vehicleId : "";
+  const rentalTerms = tenant.rentalTerms?.trim() || "";
+  if (!rentalTerms) return NextResponse.json({ error: "This rental business has not published its rental terms yet. Please contact the business directly." }, { status: 409 });
+  const rentalTermsVersion = hash(rentalTerms);
+  if (body?.acceptedRentalTerms !== true || body?.rentalTermsVersion !== rentalTermsVersion) {
+    return NextResponse.json({ error: "Please review and accept the current rental terms before submitting your request." }, { status: 400 });
+  }
   const startAt = rentalDateTimeToUtc(body?.startAt, tenant.timezone);
   const endAt = rentalDateTimeToUtc(body?.endAt, tenant.timezone);
 
@@ -138,6 +144,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           startAt,
           endAt,
           totalAmount: vehicle.dailyRate.mul(days),
+          rentalTermsSnapshot: rentalTerms,
+          rentalTermsVersion,
+          rentalTermsAcceptedAt: new Date(),
           publicTokenHash: hash(token),
           items: { create: { vehicleId: vehicle.id, rate: vehicle.dailyRate } },
           messages: {

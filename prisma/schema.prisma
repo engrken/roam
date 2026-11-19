@@ -16,7 +16,9 @@ enum TenantStatus {
 }
 enum SubscriptionTier {
   FREE
+  STARTER
   PRO
+  BUSINESS
   ENTERPRISE
 }
 enum MembershipRole {
@@ -40,6 +42,17 @@ enum BookingStatus {
   CANCELLED
   REJECTED
 }
+enum InspectionType {
+  HANDOVER
+  RETURN
+}
+enum FuelLevel {
+  EMPTY
+  QUARTER
+  HALF
+  THREE_QUARTERS
+  FULL
+}
 enum VehicleType {
   MOTORCYCLE
   SCOOTER
@@ -60,6 +73,7 @@ model Tenant {
   slug         String       @unique
   email        String
   phone        String?
+  rentalTerms  String?      @db.Text
   status       TenantStatus @default(TRIAL)
   timezone     String       @default("Asia/Manila")
   currency     String       @default("PHP")
@@ -70,6 +84,7 @@ model Tenant {
   vehicles     Vehicle[]
   customers    Customer[]
   bookings     Booking[]
+  inspections  VehicleInspection[]
   subscription Subscription?
 }
 
@@ -81,6 +96,7 @@ model User {
   updatedAt   DateTime     @updatedAt
   memberships Membership[]
   sessions    Session[]
+  legalAcceptances LegalAcceptance[]
 }
 
 model Membership {
@@ -116,6 +132,7 @@ model Subscription {
   status             String           @default("active")
   currentPeriodStart DateTime?
   currentPeriodEnd   DateTime?
+  trialEndsAt        DateTime?
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
   tenant             Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -158,6 +175,7 @@ model Vehicle {
   tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branch          Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
   bookingItems    BookingItem[]
+  inspections     VehicleInspection[]
   @@unique([tenantId, plateNumber])
   @@index([tenantId, status])
   @@index([tenantId, branchId])
@@ -190,6 +208,9 @@ model Booking {
   endAt       DateTime
   totalAmount Decimal       @db.Decimal(12, 2)
   notes       String?
+  rentalTermsSnapshot String? @db.Text
+  rentalTermsVersion String?
+  rentalTermsAcceptedAt DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -198,6 +219,7 @@ model Booking {
   items       BookingItem[]
   messages    BookingMessage[]
   documents   BookingDocument[]
+  inspections VehicleInspection[]
   publicTokenHash String? @unique
   @@unique([tenantId, reference])
   @@index([tenantId, startAt, endAt])
@@ -262,4 +284,53 @@ model BookingDocument {
   createdAt    DateTime @default(now())
   booking      Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   @@index([bookingId, reviewStatus])
+}
+
+
+model VehicleInspection {
+  id             String           @id @default(cuid())
+  tenantId       String
+  bookingId      String
+  vehicleId      String
+  type           InspectionType
+  odometerKm     Int
+  fuelLevel      FuelLevel
+  conditionNotes String
+  damageNotes    String?
+  inspectedAt    DateTime         @default(now())
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  tenant         Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking        Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  vehicle        Vehicle          @relation(fields: [vehicleId], references: [id])
+  photos         VehicleInspectionPhoto[]
+  @@unique([bookingId, vehicleId, type])
+  @@index([tenantId, inspectedAt])
+  @@index([vehicleId, inspectedAt])
+}
+
+model VehicleInspectionPhoto {
+  id           String           @id @default(cuid())
+  inspectionId String
+  pathname     String           @unique
+  fileName     String
+  contentType  String
+  size         Int
+  createdAt    DateTime         @default(now())
+  inspection   VehicleInspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  @@index([inspectionId, createdAt])
+}
+
+
+model LegalAcceptance {
+  id             String   @id @default(cuid())
+  userId         String
+  termsVersion   String
+  privacyVersion String
+  acceptedAt     DateTime @default(now())
+  ipAddress      String?
+  userAgent      String?
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, termsVersion, privacyVersion])
+  @@index([userId, acceptedAt])
 }

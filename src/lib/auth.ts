@@ -8,7 +8,7 @@ export async function getCurrentUser() {
   const tokenHash = createHash("sha256").update(token).digest("hex");
   const session = await prisma.session.findUnique({
     where: { tokenHash },
-    include: { user: { include: { memberships: { include: { tenant: true } } } } },
+    include: { user: { include: { memberships: { include: { tenant: true } }, legalAcceptances: { select: { termsVersion: true, privacyVersion: true } } } } },
   });
   if (!session || session.expiresAt <= new Date()) {
     if (session) await prisma.session.delete({ where: { id: session.id } }).catch(() => undefined);

@@ -41,8 +41,8 @@ export default function Home() {
   const faqs = [
     ["What types of vehicles can ROAM manage?", "ROAM is being designed for private vehicle rental operators managing motorcycles, scooters, cars, SUVs, MPVs, vans, pickups, buses, trucks, and other rentable vehicle types."],
     ["Can more than one rental business use ROAM?", "Yes. Each rental business gets its own workspace, team membership, and operational records."],
-    ["How do I get started?", "Create an account using your email, verify your one-time code, then create your rental business workspace on the Free plan."],
-    ["Does ROAM support multiple branches?", "The platform foundation includes branches. Free accounts include up to three vehicles and one branch. Additional capacity can be unlocked on paid plans."]
+    ["How do I get started?", "Create an account using your email, verify your one-time code, then create your rental business workspace with a 14-day free trial."],
+    ["What happens after the free trial?", "Choose the plan that fits your rental operation: Starter at ₱99/month, Pro at ₱499/month, Business at ₱999/month, or contact us for custom Enterprise pricing."]
   ];
 
   return <main className={`site ${dark ? "theme-dark" : ""}`}>
@@ -116,8 +116,13 @@ export default function Home() {
     </div></section>
 
     <section className="section plans-section" id="plans"><div className="container plans-inner">
-      <div className="plans-copy"><div className="eyebrow">ROOM TO GROW</div><h2>Start with what you have. Scale when you&apos;re ready.</h2><p>Start with the Free plan, organize your first vehicles and branch, then upgrade as your rental operation grows.</p><Link className="button button-primary" href="/register">Get started for free <ArrowRight size={16}/></Link></div>
-      <div className="plan-preview"><div className="plan-card"><span className="plan-label">FREE PLAN</span><h3>Start simple.</h3><p>For independent operators getting their fleet organized.</p><ul><li><Check/> Essential fleet workspace</li><li><Check/> Booking and customer foundations</li><li><Check/> A clear place to manage operations</li></ul><span className="plan-status">FREE · UP TO 3 VEHICLES · 1 BRANCH</span></div><div className="plan-card plan-featured"><span className="plan-label">PAID PLANS</span><h3>Grow with confidence.</h3><p>For rental teams expanding vehicles, branches, and operations.</p><ul><li><Check/> Multi-branch foundations</li><li><Check/> Team and role management</li><li><Check/> Expanded operational capabilities</li></ul><span className="plan-status">PAID PLAN OPTIONS · COMING NEXT</span></div></div>
+      <div className="plans-copy"><div className="eyebrow">SIMPLE, TRANSPARENT PRICING</div><h2>14 days to find your flow. Plans that grow with you.</h2><p>Try ROAM free for 14 days, then choose the subscription that matches your rental operation. Prices are billed monthly in Philippine pesos.</p><Link className="button button-primary" href="/register">Start your 14-day free trial <ArrowRight size={16}/></Link><span className="pricing-note">No charge during your trial.</span></div>
+      <div className="plan-preview plan-grid">
+        <div className="plan-card"><span className="plan-label">STARTER</span><h3>₱99 <small>/ month</small></h3><p>For independent operators getting organized.</p><ul><li><Check/> Core rental workspace</li><li><Check/> Fleet and booking management</li><li><Check/> Customer records</li></ul><Link className="plan-choose" href="/register">Start free trial <ArrowRight size={14}/></Link></div>
+        <div className="plan-card plan-featured"><span className="plan-label">PRO</span><h3>₱499 <small>/ month</small></h3><p>For growing rental businesses.</p><ul><li><Check/> Everything in Starter</li><li><Check/> More room for daily operations</li><li><Check/> Tools for growing teams</li></ul><Link className="plan-choose" href="/register">Start free trial <ArrowRight size={14}/></Link></div>
+        <div className="plan-card"><span className="plan-label">BUSINESS</span><h3>₱999 <small>/ month</small></h3><p>For established, expanding operators.</p><ul><li><Check/> Everything in Pro</li><li><Check/> Built for larger operations</li><li><Check/> Support for business growth</li></ul><Link className="plan-choose" href="/register">Start free trial <ArrowRight size={14}/></Link></div>
+        <div className="plan-card"><span className="plan-label">ENTERPRISE</span><h3>Custom</h3><p>For complex or high-volume rental operations.</p><ul><li><Check/> Tailored plan and pricing</li><li><Check/> Discuss your operational needs</li><li><Check/> Contact ROAM for a quote</li></ul><a className="plan-choose" href="#contact">Contact us <ArrowRight size={14}/></a></div>
+      </div>
     </div></section>
 
     <section className="section faq-section" id="faq"><div className="container faq-grid"><div><div className="eyebrow">GOOD TO KNOW</div><h2>Questions before you get moving?</h2><p>Here are a few things to know about the ROAM platform as it takes shape.</p></div><div className="faq-list">{faqs.map(([q,a],i)=><div className={`faq-item ${faqOpen===i?"faq-active":""}`} key={q}><button onClick={()=>setFaqOpen(faqOpen===i?-1:i)} aria-expanded={faqOpen===i}><span>{q}</span><ChevronDown size={18}/></button>{faqOpen===i&&<p>{a}</p>}</div>)}</div></div></section>

@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LayoutDashboard, CarFront, LogOut, ShieldCheck, CalendarDays, MapPin } from "lucide-react";
+import { LayoutDashboard, CarFront, LogOut, ShieldCheck, CalendarDays, MapPin, Users, BookOpen, FileText } from "lucide-react";
 
-export function WorkspaceNav({ slug, name, role, active }: { slug: string; name: string; role: string; active: "overview" | "fleet" | "bookings" | "branches" }) {
+export function WorkspaceNav({ slug, name, role, active }: { slug: string; name: string; role: string; active: "overview" | "fleet" | "bookings" | "branches" | "customers" | "help" | "rental-terms" }) {
   const router = useRouter();
   async function signOut() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -20,6 +20,9 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
       <Link className={active === "fleet" ? "active" : ""} href={`/workspace/${slug}/fleet`}><CarFront size={18}/> Fleet management</Link>
       <Link className={active === "bookings" ? "active" : ""} href={`/workspace/${slug}/bookings`}><CalendarDays size={18}/> Bookings</Link>
       <Link className={active === "branches" ? "active" : ""} href={"/workspace/" + slug + "/branches"}><MapPin size={18}/> Branches</Link>
+      <Link className={active === "customers" ? "active" : ""} href={"/workspace/" + slug + "/customers"}><Users size={18}/> Customers</Link>
+      <Link className={active === "rental-terms" ? "active" : ""} href={`/workspace/${slug}/rental-terms`}><FileText size={18}/> Rental terms</Link>
+      <Link className={active === "help" ? "active" : ""} href={`/workspace/${slug}/help`}><BookOpen size={18}/> How-to guides</Link>
       <Link href="/admin" className="roam-admin-link"><ShieldCheck size={18}/> Platform admin</Link>
     </nav>
     <div className="roam-sidebar-bottom"><span className="roam-role">{role}</span><button onClick={signOut}><LogOut size={16}/> Sign out</button></div>

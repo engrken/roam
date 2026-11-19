@@ -45,12 +45,15 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
   const tenantId = access.tenant.id;
+  const tenantSettings = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { timezone: true } });
+  const timeZone = tenantSettings?.timezone || "Asia/Manila";
+  const { start: todayStart, end: tomorrowStart } = localDayBounds(now, timeZone);
+
   const [
-    tenantSettings, vehicleCounts, bookingCounts, customerCount, branchCount, completedValue,
+    vehicleCounts, bookingCounts, customerCount, branchCount, completedValue,
     upcoming, recent, fleetTotal, pendingItems, pickupItems, returnItems,
     overdueItems, openBookings, recentPaymentTotals,
   ] = await Promise.all([
-    prisma.tenant.findUnique({ where: { id: tenantId }, select: { timezone: true } }),
     prisma.vehicle.groupBy({ by: ["status"], where: { tenantId }, _count: { _all: true } }),
     prisma.booking.groupBy({ by: ["status"], where: { tenantId }, _count: { _all: true } }),
     prisma.customer.count({ where: { tenantId } }),
@@ -92,8 +95,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     }),
   ]);
 
-  const timeZone = tenantSettings?.timezone || "Asia/Manila";
-  const { start: todayStart, end: tomorrowStart } = localDayBounds(now, timeZone);
   const vehicleMap = Object.fromEntries(vehicleCounts.map((x) => [x.status.toLowerCase(), x._count._all]));
   const bookingMap = Object.fromEntries(bookingCounts.map((x) => [x.status.toLowerCase(), x._count._all]));
   const days = Array.from({ length: 7 }, (_, index) => {

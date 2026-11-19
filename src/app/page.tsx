@@ -51,7 +51,7 @@ export default function Home() {
     ["What types of vehicles can ROAM manage?", "ROAM is being designed for private vehicle rental operators managing motorcycles, scooters, cars, SUVs, MPVs, vans, pickups, buses, trucks, and other rentable vehicle types."],
     ["Can more than one rental business use ROAM?", "Yes. Each rental business gets its own workspace, team membership, and operational records."],
     ["How do I get started?", "Create an account using your email, verify your one-time code, then create your rental business workspace with a 14-day free trial."],
-    ["What happens after the free trial?", "Choose the plan that fits your rental operation: Starter at ₱49/month, Pro at ₱199/month, Business at ₱499/month, or undefined"]
+    ["What happens after the free trial?", "Choose the plan that fits your rental operation: Starter at ₱49/month, Pro at ₱199/month, Business at ₱499/month, or Enterprise at ₱2,499/month"]
   ];
 
   return <main className={`site ${dark ? "theme-dark" : ""}`}>

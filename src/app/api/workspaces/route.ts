@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       await tx.branch.create({ data: { tenantId: tenant.id, name: "Main Branch", code: "MAIN" } });
       const account = await tx.user.findUnique({ where: { id: user.id }, select: { createdAt: true, referredByTenantId: true } });
       const attributedReferrerId = account?.referredByTenantId || manualReferrer?.id || null;
-      if (attributedReferrerId) {
+      if (account && attributedReferrerId) {
         const [referrer, existingReferral] = await Promise.all([
           tx.tenant.findUnique({ where: { id: attributedReferrerId }, select: { id: true, referralCode: true, status: true, memberships: { where: { role: "OWNER" }, select: { userId: true }, take: 1 } } }),
           tx.referral.findUnique({ where: { referredOwnerUserId: user.id }, select: { id: true } }),

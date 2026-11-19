@@ -58,7 +58,8 @@ export default function Home() {
   const [dark, setDark] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(0);
-  const [plans, setPlans] = useState<PublicPlan[]>([]);\n  const [plansLoading, setPlansLoading] = useState(true);
+  const [plans, setPlans] = useState<PublicPlan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
 
   useEffect(() => {
     const saved = localStorage.getItem("roam-theme");

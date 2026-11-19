@@ -24,6 +24,9 @@ export default function CustomerBookingPage() {
   const [message,setMessage] = useState("");
   const [kind,setKind] = useState("DRIVERS_LICENSE_FRONT");
   const [file,setFile] = useState<File|null>(null);
+  const [attachmentFile,setAttachmentFile] = useState<File|null>(null);
+  const [attachmentKind,setAttachmentKind] = useState("MESSAGE_ATTACHMENT");
+  const [linkCopied,setLinkCopied] = useState(false);
   const [error,setError] = useState("");
   const [notice,setNotice] = useState("");
   const [busy,setBusy] = useState(false);
@@ -60,13 +63,22 @@ export default function CustomerBookingPage() {
     finally { setRefreshing(false); }
   }
   async function send(event:FormEvent) {
-    event.preventDefault(); setBusy(true); setError(""); setNotice("");
+    event.preventDefault(); if(!message.trim()&&!attachmentFile)return; setBusy(true); setError(""); setNotice("");
     try {
-      const response=await fetch("/api/public/bookings/"+encodeURIComponent(reference),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,message})});
+      if(attachmentFile){
+        if(attachmentFile.size>8*1024*1024)throw new Error("Please choose an attachment smaller than 8 MB.");
+        await upload(attachmentFile.name,attachmentFile,{access:"private",handleUploadUrl:"/api/public/bookings/upload",clientPayload:JSON.stringify({reference,token,kind:attachmentKind})});
+      }
+      const messageBody=message.trim()||(attachmentFile?"Please see my attached file: "+attachmentFile.name:"");
+      const response=await fetch("/api/public/bookings/"+encodeURIComponent(reference),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,message:messageBody})});
       const body=await response.json(); if(!response.ok) throw new Error(body.error || "Unable to send message.");
-      setMessage(""); setNotice("Your message has been sent."); await refresh();
+      setMessage("");setAttachmentFile(null);setNotice(attachmentFile?"Your message and attachment have been sent.":"Your message has been sent."); await refresh();
     } catch(reason) { setError(reason instanceof Error?reason.message:"Unable to send message."); }
     finally { setBusy(false); }
+  }
+  async function copyBookingLink(){
+    try{await navigator.clipboard.writeText(window.location.href);setLinkCopied(true);window.setTimeout(()=>setLinkCopied(false),2200);}
+    catch{setError("Unable to copy the booking link. Please copy it from your browser address bar.");}
   }
   async function sendFile(event:FormEvent) {
     event.preventDefault(); if(!file) return;
@@ -88,11 +100,11 @@ export default function CustomerBookingPage() {
   return <main className="client-page">
     <header className="client-topbar"><Link href="/" className="client-brand"><span>R</span> ROAM</Link><span>PRIVATE BOOKING PORTAL</span></header>
     <div className="client-container">
-      <div className="client-portal-heading"><div><div className="client-eyebrow">{data.business.name}</div><h1>Your booking</h1><p>Reference <b>{data.reference}</b></p></div><button className="client-refresh" onClick={reload} disabled={refreshing}>{refreshing?"Refreshing…":"↻ Refresh status"}</button></div>
+      <div className="client-portal-heading"><div><div className="client-eyebrow">{data.business.name}</div><h1>Your booking</h1><p>Reference <b>{data.reference}</b></p></div><div className="client-top-actions" style={{display:"flex",gap:8,flexWrap:"wrap"}}><button className="client-refresh" onClick={copyBookingLink}>{linkCopied?"Copied link":"Copy booking link"}</button><button className="client-refresh" onClick={reload} disabled={refreshing}>{refreshing?"Refreshing…":"↻ Refresh status"}</button></div></div>
       {error && <div className="client-alert" role="alert">{error}</div>}{notice && <div className="client-notice" role="status">{notice}</div>}
       <section className="client-status-card"><div className="client-status-top"><div><span className="client-eyebrow">CURRENT STATUS</span><h2>{statusLabel}</h2></div><span className={"client-status-pill "+(cancelled?"is-muted":data.status==="COMPLETED"?"is-done":"")}>{data.status.replaceAll("_"," ")}</span></div>
         {cancelled ? <p className="client-status-note">Please contact the rental team if you need clarification or would like to discuss another date.</p> :
-        <div className="client-progress">{timeline.map((step,index)=><div key={step} className={"client-progress-step "+(currentIndex>=index?"is-reached":"")}><span>{currentIndex>index?"✓":index+1}</span><small>{statusText[step]}</small></div>)}</div>}
+        <div className="client-progress">{timeline.map((step,index)=><div key={step} className={"client-progress-step "+(currentIndex>=index?"is-reached":"")}><span>{currentIndex>index?"✓":index+1}</span><small>{step==="ACTIVE"?"Active · pending return":statusText[step]}</small></div>)}</div>}
       </section>
       <div className="client-portal-grid">
         <div className="client-portal-main">
@@ -107,7 +119,7 @@ export default function CustomerBookingPage() {
           </section>
           <section className="client-panel"><div className="client-panel-heading"><div><span className="client-eyebrow">DIRECT COMMUNICATION</span><h2>Messages</h2></div><span className="client-count">{data.messages.length} updates</span></div>
             <div className="client-message-list">{data.messages.length ? data.messages.map(item=><article key={item.id} className={"client-message "+(item.sender==="CUSTOMER"?"from-customer":"")}><div><b>{item.sender==="CUSTOMER"?"You":item.sender==="SYSTEM"?"ROAM":"Rental team"}</b><time>{new Date(item.createdAt).toLocaleString("en-PH",{dateStyle:"medium",timeStyle:"short"})}</time></div><p>{item.body}</p></article>) : <p className="client-empty-inline">No messages yet.</p>}</div>
-            <form onSubmit={send} className="client-message-form"><label htmlFor="client-message">Send a message to the rental team</label><textarea id="client-message" required maxLength={2000} value={message} onChange={event=>setMessage(event.target.value)} placeholder="Ask about pickup, requirements, payment or return…"/><div><small>{message.length}/2,000 characters</small><button className="client-primary" disabled={busy||!message.trim()}>{busy?"Sending…":"Send message"} <span>→</span></button></div></form>
+            <form onSubmit={send} className="client-message-form"><label htmlFor="client-message">Send a message to the rental team</label><textarea id="client-message" maxLength={2000} value={message} onChange={event=>setMessage(event.target.value)} placeholder="Ask about pickup, requirements, payment or return…"/><label>Attach a screenshot or file<select value={attachmentKind} onChange={event=>setAttachmentKind(event.target.value)}><option value="MESSAGE_ATTACHMENT">General message attachment</option><option value="PAYMENT_EVIDENCE">Proof of payment</option></select></label><label className="client-file-picker"><span>{attachmentFile?attachmentFile.name:"Choose an attachment (JPG, PNG, WebP or PDF · max 8 MB)"}</span><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={event=>setAttachmentFile(event.target.files?.[0]||null)}/></label><div><small>{message.length}/2,000 characters · {attachmentFile?"1 attachment selected":"No attachment"}</small><button className="client-primary" disabled={busy||(!message.trim()&&!attachmentFile)}>{busy?"Sending…":"Send message"} <span>→</span></button></div></form>
           </section>
         </div>
         <aside className="client-portal-side"><section className="client-panel client-help-panel"><span className="client-eyebrow">NEED HELP?</span><h2>Talk to the rental team.</h2><p>For changes to your booking, pickup instructions, or urgent questions, contact the business directly.</p>{data.business.phone ? <a className="client-primary" href={"tel:"+data.business.phone}>Call {data.business.phone} <span>↗</span></a> : <p className="client-panel-copy">Send a message through this portal and the team will get back to you.</p>}</section><div className="client-security-note">🔒 <span><b>Your link is private</b><small>Anyone with this unique link can view this booking. Keep it to yourself.</small></span></div></aside>

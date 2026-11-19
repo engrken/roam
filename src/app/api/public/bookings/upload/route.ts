@@ -12,7 +12,7 @@ export async function POST(request:NextRequest){
    onBeforeGenerateToken:async(pathname,clientPayload)=>{
     const payload=clientPayload?JSON.parse(clientPayload):{};
     const reference=String(payload.reference||"");const token=String(payload.token||"");const kind=String(payload.kind||"");
-    if(!["DRIVERS_LICENSE_FRONT","DRIVERS_LICENSE_BACK","IDENTITY_DOCUMENT","OTHER_REQUIREMENT"].includes(kind)||token.length<20)throw new Error("Invalid document upload request.");
+    if(!["DRIVERS_LICENSE_FRONT","DRIVERS_LICENSE_BACK","IDENTITY_DOCUMENT","OTHER_REQUIREMENT","MESSAGE_ATTACHMENT","PAYMENT_EVIDENCE"].includes(kind)||token.length<20)throw new Error("Invalid document upload request.");
     const booking=await prisma.booking.findFirst({where:{reference,publicTokenHash:hash(token)},select:{id:true}});
     if(!booking)throw new Error("Booking access link is invalid.");
     return {allowedContentTypes:["image/jpeg","image/png","image/webp","application/pdf"],maximumSizeInBytes:8*1024*1024,addRandomSuffix:true,tokenPayload:JSON.stringify({bookingId:booking.id,kind})};

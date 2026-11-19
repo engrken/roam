@@ -62,7 +62,8 @@ export default function PublicBookPage() {
   const [phone, setPhone] = useState("");
   const [startAt, setStartAt] = useState("");
   const [endAt, setEndAt] = useState("");
-  const [acceptedRentalTerms, setAcceptedRentalTerms] = useState(false);\n  const [busy, setBusy] = useState(false);
+  const [acceptedRentalTerms, setAcceptedRentalTerms] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [booking, setBooking] = useState<{ reference: string; accessToken: string } | null>(null);
@@ -129,7 +130,8 @@ export default function PublicBookPage() {
             <div className="client-section-head client-subhead"><span>02</span><div><h2>Your contact details</h2><p>We’ll use these details to coordinate your booking.</p></div></div>
             <label>Full name<input required minLength={2} maxLength={100} autoComplete="name" value={name} onChange={event => setName(event.target.value)} placeholder="Your full name"/></label>
             <div className="client-fields-two"><label>Email address<input required type="email" maxLength={254} autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="you@example.com"/></label><label>Mobile number<input required type="tel" minLength={7} maxLength={30} autoComplete="tel" value={phone} onChange={event => setPhone(event.target.value)} placeholder="+63 9XX XXX XXXX"/></label></div>
-            <section className="client-rental-terms"><div><strong>Rental terms and conditions</strong><p>These are set by {business?.name || "the rental business"}. Please read them before sending your request.</p></div><div className="client-rental-terms-copy">{business?.rentalTerms || "The rental business will confirm the rental agreement, payment arrangements, deposit, permitted use, cancellation terms and vehicle return requirements before handover."}</div><label className="client-terms-check"><input type="checkbox" required checked={acceptedRentalTerms} onChange={event => setAcceptedRentalTerms(event.target.checked)}/><span>I have read and agree to the rental terms and conditions provided by this rental business.</span></label></section>\n            <button className="client-primary client-submit" disabled={busy || !estimate || !acceptedRentalTerms}>{busy ? "Sending request…" : "Send booking request"} <span>→</span></button>
+            <section className="client-rental-terms"><div><strong>Rental terms and conditions</strong><p>These are set by {business?.name || "the rental business"}. Please read them before sending your request.</p></div><div className="client-rental-terms-copy">{business?.rentalTerms || "The rental business will confirm the rental agreement, payment arrangements, deposit, permitted use, cancellation terms and vehicle return requirements before handover."}</div><label className="client-terms-check"><input type="checkbox" required checked={acceptedRentalTerms} onChange={event => setAcceptedRentalTerms(event.target.checked)}/><span>I have read and agree to the rental terms and conditions provided by this rental business.</span></label></section>
+            <button className="client-primary client-submit" disabled={busy || !estimate || !acceptedRentalTerms}>{busy ? "Sending request…" : "Send booking request"} <span>→</span></button>
             <p className="client-privacy">Your details are shared with this rental business only to process your booking request. ROAM platform <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy Policy</Link> also apply to use of this service.</p>
           </form>}
         </section>

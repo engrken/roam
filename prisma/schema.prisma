@@ -88,7 +88,7 @@ model Tenant {
   subscription Subscription?
   invitations  TeamInvitation[]
   billingRecords BillingRecord[]
-  referralCode String? @unique
+  referralCode String @unique
   referralsSent Referral[] @relation("ReferralReferrer")
   referralReceived Referral? @relation("ReferralReferredTenant")
   referredUsers User[] @relation("UserReferredByTenant")

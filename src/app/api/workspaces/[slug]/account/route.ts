@@ -24,8 +24,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   ]);
   if (!tenant) return NextResponse.json({ error: "Workspace not found." }, { status: 404 });
   return NextResponse.json({
-    user: { id: true, name: true, email: true },
-        user: { id: access.user.id, name: access.user.name, email: access.user.email },
+    user: { id: access.user.id, name: access.user.name, email: access.user.email },
     tenant: { ...tenant, createdAt: tenant.createdAt.toISOString() },
     subscription: tenant.subscription ? {
       tier: tenant.subscription.tier, status: tenant.subscription.status,

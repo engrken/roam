@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTenantAccess, canManageFleet, hasWorkspaceTier } from "@/lib/tenant-access";
+import { getTenantAccess, canManageFleet, hasWorkspaceTier, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";

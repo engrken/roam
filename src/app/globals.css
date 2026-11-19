@@ -269,3 +269,16 @@
 .roam-share-link-row button,.roam-share-socials a,.roam-share-socials button{display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;white-space:nowrap}
 .roam-share-socials{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:12px}
 @media(max-width:600px){.roam-share-link-row{align-items:stretch;flex-direction:column}.roam-share-link-row button{width:100%}.roam-share-socials>*{flex:1 1 140px}}
+
+/* Booking workflow and secure customer reference links */
+.roam-detail-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+.roam-workflow-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:16px 0;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.roam-workflow-steps>div{display:flex;align-items:center;gap:8px;min-width:0;color:var(--muted);font-size:11px}
+.roam-workflow-steps>div b{display:grid;place-items:center;flex:0 0 25px;width:25px;height:25px;border:1px solid var(--line);border-radius:50%;font-size:11px}
+.roam-workflow-steps>div.reached{color:var(--ink);font-weight:700}
+.roam-workflow-steps>div.reached b{background:var(--green);border-color:var(--green);color:#fff}
+.roam-customer-link,.roam-payment-check{display:grid;gap:7px;margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);font-size:12px}
+.roam-customer-link a{overflow-wrap:anywhere;color:var(--accent,#176b54)}
+.roam-payment-check{display:block;color:var(--muted)}
+.roam-payment-check b{color:var(--ink)}
+@media(max-width:650px){.roam-workflow-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.roam-detail-actions{justify-content:flex-start}.roam-detail-actions .roam-secondary-btn{width:100%}}

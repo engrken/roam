@@ -13,6 +13,10 @@ export async function GET(request: NextRequest) {
   }
 
   const now = new Date();
+  const expiredReferrals = await prisma.referral.updateMany({
+    where: { status: "PENDING", expiresAt: { lte: now } },
+    data: { status: "EXPIRED" },
+  });
   const reminderCutoff = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
   const subscriptions = await prisma.subscription.findMany({
     where: {
@@ -72,5 +76,5 @@ export async function GET(request: NextRequest) {
       }
     }
   }
-  return NextResponse.json({ ok: true, scanned: subscriptions.length, sent, skipped, failed, checkedAt: now.toISOString() });
+  return NextResponse.json({ ok: true, scanned: subscriptions.length, sent, skipped, failed, expiredReferrals: expiredReferrals.count, checkedAt: now.toISOString() });
 }

@@ -44,7 +44,8 @@ export default function ReportsPage() {
     return () => { active = false; };
   }, [slug]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- load fetches the selected report range on entry and when filters change.\n  useEffect(() => { void load(); }, [load]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- load fetches the selected report range on entry and when filters change.
+  useEffect(() => { void load(); }, [load]);
 
   function exportCsv() {
     if (!report) return;

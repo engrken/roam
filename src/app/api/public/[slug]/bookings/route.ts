@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { rentalDateTimeToUtc } from "@/lib/datetime";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { sendBookingRequestReceived } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const body = await request.json().catch(() => null);
   const tenant = await prisma.tenant.findUnique({
     where: { slug },
-    select: { id: true, status: true, timezone: true, rentalTerms: true },
+    select: { id: true, name: true, status: true, timezone: true, rentalTerms: true },
   });
 
   if (!tenant || !["ACTIVE", "TRIAL"].includes(tenant.status)) {
@@ -164,6 +165,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     if ("conflict" in result) {
       return NextResponse.json({ error: result.conflict }, { status: 409 });
+    }
+
+    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\\/$/, "");
+    const bookingUrl = baseUrl + "/booking/" + encodeURIComponent(reference) + "?token=" + encodeURIComponent(token);
+    let emailNotification: "attempted" | "failed" = "attempted";
+    try {
+      await sendBookingRequestReceived({
+        recipient: email,
+        tenantName: tenant.name,
+        bookingReference: reference,
+        startAt,
+        endAt,
+        bookingUrl,
+      });
+    } catch (error) {
+      emailNotification = "failed";
+      console.error("Booking request email notification failed", error);
     }
 
     return NextResponse.json({

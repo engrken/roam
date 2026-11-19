@@ -28,6 +28,7 @@ export default function AdminTenantDetailPage() {
   const [audit,setAudit] = useState<Audit[]>([]);
   const [loading,setLoading] = useState(true), [saving,setSaving] = useState(false), [error,setError] = useState(""), [notice,setNotice] = useState("");
   const [form,setForm] = useState({name:"",email:"",phone:"",currency:"PHP",timezone:"Asia/Manila"});
+  const [ownerTarget,setOwnerTarget] = useState("");
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
@@ -37,6 +38,7 @@ export default function AdminTenantDetailPage() {
       const t = body.tenant as TenantData;
       setTenant(t); setAudit(body.auditLogs || []);
       setForm({name:t.name,email:t.email,phone:t.phone || "",currency:t.currency,timezone:t.timezone});
+      setOwnerTarget(t.memberships.find(member=>member.role!=="OWNER")?.id || "");
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to load tenant."); }
     finally { setLoading(false); }
   },[id]);
@@ -52,6 +54,22 @@ export default function AdminTenantDetailPage() {
     } catch(e) { setError(e instanceof Error ? e.message : "Unable to save tenant."); }
     finally { setSaving(false); }
   }
+  async function transferOwner() {
+    if(!tenant || !ownerTarget) return;
+    const target=tenant.memberships.find(member=>member.id===ownerTarget);
+    if(!target) return;
+    const currentOwners=tenant.memberships.filter(member=>member.role==="OWNER").map(member=>member.email);
+    const confirmed=window.confirm("Transfer ownership of "+tenant.name+" to "+target.email+"? Current owner(s) "+(currentOwners.join(", ")||"none")+" will become workspace Admins. This grants the new owner full workspace control.");
+    if(!confirmed) return;
+    setSaving(true); setError(""); setNotice("");
+    try {
+      const response=await fetch("/api/admin/tenants/"+encodeURIComponent(id),{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"transfer-owner",targetMembershipId:ownerTarget})});
+      const body=await response.json(); if(!response.ok) throw new Error(body.error || "Unable to transfer ownership.");
+      setNotice("Workspace ownership transferred to "+body.owner.email+". The previous owner is now an Admin."); await load();
+    } catch(e) { setError(e instanceof Error ? e.message : "Unable to transfer ownership."); }
+    finally { setSaving(false); }
+  }
+
   async function setStatus(status:string) {
     if(!tenant) return;
     const action=status==="ACTIVE"||status==="TRIAL"?"restore access to":"change access status for";
@@ -122,6 +140,10 @@ export default function AdminTenantDetailPage() {
 
         <aside className="space-y-5">
           <section className="rounded-2xl border border-white/10 bg-slate-900 p-5"><p className="text-[10px] font-bold tracking-[.18em] text-cyan-300">SUBSCRIPTION</p><h2 className="mt-1 text-xl font-semibold">{tenant.subscription?.plan.name||"No plan assigned"}</h2><p className="mt-1 text-sm text-slate-400">{tenant.subscription?.tier||"Unassigned"} · {tenant.subscription?.status||"No subscription"}</p>{tenant.subscription&&<><p className="mt-4 text-2xl font-bold">{money(tenant.subscription.plan.monthlyPrice,tenant.currency)}<span className="ml-1 text-xs font-normal text-slate-500">/ month (catalog price)</span></p><div className="mt-4 space-y-2 border-t border-white/5 pt-4 text-xs text-slate-400"><p>Vehicles: {tenant.subscription.plan.maxVehicles??"Unlimited"} max</p><p>Branches: {tenant.subscription.plan.maxBranches??"Unlimited"} max</p><p>Staff: {tenant.subscription.plan.maxStaff??"Unlimited"} max</p><p>Trial ends: {date(tenant.subscription.trialEndsAt)}</p><p>Period ends: {date(tenant.subscription.currentPeriodEnd)}</p><p>Plan availability: {tenant.subscription.plan.active?"Active":"Inactive"}</p></div></>}<Link href="/admin/plans" className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/20 px-4 py-2.5 text-sm font-semibold text-cyan-200 hover:bg-cyan-300/5"><Wallet size={15}/> Manage plan assignment</Link><p className="mt-3 text-[10px] leading-5 text-slate-500">Catalog price only. ROAM does not process subscription payments or automatic renewals.</p></section>
+
+          <section className="rounded-2xl border border-white/10 bg-slate-900 p-5"><p className="text-[10px] font-bold tracking-[.18em] text-cyan-300">OWNERSHIP</p><h2 className="mt-1 text-lg font-semibold">Transfer workspace owner</h2><p className="mt-2 text-xs leading-5 text-slate-400">Transfer control to an existing member. Current owner accounts are changed to Admin; no user account is deleted.</p>
+            {tenant.memberships.some(member=>member.role!=="OWNER")?<><label className="mt-4 block text-xs text-slate-400">New workspace owner<select value={ownerTarget} onChange={event=>setOwnerTarget(event.target.value)} className={inputClass}><option value="">Choose a workspace member</option>{tenant.memberships.filter(member=>member.role!=="OWNER").map(member=><option key={member.id} value={member.id}>{member.name||member.email} · {member.role}</option>)}</select></label><button disabled={saving||!ownerTarget} onClick={()=>void transferOwner()} className="mt-3 w-full rounded-xl border border-amber-300/20 bg-amber-300/10 px-4 py-2.5 text-sm font-semibold text-amber-100 disabled:opacity-40">Transfer ownership</button></>:<p className="mt-3 text-xs text-slate-500">No eligible non-owner members are available. Add a team member first.</p>}
+          </section>
 
           <section className="rounded-2xl border border-white/10 bg-slate-900 p-5"><p className="text-[10px] font-bold tracking-[.18em] text-cyan-300">WORKSPACE ACCESS</p><h2 className="mt-1 text-lg font-semibold">Account controls</h2><p className="mt-2 text-xs leading-5 text-slate-400">Suspension and closure block tenant access. They do not delete tenant records or alter payment state.</p><div className="mt-4 grid gap-2">{tenant.status!=="ACTIVE"&&<button disabled={saving} onClick={()=>void setStatus("ACTIVE")} className="rounded-xl bg-emerald-400/15 px-4 py-2.5 text-sm font-semibold text-emerald-200 disabled:opacity-50">Activate workspace</button>}{tenant.status!=="TRIAL"&&<button disabled={saving} onClick={()=>void setStatus("TRIAL")} className="rounded-xl bg-sky-400/10 px-4 py-2.5 text-sm font-semibold text-sky-200 disabled:opacity-50">Set trial status</button>}{tenant.status!=="SUSPENDED"&&<button disabled={saving} onClick={()=>void setStatus("SUSPENDED")} className="rounded-xl bg-amber-400/10 px-4 py-2.5 text-sm font-semibold text-amber-200 disabled:opacity-50">Suspend access</button>}{tenant.status!=="CANCELLED"&&<button disabled={saving} onClick={()=>void setStatus("CANCELLED")} className="rounded-xl bg-rose-400/10 px-4 py-2.5 text-sm font-semibold text-rose-200 disabled:opacity-50">Close workspace access</button>}</div></section>
 

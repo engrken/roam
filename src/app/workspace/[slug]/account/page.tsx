@@ -6,6 +6,7 @@ import { CreditCard, ShieldCheck, Building2, ReceiptText, ArrowUpRight } from "l
 import { WorkspaceNav } from "@/components/workspace-nav";
 
 type AccountData = {
+  user: { id: string; name: string | null; email: string };
   tenant: { name: string; email: string; phone: string | null; status: string; createdAt: string };
   subscription: null | { tier: string; status: string; currentPeriodStart: string | null; currentPeriodEnd: string | null; trialEndsAt: string | null; plan: { name: string; monthlyPrice: number; maxVehicles: number | null; maxBranches: number | null; maxStaff: number | null } };
   plans: { tier: string; name: string; monthlyPrice: number; maxVehicles: number | null; maxBranches: number | null; maxStaff: number | null }[];
@@ -24,6 +25,10 @@ export default function AccountPage() {
   const [notice, setNotice] = useState("");
   const [selectedTier, setSelectedTier] = useState("");
   const [saving, setSaving] = useState(false);
+  const [ownerName, setOwnerName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [emailCode, setEmailCode] = useState("");
+  const [emailStep, setEmailStep] = useState(false);
 
   async function load() {
     const response = await fetch("/api/workspaces/" + encodeURIComponent(slug) + "/account", { cache: "no-store" });
@@ -34,7 +39,7 @@ export default function AccountPage() {
   useEffect(() => {
     let active = true;
     fetch("/api/workspaces/" + encodeURIComponent(slug) + "/account", { cache: "no-store" })
-      .then(async response => { const body = await response.json(); if (!response.ok) throw new Error(body.error || "Unable to load account information."); if (active) setData(body); })
+      .then(async response => { const body = await response.json(); if (!response.ok) throw new Error(body.error || "Unable to load account information."); if (active) { setData(body); setOwnerName(body.user?.name || ""); } })
       .catch(reason => { if (active) setError(reason instanceof Error ? reason.message : "Unable to load account information."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -75,6 +80,35 @@ export default function AccountPage() {
         </section>
 
         <section className="roam-panel">
+          <div className="roam-settings-heading"><span className="roam-help-card-icon"><ShieldCheck size={20}/></span><div><h2>Owner account details</h2><p>Personal profile and verified sign-in email.</p></div></div>
+          <form className="roam-settings-form" onSubmit={async event => {
+            event.preventDefault(); setError(""); setNotice("");
+            const response = await fetch("/api/workspaces/" + encodeURIComponent(slug) + "/account", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: ownerName }) });
+            const body = await response.json(); if (!response.ok) { setError(body.error || "Unable to save profile."); return; }
+            setNotice("Account profile updated."); await load();
+          }}>
+            <label htmlFor="owner-name">Your name</label><input id="owner-name" value={ownerName} maxLength={100} onChange={event => setOwnerName(event.target.value)} />
+            <label>Sign-in email</label><input value={data.user.email} readOnly disabled />
+            <button className="roam-primary-button" type="submit">Save profile</button>
+          </form>
+          <div className="roam-settings-form">
+            <label htmlFor="new-signin-email">Change sign-in email</label>
+            <input id="new-signin-email" type="email" value={newEmail} onChange={event => setNewEmail(event.target.value)} placeholder="New email address" />
+            {!emailStep ? <button className="roam-secondary-button" type="button" disabled={!newEmail.includes("@")} onClick={async () => {
+              setError(""); const response = await fetch("/api/auth/request-otp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: newEmail, purpose: "change-email" }) });
+              const body = await response.json(); if (!response.ok) { setError(body.error || "Unable to send verification code."); return; } setEmailStep(true); setNotice("A verification code was sent to your new email address.");
+            }}>Send verification code</button> : <>
+              <label htmlFor="email-change-code">Verification code</label><input id="email-change-code" inputMode="numeric" maxLength={6} value={emailCode} onChange={event => setEmailCode(event.target.value)} />
+              <button className="roam-primary-button" type="button" disabled={emailCode.length !== 6} onClick={async () => {
+                setError(""); const response = await fetch("/api/auth/verify-otp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: newEmail, code: emailCode }) });
+                const body = await response.json(); if (!response.ok) { setError(body.error || "Unable to verify new email."); return; } setEmailStep(false); setEmailCode(""); setNewEmail(""); setNotice("Your sign-in email has been changed."); await load();
+              }}>Verify and change email</button>
+              <button className="roam-secondary-button" type="button" onClick={() => { setEmailStep(false); setEmailCode(""); }}>Cancel</button>
+            </>}
+          </div>
+        </section>
+
+        <section className="roam-panel">
           <div className="roam-settings-heading"><span className="roam-help-card-icon"><Building2 size={20}/></span><div><h2>Business information</h2><p>{data.tenant.name} · {data.tenant.email} · {data.tenant.phone || "No phone added"}</p></div><a className="roam-secondary-button" href={"/workspace/" + slug + "/settings"}>Edit business details <ArrowUpRight size={15}/></a></div>
           <p className="roam-settings-footnote">Business contact details are separate from your personal sign-in email. Only the workspace owner can manage subscription and billing information.</p>
         </section>
@@ -99,7 +133,7 @@ export default function AccountPage() {
 
         <section className="roam-panel">
           <div className="roam-settings-heading"><span className="roam-help-card-icon"><ShieldCheck size={20}/></span><div><h2>Sign-in & security</h2><p>ROAM currently uses passwordless email verification codes. There is no account password to change.</p></div></div>
-          <p className="roam-settings-footnote">To secure your account, keep access to your sign-in email private and sign out on shared devices. A verified sign-in email change and active-session management are planned as separate security controls.</p>
+          <p className="roam-settings-footnote">To secure your account, keep access to your sign-in email private and sign out on shared devices. Keep access to your sign-in email private. Password reset is not applicable to passwordless accounts.</p>
         </section>
       </>}
     </main>

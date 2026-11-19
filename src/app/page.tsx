@@ -66,7 +66,7 @@ export default function Home() {
         <div className="nav-actions">
           <button className="icon-button theme-toggle" onClick={toggleTheme} aria-label={dark ? "Switch to light theme" : "Switch to dark theme"} title={dark ? "Light theme" : "Dark theme"}>{dark ? <Sun size={18}/> : <Moon size={18}/>}</button>
           <Link className="text-link" href="/login">Sign in</Link>
-          <Link className="button button-small button-dark" href="/register">Start free <ArrowRight size={15}/></Link>
+          <Link className="btn button button-small button-dark" href="/register">Start free <ArrowRight size={15}/></Link>
           <button className="icon-button menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? "Close menu" : "Open menu"}>{menuOpen ? <X/> : <Menu/>}</button>
         </div>
       </div>
@@ -79,7 +79,7 @@ export default function Home() {
           <h1>Move more.<br/><span>Manage smarter.</span></h1>
           <p className="hero-lead">A clearer way to run your vehicle rental business. Bring your fleet, bookings, customers, and daily operations together in one connected platform.</p>
           <div className="hero-actions">
-            <Link className="button button-primary" href="/register">Create your free workspace <ArrowRight size={17}/></Link>
+            <Link className="btn button button-primary" href="/register">Create your free workspace <ArrowRight size={17}/></Link>
             <Link className="text-link" href="/login">Sign in <span><ArrowRight size={16}/></span></Link>
           </div>
           <div className="hero-proof"><span className="proof-icon"><ShieldCheck size={16}/></span><span>Designed for independent operators and growing rental teams.</span></div>
@@ -123,18 +123,18 @@ export default function Home() {
     </div></section>
 
     <section className="section plans-section" id="plans"><div className="container plans-inner">
-      <div className="plans-copy"><div className="eyebrow">SIMPLE, TRANSPARENT PRICING</div><h2>14 days to find your flow. Plans that grow with you.</h2><p>Try ROAM free for 14 days, then choose the subscription that matches your rental operation. Prices are billed monthly in Philippine pesos.</p><Link className="button button-primary" href="/register">Start your 14-day free trial <ArrowRight size={16}/></Link><span className="pricing-note">No charge during your trial.</span></div>
+      <div className="plans-copy"><div className="eyebrow">SIMPLE, TRANSPARENT PRICING</div><h2>14 days to find your flow. Plans that grow with you.</h2><p>Try ROAM free for 14 days, then choose the subscription that matches your rental operation. Prices are billed monthly in Philippine pesos.</p><Link className="btn button button-primary" href="/register">Start your 14-day free trial <ArrowRight size={16}/></Link><span className="pricing-note">No charge during your trial.</span></div>
       <div className="plan-preview plan-grid">
-        <div className="plan-card"><span className="plan-label">STARTER</span><h3>₱99 <small>/ month</small></h3><p>For independent operators getting organized.</p><ul><li><Check/> Core rental workspace</li><li><Check/> Fleet and booking management</li><li><Check/> Customer records</li></ul><Link className="plan-choose" href="/register">Start free trial <ArrowRight size={14}/></Link></div>
-        <div className="plan-card plan-featured"><span className="plan-label">PRO</span><h3>₱499 <small>/ month</small></h3><p>For growing rental businesses.</p><ul><li><Check/> Everything in Starter</li><li><Check/> More room for daily operations</li><li><Check/> Tools for growing teams</li></ul><Link className="plan-choose" href="/register">Start free trial <ArrowRight size={14}/></Link></div>
-        <div className="plan-card"><span className="plan-label">BUSINESS</span><h3>₱999 <small>/ month</small></h3><p>For established, expanding operators.</p><ul><li><Check/> Everything in Pro</li><li><Check/> Built for larger operations</li><li><Check/> Support for business growth</li></ul><Link className="plan-choose" href="/register">Start free trial <ArrowRight size={14}/></Link></div>
-        <div className="plan-card"><span className="plan-label">ENTERPRISE</span><h3>Custom</h3><p>For complex or high-volume rental operations.</p><ul><li><Check/> Tailored plan and pricing</li><li><Check/> Discuss your operational needs</li><li><Check/> Contact ROAM for a quote</li></ul><a className="plan-choose" href="#contact">Contact us <ArrowRight size={14}/></a></div>
+        <div className="plan-card"><span className="plan-label">STARTER</span><h3>₱99 <small>/ month</small></h3><p>For independent operators getting organized.</p><ul><li><Check/> Core rental workspace</li><li><Check/> Fleet and booking management</li><li><Check/> Customer records</li></ul><Link className="btn plan-choose" href="/register">Start free trial <ArrowRight size={14}/></Link></div>
+        <div className="plan-card plan-featured"><span className="plan-label">PRO</span><h3>₱499 <small>/ month</small></h3><p>For growing rental businesses.</p><ul><li><Check/> Everything in Starter</li><li><Check/> More room for daily operations</li><li><Check/> Tools for growing teams</li></ul><Link className="btn plan-choose" href="/register">Start free trial <ArrowRight size={14}/></Link></div>
+        <div className="plan-card"><span className="plan-label">BUSINESS</span><h3>₱999 <small>/ month</small></h3><p>For established, expanding operators.</p><ul><li><Check/> Everything in Pro</li><li><Check/> Built for larger operations</li><li><Check/> Support for business growth</li></ul><Link className="btn plan-choose" href="/register">Start free trial <ArrowRight size={14}/></Link></div>
+        <div className="plan-card"><span className="plan-label">ENTERPRISE</span><h3>Custom</h3><p>For complex or high-volume rental operations.</p><ul><li><Check/> Tailored plan and pricing</li><li><Check/> Discuss your operational needs</li><li><Check/> Contact ROAM for a quote</li></ul><a className="btn plan-choose" href="#contact">Contact us <ArrowRight size={14}/></a></div>
       </div>
     </div></section>
 
     <section className="section faq-section" id="faq"><div className="container faq-grid"><div><div className="eyebrow">GOOD TO KNOW</div><h2>Questions before you get moving?</h2><p>Here are a few things to know about the ROAM platform as it takes shape.</p></div><div className="faq-list">{faqs.map(([q,a],i)=><div className={`faq-item ${faqOpen===i?"faq-active":""}`} key={q}><button onClick={()=>setFaqOpen(faqOpen===i?-1:i)} aria-expanded={faqOpen===i}><span>{q}</span><ChevronDown size={18}/></button>{faqOpen===i&&<p>{a}</p>}</div>)}</div></div></section>
 
-    <section className="contact-section" id="contact"><div className="container contact-card"><div className="contact-orbit"/><div className="eyebrow">YOUR NEXT MOVE STARTS HERE</div><h2>Ready to run rentals with more clarity?</h2><p>Create your free account today and set up your first rental business workspace in minutes.</p><Link className="button button-light" href="/register">Create your free account <ArrowRight size={17}/></Link><span className="contact-note">Free to get started. No credit card required.</span></div></section>
+    <section className="contact-section" id="contact"><div className="container contact-card"><div className="contact-orbit"/><div className="eyebrow">YOUR NEXT MOVE STARTS HERE</div><h2>Ready to run rentals with more clarity?</h2><p>Create your free account today and set up your first rental business workspace in minutes.</p><Link className="btn button button-light" href="/register">Create your free account <ArrowRight size={17}/></Link><span className="contact-note">Free to get started. No credit card required.</span></div></section>
 
     <footer className="site-footer"><div className="container"><div className="footer-main"><div><Brand/><p>Rental Operations and Asset Management</p><span className="footer-tagline">Move More. Manage Smarter.</span></div><div className="footer-links"><div><b>EXPLORE</b><a href="#platform">Platform</a><a href="#how-it-works">How it works</a><a href="#plans">Plans</a><a href="#faq">FAQs</a></div><div><b>INFORMATION</b><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a><a href="#contact">Contact</a></div></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} ROAM. All rights reserved.</span><span>Built for the people who keep things moving.</span></div></div></footer>
   </main>;

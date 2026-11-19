@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTenantAccess, canManageFleet } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
+import { sendBookingMessageNotification } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const body = await request.json().catch(() => null);
   const booking = await prisma.booking.findFirst({
     where: { tenantId: access.tenant.id, reference },
-    select: { id: true },
+    select: { id: true, customer: { select: { name: true, email: true } } },
   });
   if (!booking) return NextResponse.json({ error: "Booking not found." }, { status: 404 });
 
@@ -83,7 +84,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     await prisma.bookingMessage.create({
       data: { bookingId: booking.id, sender: "OWNER", body: message },
     });
-    return NextResponse.json({ sent: true }, { status: 201 });
+    if (booking.customer.email) {
+      try {
+        await sendBookingMessageNotification({ recipient: booking.customer.email, tenantName: access.tenant.name, bookingReference: reference, senderLabel: "Rental team", message });
+      } catch (error) { console.error("Rental team reply email notification failed", error); }
+    }
+    return NextResponse.json({ sent: true, notification: booking.customer.email ? "attempted" : "no_customer_email" }, { status: 201 });
   }
 
   if (typeof body?.status === "string") {

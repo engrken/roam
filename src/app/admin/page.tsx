@@ -21,7 +21,8 @@ const statusStyle: Record<string, string> = {
 };
 
 function csvCell(value: unknown) {
-  const text = String(value ?? "");
+  const raw = String(value ?? "");
+  const text = /^[=+\\-@\\t\\r]/.test(raw) ? "'" + raw : raw;
   return '"' + text.replace(/"/g, '""') + '"';
 }
 

@@ -17,6 +17,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
     return NextResponse.json({ error: "Choose a valid calendar date range." }, { status: 400 });
   }
+  const parsedFrom = new Date(`${from}T00:00:00.000Z`);
+  const parsedTo = new Date(`${to}T00:00:00.000Z`);
+  if (!Number.isFinite(parsedFrom.getTime()) || !Number.isFinite(parsedTo.getTime()) || parsedFrom.toISOString().slice(0, 10) !== from || parsedTo.toISOString().slice(0, 10) !== to || parsedTo < parsedFrom || (parsedTo.getTime() - parsedFrom.getTime()) / 86400000 > 30) {
+    return NextResponse.json({ error: "Choose a valid date range of no more than 31 days." }, { status: 400 });
+  }
   const tenantSettings = await prisma.tenant.findUnique({ where: { id: access.tenant.id }, select: { timezone: true } });
   const timeZone = tenantSettings?.timezone || "Asia/Manila";
   const startAt = rentalDateTimeToUtc(from + "T00:00", timeZone);

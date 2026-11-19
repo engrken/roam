@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowUpRight, CalendarDays, CarFront, CircleDollarSign, Gauge, Users, MapPin, Clock3 } from "lucide-react";
+import { ArrowUpRight, CalendarDays, CarFront, CircleDollarSign, Gauge, Users, MapPin, Clock3, Share2, Copy, Check } from "lucide-react";
 import { WorkspaceNav } from "@/components/workspace-nav";
 
 type Overview = {
@@ -22,6 +22,14 @@ export default function WorkspaceOverviewPage() {
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const [showGettingStarted,setShowGettingStarted]=useState(true);
+  const [showShareOptions,setShowShareOptions]=useState(false);
+  const [shareCopied,setShareCopied]=useState(false);
+  const bookingUrl=typeof window !== "undefined" ? `${window.location.origin}/${encodeURIComponent(slug)}/book` : `https://roamph.vercel.app/${encodeURIComponent(slug)}/book`;
+  const shareMessage=`Book your next rental with ${data?.workspace.name || "us"}! View available vehicles and send a booking request: ${bookingUrl}`;
+  async function copyBookingLink(){
+    try{await navigator.clipboard.writeText(bookingUrl);setShareCopied(true);window.setTimeout(()=>setShareCopied(false),2200);}
+    catch{setError("Unable to copy the booking link. Please copy it from your browser address bar.");}
+  }
   useEffect(()=>{let live=true;fetch(`/api/workspaces/${encodeURIComponent(slug)}/overview`,{cache:"no-store"}).then(async r=>{const j=await r.json();if(!r.ok)throw new Error(j.error||"Unable to load workspace.");return j;}).then(j=>{if(live)setData(j);}).catch(e=>{if(live)setError(e instanceof Error?e.message:"Unable to load dashboard.");}).finally(()=>{if(live)setLoading(false);});return()=>{live=false;};},[slug]);
   async function signOut(){await fetch("/api/auth/logout",{method:"POST"});router.replace("/login");router.refresh();}
   if(loading)return <main className="roam-loading">Loading your business overview…</main>;
@@ -31,7 +39,8 @@ export default function WorkspaceOverviewPage() {
   return <div className="roam-app-shell">
     <WorkspaceNav slug={slug} name={workspace.name} role={workspace.role} active="overview"/>
     <main className="roam-main">
-      <header className="roam-topbar"><div><span className="roam-eyebrow">BUSINESS OVERVIEW</span><h1>Good day. Here&apos;s your operation.</h1><p>Your fleet and rental activity at a glance.</p></div><div className="roam-topbar-actions"><span className="roam-date-pill"><CalendarDays size={15}/>{new Date().toLocaleDateString("en-PH",{weekday:"short",month:"short",day:"numeric"})}</span><button className="roam-primary-btn" onClick={()=>router.push(`/workspace/${slug}/fleet`)}>Manage fleet <ArrowUpRight size={16}/></button></div></header>
+      <header className="roam-topbar"><div><span className="roam-eyebrow">BUSINESS OVERVIEW</span><h1>Good day. Here&apos;s your operation.</h1><p>Your fleet and rental activity at a glance.</p></div><div className="roam-topbar-actions"><span className="roam-date-pill"><CalendarDays size={15}/>{new Date().toLocaleDateString("en-PH",{weekday:"short",month:"short",day:"numeric"})}</span><button className="roam-secondary-btn" onClick={()=>setShowShareOptions(v=>!v)} aria-expanded={showShareOptions}><Share2 size={16}/> Share booking page</button><button className="roam-primary-btn" onClick={()=>router.push(`/workspace/${slug}/fleet`)}>Manage fleet <ArrowUpRight size={16}/></button></div></header>
+      {showShareOptions && <section className="roam-panel" aria-label="Share your public booking page"><div className="roam-panel-heading"><div><span className="roam-eyebrow">GET MORE BOOKINGS</span><h2>Share your booking page</h2></div><button className="roam-quiet-btn" onClick={()=>setShowShareOptions(false)}>Close</button></div><p className="roam-guide-description">Post this public link on your social media pages so customers can view your vehicles and send booking requests.</p><div className="roam-share-link-row"><span>{bookingUrl}</span><button className="roam-primary-btn" onClick={copyBookingLink}>{shareCopied?<Check size={15}/>:<Copy size={15}/>} {shareCopied?"Copied":"Copy link"}</button></div><div className="roam-share-socials"><a className="roam-secondary-btn" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(bookingUrl)}`} target="_blank" rel="noopener noreferrer">Share on Facebook <ArrowUpRight size={14}/></a><a className="roam-secondary-btn" href={`https://wa.me/?text=${encodeURIComponent(shareMessage)}`} target="_blank" rel="noopener noreferrer">Share on WhatsApp <ArrowUpRight size={14}/></a><button className="roam-secondary-btn" onClick={async()=>{if(navigator.share){try{await navigator.share({title:`Book with ${workspace.name}`,text:shareMessage,url:bookingUrl});}catch(e){if(e instanceof Error&&e.name!=="AbortError")setError("Unable to open the share sheet.");}}else{await copyBookingLink();}}}><Share2 size={15}/> More sharing options</button></div></section>}
       {showGettingStarted && <section className="roam-panel roam-getting-started">
         <div className="roam-panel-heading">
           <div><span className="roam-eyebrow">NEW TO ROAM?</span><h2>Getting started with your rental workspace</h2></div>

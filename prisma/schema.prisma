@@ -88,6 +88,7 @@ model Tenant {
   subscription Subscription?
   invitations  TeamInvitation[]
   billingRecords BillingRecord[]
+  rentalPayments RentalPayment[]
   subscriptionChangeRequests SubscriptionChangeRequest[]
 }
 
@@ -221,6 +222,8 @@ model Booking {
   customer    Customer      @relation(fields: [customerId], references: [id])
   items       BookingItem[]
   messages    BookingMessage[]
+  payments    RentalPayment[]
+  automationNotices BookingAutomationNotice[]
   documents   BookingDocument[]
   inspections VehicleInspection[]
   publicTokenHash String? @unique
@@ -402,4 +405,38 @@ model SubscriptionChangeRequest {
   tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   @@index([tenantId, createdAt])
   @@index([status, createdAt])
+}
+
+
+model RentalPayment {
+  id        String   @id @default(cuid())
+  tenantId  String
+  bookingId String
+  amount    Decimal  @db.Decimal(12, 2)
+  currency  String   @default("PHP")
+  method    String   @default("CASH")
+  kind      String   @default("PAYMENT")
+  reference String?
+  notes     String?  @db.Text
+  receivedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  @@index([tenantId, receivedAt])
+  @@index([bookingId, receivedAt])
+}
+
+model BookingAutomationNotice {
+  id           String   @id @default(cuid())
+  bookingId    String
+  noticeKey    String   @unique
+  noticeType   String
+  status       String   @default("PENDING")
+  scheduledFor DateTime
+  sentAt       DateTime?
+  lastError    String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  booking      Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  @@index([status, scheduledFor])
 }

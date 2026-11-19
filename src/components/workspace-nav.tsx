@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LayoutDashboard, CarFront, LogOut, ShieldCheck, CalendarDays, MapPin, Users, BookOpen, FileText, UserCog } from "lucide-react";
+import { LayoutDashboard, CarFront, LogOut, ShieldCheck, CalendarDays, MapPin, Users, BookOpen, FileText, UserCog, MessageCircle, Wallet } from "lucide-react";
 
-export function WorkspaceNav({ slug, name, role, active }: { slug: string; name: string; role: string; active: "overview" | "fleet" | "bookings" | "branches" | "customers" | "help" | "rental-terms" | "team" | "settings" | "reports" | "account" }) {
+export function WorkspaceNav({ slug, name, role, active }: { slug: string; name: string; role: string; active: "overview" | "fleet" | "bookings" | "messages" | "finance" | "branches" | "customers" | "help" | "rental-terms" | "team" | "settings" | "reports" | "account" }) {
   const router = useRouter();
   async function signOut() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -18,7 +18,9 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
     <nav className="roam-side-nav" aria-label="Workspace navigation">
       <Link className={active === "overview" ? "active" : ""} href={`/workspace/${slug}`}><LayoutDashboard size={18}/> Overview</Link>
       <Link className={active === "fleet" ? "active" : ""} href={`/workspace/${slug}/fleet`}><CarFront size={18}/> Fleet management</Link>
-      <Link className={active === "bookings" ? "active" : ""} href={`/workspace/${slug}/bookings`}><CalendarDays size={18}/> Bookings & messages</Link>
+      <Link className={active === "bookings" ? "active" : ""} href={`/workspace/${slug}/bookings`}><CalendarDays size={18}/> Bookings</Link>
+      <Link className={active === "messages" ? "active" : ""} href={`/workspace/${slug}/messages`}><MessageCircle size={18}/> Customer messages</Link>
+      <Link className={active === "finance" ? "active" : ""} href={`/workspace/${slug}/finance`}><Wallet size={18}/> Financials</Link>
       <Link className={active === "branches" ? "active" : ""} href={"/workspace/" + slug + "/branches"}><MapPin size={18}/> Branches</Link>
       <Link className={active === "customers" ? "active" : ""} href={"/workspace/" + slug + "/customers"}><Users size={18}/> Customers</Link>
       <Link className={active === "rental-terms" ? "active" : ""} href={`/workspace/${slug}/rental-terms`}><FileText size={18}/> Rental terms</Link>

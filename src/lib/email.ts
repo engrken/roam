@@ -76,3 +76,30 @@ export async function sendBookingMessageNotification(input: BookingMessageNotice
     html: '<div style="background:#f3f6fb;padding:32px 16px;font-family:Arial,sans-serif;color:#14233b"><div style="max-width:560px;margin:auto;background:#fff;border-radius:14px;padding:28px"><div style="font-size:22px;font-weight:800;letter-spacing:2px">ROAM</div><p style="color:#526176">' + escapeHtml(input.senderLabel) + ' sent a message to ' + safeTenant + ' about booking <strong>' + safeReference + '</strong>.</p><div style="margin:20px 0;padding:16px;border-radius:10px;background:#f3f6fb;white-space:pre-wrap;overflow-wrap:anywhere">' + safeMessage + '</div>' + link + '<p style="font-size:13px;color:#66758a">' + escapeHtml(destination) + '</p></div></div>',
   });
 }
+
+export async function sendBookingReminder(input: {
+  recipient: string;
+  tenantName: string;
+  bookingReference: string;
+  reminderType: "PICKUP" | "RETURN" | "OVERDUE";
+  startAt: Date;
+  endAt: Date;
+}) {
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  if (!from) throw new Error("Email sender is not configured.");
+  const labels = {
+    PICKUP: ["Your rental pickup is coming up", "Your vehicle pickup is scheduled for"],
+    RETURN: ["Your rental return is coming up", "Your vehicle return is scheduled for"],
+    OVERDUE: ["Your rental return is overdue", "Our records show your rental was due back on"],
+  } as const;
+  const [subject, lead] = labels[input.reminderType];
+  const dateTime = (value: Date) => value.toLocaleString("en-PH", { timeZone: "Asia/Manila", dateStyle: "long", timeStyle: "short" });
+  const safe = (value: string) => value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[character] || character);
+  const text = `Hello,\n\n${lead} ${dateTime(input.reminderType === "PICKUP" ? input.startAt : input.endAt)}.\nBooking reference: ${input.bookingReference}\nRental business: ${input.tenantName}\n\nIf you have questions or need to coordinate a change, please contact the rental business directly.\n\nThank you.\nROAM`;
+  await getTransport().sendMail({
+    from, to: input.recipient, subject: `${subject} · ${input.bookingReference}`, text,
+    html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#172033;line-height:1.6"><h2>${safe(subject)}</h2><p>${safe(lead)} <strong>${safe(dateTime(input.reminderType === "PICKUP" ? input.startAt : input.endAt))}</strong>.</p><p><strong>Booking:</strong> ${safe(input.bookingReference)}<br/><strong>Rental business:</strong> ${safe(input.tenantName)}</p><p>If you have questions or need to coordinate a change, please contact the rental business directly.</p><p>Thank you,<br/>ROAM</p></div>`,
+  });
+}

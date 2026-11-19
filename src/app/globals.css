@@ -217,3 +217,9 @@
 .client-privacy a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 .client-success-inline{padding:12px 14px;border-radius:10px;background:#f1f8e9;color:#31482b;font-size:.9rem}
 @media(max-width:640px){.roam-settings-panel{padding:18px}.roam-settings-actions{align-items:stretch}.roam-settings-actions button{flex:1}.client-rental-terms{padding:14px}}
+
+
+.client-terms-unavailable{margin:0;padding:12px 14px;border-radius:10px;background:#fff6e8;color:#80521b;font-size:.88rem;line-height:1.5}
+.client-topbar-links{display:flex;align-items:center;gap:18px}
+.client-topbar-links a{font-size:.86rem;color:inherit;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:520px){.client-topbar-links{gap:10px}.client-topbar-links span{font-size:.68rem}.client-topbar-links a{font-size:.78rem}}

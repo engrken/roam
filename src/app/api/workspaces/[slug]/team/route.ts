@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { getTenantAccess, hasWorkspaceTier } from "@/lib/tenant-access";
+import { getTenantAccess, hasWorkspaceTier, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 import { sendTeamInvitation } from "@/lib/email";
 

@@ -73,6 +73,7 @@ model Tenant {
   slug         String       @unique
   email        String
   phone        String?
+  rentalTerms  String?      @db.Text
   status       TenantStatus @default(TRIAL)
   timezone     String       @default("Asia/Manila")
   currency     String       @default("PHP")
@@ -207,6 +208,9 @@ model Booking {
   endAt       DateTime
   totalAmount Decimal       @db.Decimal(12, 2)
   notes       String?
+  rentalTermsSnapshot String? @db.Text
+  rentalTermsVersion String?
+  rentalTermsAcceptedAt DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)

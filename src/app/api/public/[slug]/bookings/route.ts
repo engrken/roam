@@ -31,7 +31,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   });
 
   return NextResponse.json({
-    business: { name: tenant.name, phone: tenant.phone, currency: tenant.currency, timezone: tenant.timezone, rentalTerms: tenant.rentalTerms || "The rental business will confirm the rental agreement, payment arrangements, deposit, permitted use, cancellation terms and vehicle return requirements before handover." },
+    business: { name: tenant.name, phone: tenant.phone, currency: tenant.currency, timezone: tenant.timezone, rentalTerms: tenant.rentalTerms?.trim() || "The rental business will confirm the rental agreement, payment arrangements, deposit, permitted use, cancellation terms and vehicle return requirements before handover.", rentalTermsVersion: hash(tenant.rentalTerms?.trim() || "The rental business will confirm the rental agreement, payment arrangements, deposit, permitted use, cancellation terms and vehicle return requirements before handover.") },
     vehicles: vehicles.map((vehicle) => ({
       ...vehicle,
       dailyRate: Number(vehicle.dailyRate),

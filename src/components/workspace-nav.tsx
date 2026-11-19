@@ -41,6 +41,7 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [tier, setTier] = useState("FREE");
+  const [trial, setTrial] = useState<null | { endsAt: string | null; graceEndsAt: string | null; readOnly: boolean }>(null);
   const [selectedFeature, setSelectedFeature] = useState<FeatureKey | null>(null);
 
   useEffect(() => {
@@ -50,7 +51,7 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
         if (!response.ok) throw new Error("Unable to load plan access");
         return response.json();
       })
-      .then(data => { if (current && typeof data.tier === "string") setTier(data.tier); })
+      .then(data => { if (current && typeof data.tier === "string") setTier(data.tier); if (current) setTrial(data.trial || null); })
       .catch(() => { if (current) setTier("FREE"); });
     return () => { current = false; };
   }, [slug]);
@@ -75,6 +76,11 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
     <button className="roam-mobile-menu-toggle" type="button" aria-label={menuOpen ? "Close workspace menu" : "Open workspace menu"} aria-expanded={menuOpen} aria-controls="roam-workspace-menu" onClick={() => setMenuOpen(open => !open)}><span>{menuOpen ? "Close menu" : "Menu"}</span>{menuOpen ? <X size={19}/> : <Menu size={19}/>}</button>
     <div className="roam-side-label">WORKSPACE</div>
     <div className="roam-workspace-name">{name}</div>
+    {trial && <div role="status" style={{margin:"10px 12px",padding:"10px 12px",borderRadius:10,border:trial.readOnly?"1px solid #f59e0b":"1px solid #0891b2",background:trial.readOnly?"#fff7ed":"#ecfeff",color:"#164e63",fontSize:12,lineHeight:1.5}}>
+      <strong style={{display:"block",color:trial.readOnly?"#9a3412":"#155e75"}}>{trial.readOnly?"Read-only · trial grace ended":"Starter trial"}</strong>
+      <span>{trial.readOnly?"Existing records are available.":"Trial ends "+(trial.endsAt?new Date(trial.endsAt).toLocaleDateString("en-PH",{month:"short",day:"numeric"}):"soon")+". A 7-day grace period follows."}</span>
+      {role==="OWNER" ? <Link href={`/workspace/${slug}/account`} style={{display:"block",marginTop:5,fontWeight:700,color:"#0e7490"}}>Review subscription <ArrowUpRight size={12}/></Link> : <span style={{display:"block",marginTop:5}}>Ask your workspace owner about upgrading.</span>}
+    </div>}
     <nav className="roam-side-nav" id="roam-workspace-menu" aria-label="Workspace navigation" onClick={() => setMenuOpen(false)}>
       <Link className={active === "overview" ? "active" : ""} href={`/workspace/${slug}`}><LayoutDashboard size={18}/> Overview</Link>
       <Link className={active === "fleet" ? "active" : ""} href={`/workspace/${slug}/fleet`}><CarFront size={18}/> Fleet management</Link>

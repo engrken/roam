@@ -23,7 +23,13 @@ export default function PlatformPlansPage() {
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Unable to load plans.");
       setPlans(body.plans || []); setTenants(body.tenants || []);
-      setAssignments(Object.fromEntries((body.tenants || []).map((tenant: Tenant) => [tenant.id, tenant.subscription?.tier || "STARTER"])));
+      const firstActiveTier = (body.plans || []).find((plan: Plan) => plan.active)?.tier || "";
+      setAssignments(Object.fromEntries((body.tenants || []).map((tenant: Tenant) => [
+        tenant.id,
+        tenant.subscription && (body.plans || []).some((plan: Plan) => plan.active && plan.tier === tenant.subscription?.tier)
+          ? tenant.subscription.tier
+          : firstActiveTier,
+      ])));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to load plans.");
     } finally { setLoading(false); }
@@ -50,7 +56,7 @@ export default function PlatformPlansPage() {
   }
 
   async function assignPlan(tenant: Tenant) {
-    const tier = assignments[tenant.id] || tenant.subscription?.tier || plans.find(plan => plan.active)?.tier || "";
+    const tier = assignments[tenant.id] || (plans.some(plan => plan.active && plan.tier === tenant.subscription?.tier) ? tenant.subscription?.tier : plans.find(plan => plan.active)?.tier) || "";
     if (!tier || !plans.some(plan => plan.active && plan.tier === tier)) {
       setError("Choose an active plan before assigning it.");
       return;

@@ -481,3 +481,27 @@
 .roam-account-referral-note{margin:12px 0 0;color:var(--muted);font-size:12px;line-height:1.6}
 .roam-account-referral-note strong{color:var(--ink)}
 @media(max-width:640px){.roam-account-referral-code{align-items:flex-start;flex-direction:column;gap:7px}}
+
+
+/* Tenant workspace 2.0 — daily action center */
+.roam-action-center{margin:18px 0 20px}
+.roam-action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.roam-action-card{min-width:0;border:1px solid var(--roam-border,#dce4ef);border-radius:12px;padding:14px;background:var(--roam-card,#fff)}
+.roam-action-card>div{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.roam-action-card>div>b{font-size:12px;color:var(--roam-text,#17243a)}
+.roam-action-card>div>strong{font:800 21px Manrope,sans-serif}
+.roam-action-card>button{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;text-align:left;padding:9px 0;border:0;border-top:1px solid var(--roam-border,#e5eaf1);background:transparent;color:inherit;cursor:pointer}
+.roam-action-card>button>span{display:grid;gap:3px;min-width:0}
+.roam-action-card>button b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.roam-action-card>button small,.roam-action-card>p{font-size:10px;color:var(--roam-muted,#64748b)}
+.roam-action-card>button>small{white-space:nowrap}
+.roam-action-card>p{margin:8px 0 2px}
+.roam-action-warning{border-color:#f0c48b;background:color-mix(in srgb,#fff7ed 58%,var(--roam-card,#fff))}
+.roam-action-warning>div>strong{color:#b45309}
+.roam-action-finance{display:flex;align-items:center;gap:22px;flex-wrap:wrap;padding:15px 2px 0;margin-top:14px;border-top:1px solid var(--roam-border,#e5eaf1)}
+.roam-action-finance>div{display:grid;gap:4px;min-width:145px}
+.roam-action-finance>div>span,.roam-action-finance>div>small{font-size:10px;color:var(--roam-muted,#64748b)}
+.roam-action-finance>div>b{font:750 17px Manrope,sans-serif}
+.roam-action-finance>.roam-secondary-btn{margin-left:auto}
+@media(max-width:1050px){.roam-action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.roam-action-grid{grid-template-columns:1fr}.roam-action-finance{align-items:stretch;gap:14px}.roam-action-finance>div{min-width:calc(50% - 8px)}.roam-action-finance>.roam-secondary-btn{margin-left:0;width:100%;justify-content:center}}

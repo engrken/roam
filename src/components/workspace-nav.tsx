@@ -37,7 +37,7 @@ const lockedFeatures: Record<FeatureKey, FeatureInfo> = {
   },
 };
 
-export function WorkspaceNav({ slug, name, role, active }: { slug: string; name: string; role: string; active: "overview" | "fleet" | "bookings" | "messages" | "finance" | "branches" | "customers" | "help" | "rental-terms" | "team" | "settings" | "reports" | "account" }) {
+export function WorkspaceNav({ slug, name, role, active }: { slug: string; name: string; role: string; active: "overview" | "fleet" | "calendar" | "bookings" | "messages" | "finance" | "branches" | "customers" | "help" | "rental-terms" | "team" | "settings" | "reports" | "account" }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [tier, setTier] = useState("FREE");
@@ -84,6 +84,7 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
     <nav className="roam-side-nav" id="roam-workspace-menu" aria-label="Workspace navigation" onClick={() => setMenuOpen(false)}>
       <Link className={active === "overview" ? "active" : ""} href={`/workspace/${slug}`}><LayoutDashboard size={18}/> Overview</Link>
       <Link className={active === "fleet" ? "active" : ""} href={`/workspace/${slug}/fleet`}><CarFront size={18}/> Fleet management</Link>
+      <Link className={active === "calendar" ? "active" : ""} href={`/workspace/${slug}/calendar`}><CalendarDays size={18}/> Fleet calendar</Link>
       <Link className={active === "bookings" ? "active" : ""} href={`/workspace/${slug}/bookings`}><CalendarDays size={18}/> Bookings</Link>
       <Link className={active === "messages" ? "active" : ""} href={`/workspace/${slug}/messages`}><MessageCircle size={18}/> Customer messages</Link>
       <Link className={active === "finance" ? "active" : ""} href={`/workspace/${slug}/finance`}><Wallet size={18}/> Financials</Link>

@@ -57,7 +57,7 @@ export default function FleetCalendarPage() {
 
   useEffect(() => { void load(); }, [load]);
   const timeZone = data?.timeZone || "Asia/Manila";
-  const title = new Intl.DateTimeFormat("en-PH", { month: "long", year: "numeric", timeZone }).format(new Date(days[3].toISOString().slice(0, 10) + "T12:00:00Z"));
+  const title = new Intl.DateTimeFormat("en-PH", { month: "long", year: "numeric", timeZone }).format(new Date(dateKey(days[3]) + "T12:00:00Z"));
 
   return <div className="roam-app-shell">
     <WorkspaceNav slug={slug} name="Fleet availability" role="Workspace team" active="calendar" />
@@ -67,7 +67,7 @@ export default function FleetCalendarPage() {
         <div className="roam-topbar-actions"><button className="roam-secondary-btn" onClick={() => setAnchor(new Date())}>Today</button><button className="roam-secondary-btn" onClick={() => void load()}><RefreshCw size={15}/> Refresh</button></div>
       </header>
       <section className="roam-panel roam-fleet-calendar">
-        <div className="roam-calendar-toolbar"><div><span className="roam-eyebrow">WEEKLY AVAILABILITY</span><h2>{title}</h2><small>{new Intl.DateTimeFormat("en-PH", { timeZone, dateStyle: "medium" }).format(new Date(days[0].toISOString().slice(0,10)+"T12:00:00Z"))} – {new Intl.DateTimeFormat("en-PH", { timeZone, dateStyle: "medium" }).format(new Date(days[6].toISOString().slice(0,10)+"T12:00:00Z"))} · {timeZone}</small></div><div className="roam-calendar-nav"><button aria-label="Previous week" onClick={() => setAnchor(value => addDays(value, -7))}><ChevronLeft size={18}/></button><button aria-label="Next week" onClick={() => setAnchor(value => addDays(value, 7))}><ChevronRight size={18}/></button></div></div>
+        <div className="roam-calendar-toolbar"><div><span className="roam-eyebrow">WEEKLY AVAILABILITY</span><h2>{title}</h2><small>{new Intl.DateTimeFormat("en-PH", { timeZone, dateStyle: "medium" }).format(new Date(dateKey(days[0])+"T12:00:00Z"))} – {new Intl.DateTimeFormat("en-PH", { timeZone, dateStyle: "medium" }).format(new Date(dateKey(days[6])+"T12:00:00Z"))} · {timeZone}</small></div><div className="roam-calendar-nav"><button aria-label="Previous week" onClick={() => setAnchor(value => addDays(value, -7))}><ChevronLeft size={18}/></button><button aria-label="Next week" onClick={() => setAnchor(value => addDays(value, 7))}><ChevronRight size={18}/></button></div></div>
         <div className="roam-calendar-legend"><span><i className="pending"/> Pending request</span><span><i className="confirmed"/> Confirmed</span><span><i className="active"/> Active rental</span><span><i className="maintenance"/> Maintenance</span></div>
         {error && <p className="roam-error" role="alert">{error}</p>}
         {loading ? <div className="roam-empty"><CalendarDays size={26}/><span>Loading availability…</span></div> : !data?.vehicles.length ? <div className="roam-empty"><CalendarDays size={28}/><b>No vehicles yet</b><span>Add vehicles to see their booking schedules.</span><Link className="roam-primary-btn" href={`/workspace/${slug}/fleet`}>Manage fleet</Link></div> :

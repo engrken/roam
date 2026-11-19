@@ -6,13 +6,15 @@ import { ArrowLeft, Save, RefreshCw, Layers3 } from "lucide-react";
 
 type Plan = { id: string; tier: string; name: string; monthlyPrice: number; maxVehicles: number | null; maxBranches: number | null; maxStaff: number | null; active: boolean };
 type SubscriptionRequest = { id: string; tenantId: string; tenantName: string; tenantSlug: string; currentTier: string; requestedTier: string; status: string; createdAt: string };
-type Tenant = { id: string; name: string; slug: string; subscription: { tier: string; status: string; currentPeriodEnd: string | null; trialEndsAt: string | null } | null };
+type Tenant = { id: string; name: string; slug: string; subscription: { tier: string; status: string; currentPeriodEnd: string | null; trialEndsAt: string | null; monthlyPrice: number } | null };
 
 export default function PlatformPlansPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [subscriptionRequests, setSubscriptionRequests] = useState<SubscriptionRequest[]>([]);
   const [assignments, setAssignments] = useState<Record<string, string>>({});
+  const [paymentAmounts, setPaymentAmounts] = useState<Record<string, string>>({});
+  const [paymentReferences, setPaymentReferences] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -24,7 +26,9 @@ export default function PlatformPlansPage() {
       const response = await fetch("/api/admin/plans", { cache: "no-store" });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Unable to load plans.");
-      setPlans(body.plans || []); setTenants(body.tenants || []); setSubscriptionRequests(body.subscriptionRequests || []);
+      const loadedTenants = body.tenants || [];
+      setPlans(body.plans || []); setTenants(loadedTenants); setSubscriptionRequests(body.subscriptionRequests || []);
+      setPaymentAmounts(Object.fromEntries(loadedTenants.map((tenant: Tenant) => [tenant.id, String(tenant.subscription?.monthlyPrice || "")])));
       const firstActiveTier = (body.plans || []).find((plan: Plan) => plan.active)?.tier || "";
       setAssignments(Object.fromEntries((body.tenants || []).map((tenant: Tenant) => [
         tenant.id,
@@ -80,6 +84,30 @@ export default function PlatformPlansPage() {
     } finally { setBusy(""); }
   }
 
+  async function recordPayment(tenant: Tenant) {
+    const amount = Number(paymentAmounts[tenant.id]);
+    if (!tenant.subscription || !Number.isFinite(amount) || amount <= 0) {
+      setError("Assign a plan and enter the verified amount received before confirming payment.");
+      return;
+    }
+    const reference = paymentReferences[tenant.id]?.trim() || "";
+    if (!window.confirm("Confirm that " + amount.toLocaleString("en-PH") + " has actually been received from " + tenant.name + "? Only confirm after verifying the payment outside ROAM.")) return;
+    setBusy("payment-" + tenant.id); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/admin/plans", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "record-subscription-payment", tenantId: tenant.id, amount, reference }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Unable to confirm payment.");
+      setNotice(body.message || "Payment recorded and subscription activated.");
+      setPaymentReferences(current => ({ ...current, [tenant.id]: "" }));
+      await load();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to confirm payment.");
+    } finally { setBusy(""); }
+  }
+
   async function reviewRequest(item: SubscriptionRequest, decision: "approve" | "reject") {
     const action = decision === "approve" ? "approve" : "reject";
     if (!window.confirm((decision === "approve" ? "Approve" : "Reject") + " the " + item.currentTier + " → " + item.requestedTier + " request for " + item.tenantName + "?")) return;
@@ -114,10 +142,21 @@ export default function PlatformPlansPage() {
           <div className="flex flex-wrap items-start justify-between gap-2"><div><b className="text-sm">{tenant.name}</b><p className="mt-1 text-xs text-slate-500">{tenant.slug}</p></div><span className="rounded-full bg-white/5 px-2.5 py-1 text-[10px] text-slate-300">{tenant.subscription?.status || "Not configured"}</span></div>
           <p className="mt-3 text-xs text-slate-400">Current plan: <strong className="text-slate-200">{tenant.subscription?.tier || "None"}</strong></p>
           <div className="mt-3 flex flex-wrap gap-2"><select aria-label={"Plan for " + tenant.name} className="min-w-0 flex-1 rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-sm" value={assignments[tenant.id] || tenant.subscription?.tier || plans.find(plan=>plan.active)?.tier || ""} onChange={event => setAssignments(current => ({...current,[tenant.id]:event.target.value}))}>{!plans.some(plan=>plan.active) && <option value="">No active plans</option>}{plans.filter(plan=>plan.active).map(plan=><option key={plan.id} value={plan.tier}>{plan.name}</option>)}</select><button disabled={busy===tenant.id || !plans.some(plan=>plan.active)} onClick={()=>void assignPlan(tenant)} className="rounded-lg bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50">{busy===tenant.id ? "Assigning…" : "Assign"}</button></div>
+          <div className="mt-4 grid gap-2 border-t border-white/10 pt-3">
+            <p className="text-xs font-semibold text-slate-300">Record verified payment</p>
+            <input aria-label={"Verified payment amount for " + tenant.name} type="number" min="0.01" step="0.01" placeholder="Amount received" value={paymentAmounts[tenant.id] || ""} onChange={event=>setPaymentAmounts(current=>({...current,[tenant.id]:event.target.value}))} className="w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-sm"/>
+            <input aria-label={"Payment reference for " + tenant.name} maxLength={100} placeholder="Payment reference (optional)" value={paymentReferences[tenant.id] || ""} onChange={event=>setPaymentReferences(current=>({...current,[tenant.id]:event.target.value}))} className="w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-sm"/>
+            <button disabled={!tenant.subscription || busy==="payment-"+tenant.id} onClick={()=>void recordPayment(tenant)} className="rounded-lg border border-emerald-400/40 px-3 py-2 text-xs font-semibold text-emerald-200 disabled:opacity-40">{busy==="payment-"+tenant.id ? "Recording…" : "Confirm payment received"}</button>
+          </div>
         </article>)}</div>
-        <div className="hidden overflow-x-auto rounded-2xl border border-white/10 bg-slate-900 lg:block"><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-slate-950/70 text-xs uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-4">Tenant</th><th className="px-5 py-4">Current plan</th><th className="px-5 py-4">Subscription status</th><th className="px-5 py-4">Assign plan</th></tr></thead><tbody>{tenants.map(tenant=><tr key={tenant.id} className="border-t border-white/5"><td className="px-5 py-4"><b>{tenant.name}</b><p className="text-xs text-slate-500">{tenant.slug}</p></td><td className="px-5 py-4">{tenant.subscription?.tier || "None"}</td><td className="px-5 py-4">{tenant.subscription?.status || "Not configured"}</td><td className="px-5 py-4"><div className="flex items-center gap-2"><select className="rounded-lg border border-white/10 bg-slate-950 px-3 py-2" value={assignments[tenant.id] || tenant.subscription?.tier || plans.find(plan=>plan.active)?.tier || ""} onChange={event => setAssignments(current => ({...current,[tenant.id]:event.target.value}))}>{!plans.some(plan=>plan.active) && <option value="">No active plans</option>}{plans.filter(plan=>plan.active).map(plan=><option key={plan.id} value={plan.tier}>{plan.name}</option>)}</select><button disabled={busy===tenant.id || !plans.some(plan=>plan.active)} onClick={()=>void assignPlan(tenant)} className="rounded-lg bg-cyan-400 px-3 py-2 font-semibold text-slate-950 disabled:opacity-50">{busy===tenant.id ? "…" : "Assign"}</button></div></td></tr>)}</tbody></table></div></>}
+        <div className="hidden overflow-x-auto rounded-2xl border border-white/10 bg-slate-900 lg:block"><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-slate-950/70 text-xs uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-4">Tenant</th><th className="px-5 py-4">Current plan</th><th className="px-5 py-4">Subscription status</th><th className="px-5 py-4">Assign plan</th></tr></thead><tbody>{tenants.map(tenant=><tr key={tenant.id} className="border-t border-white/5"><td className="px-5 py-4"><b>{tenant.name}</b><p className="text-xs text-slate-500">{tenant.slug}</p></td><td className="px-5 py-4">{tenant.subscription?.tier || "None"}</td><td className="px-5 py-4">{tenant.subscription?.status || "Not configured"}</td><td className="px-5 py-4"><div className="flex items-center gap-2"><select className="rounded-lg border border-white/10 bg-slate-950 px-3 py-2" value={assignments[tenant.id] || tenant.subscription?.tier || plans.find(plan=>plan.active)?.tier || ""} onChange={event => setAssignments(current => ({...current,[tenant.id]:event.target.value}))}>{!plans.some(plan=>plan.active) && <option value="">No active plans</option>}{plans.filter(plan=>plan.active).map(plan=><option key={plan.id} value={plan.tier}>{plan.name}</option>)}</select><button disabled={busy===tenant.id || !plans.some(plan=>plan.active)} onClick={()=>void assignPlan(tenant)} className="rounded-lg bg-cyan-400 px-3 py-2 font-semibold text-slate-950 disabled:opacity-50">{busy===tenant.id ? "…" : "Assign"}</button></div>
+          <div className="mt-3 grid grid-cols-[1fr_1fr_auto] gap-2">
+            <input aria-label={"Verified payment amount for " + tenant.name} type="number" min="0.01" step="0.01" placeholder="Amount received" value={paymentAmounts[tenant.id] || ""} onChange={event=>setPaymentAmounts(current=>({...current,[tenant.id]:event.target.value}))} className="min-w-0 rounded-lg border border-white/10 bg-slate-950 px-2 py-2 text-xs"/>
+            <input aria-label={"Payment reference for " + tenant.name} maxLength={100} placeholder="Payment reference" value={paymentReferences[tenant.id] || ""} onChange={event=>setPaymentReferences(current=>({...current,[tenant.id]:event.target.value}))} className="min-w-0 rounded-lg border border-white/10 bg-slate-950 px-2 py-2 text-xs"/>
+            <button disabled={!tenant.subscription || busy==="payment-"+tenant.id} onClick={()=>void recordPayment(tenant)} className="rounded-lg border border-emerald-400/40 px-2 py-2 text-xs text-emerald-200 disabled:opacity-40">{busy==="payment-"+tenant.id ? "…" : "Confirm paid"}</button>
+          </div></td></tr>)}</tbody></table></div></>}
       </section>
     </>}
-    <p className="mt-4 text-xs leading-5 text-slate-500">Plan assignment changes entitlements and records a manual-review subscription state for new assignments. ROAM does not currently collect payments, charge cards, or automatically renew subscriptions. Confirm payment separately before marking any account paid.</p>
+    <p className="mt-4 text-xs leading-5 text-slate-500">Plan assignment changes entitlements and places new assignments into manual billing review. Use “Confirm payment received” only after independently verifying funds received outside ROAM. This records the paid billing entry, activates the subscription, applies any queued referral credits, and qualifies an eligible first paid referral. ROAM does not collect payments or charge cards.</p>
   </div></main>;
 }

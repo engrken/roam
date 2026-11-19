@@ -26,6 +26,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       });
       if (!invitation) return { error: "This invitation is expired, already used, or belongs to a different email address." };
       if (!["ACTIVE", "TRIAL"].includes(invitation.tenant.status)) return { error: "This workspace is not currently accepting team members." };
+      const trialPolicy = await tx.subscription.findUnique({ where: { tenantId: invitation.tenantId }, select: { status: true, trialPolicyVersion: true, trialGraceEndsAt: true } });
+      if (trialPolicy?.trialPolicyVersion === 1 && trialPolicy.status === "trialing" && trialPolicy.trialGraceEndsAt && trialPolicy.trialGraceEndsAt <= now) return { error: "This workspace is read-only after its trial grace period. Ask the owner to arrange an approved subscription before joining." };
       await tx.$queryRawUnsafe(
         "SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1))) AS advisory_lock",
         "team-invitation:" + invitation.tenantId,

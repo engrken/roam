@@ -6,7 +6,7 @@
   --admin-input: #0b1424;
   --admin-ink: #edf4ff;
   --admin-muted: #9aabc2;
-  --admin-subtle: #71839d;
+  --admin-subtle: #8092aa;
   --admin-border: rgba(183, 202, 230, .14);
   --admin-accent: #67e8f9;
   --admin-accent-ink: #08202b;
@@ -22,11 +22,23 @@
   --admin-input: #ffffff;
   --admin-ink: #17243a;
   --admin-muted: #52627a;
-  --admin-subtle: #718096;
+  --admin-subtle: #5b6678;
   --admin-border: #dce4ef;
   --admin-accent: #087e9b;
   --admin-accent-ink: #ffffff;
 }
+.roam-admin-theme-root[data-theme="light"] .text-emerald-300,
+.roam-admin-theme-root[data-theme="light"] .text-emerald-400 { color: #047857 !important; }
+.roam-admin-theme-root[data-theme="light"] .text-sky-300,
+.roam-admin-theme-root[data-theme="light"] .text-sky-400 { color: #0369a1 !important; }
+.roam-admin-theme-root[data-theme="light"] .text-amber-200 { color: #92400e !important; }
+.roam-admin-theme-root[data-theme="light"] .text-amber-300 { color: #a16207 !important; }
+.roam-admin-theme-root[data-theme="light"] .text-rose-200,
+.roam-admin-theme-root[data-theme="light"] .text-rose-300 { color: #be123c !important; }
+.roam-admin-theme-root[data-theme="light"] .text-red-200,
+.roam-admin-theme-root[data-theme="light"] .text-red-300 { color: #b91c1c !important; }
+.roam-admin-theme-root[data-theme="light"] .text-orange-300 { color: #c2410c !important; }
+.roam-admin-theme-root[data-theme="light"] .text-yellow-300 { color: #a16207 !important; }
 .roam-admin-theme-root,
 .roam-admin-theme-root * { box-sizing: border-box; }
 .roam-admin-theme-root a { color: var(--admin-accent); }

@@ -10,6 +10,9 @@ type Overview = {
   metrics: { totalVehicles:number; availableVehicles:number; rentedVehicles:number; reservedVehicles:number; maintenanceVehicles:number; activeBookings:number; pendingBookings:number; completedBookings:number; customers:number; branches:number; utilization:number; completedValue30d:number; collected30d:number; outstandingBalance:number; bookings7d:number };
   actionCenter: {
     pendingCount:number;
+    pickupCount:number;
+    returnCount:number;
+    overdueCount:number;
     pendingItems:{id:string;reference:string;customer:string;startAt:string;endAt:string;totalAmount?:number}[];
     pickupsToday:{id:string;reference:string;customer:string;startAt:string;endAt:string}[];
     returnsToday:{id:string;reference:string;customer:string;startAt:string;endAt:string}[];
@@ -89,15 +92,15 @@ export default function WorkspaceOverviewPage() {
             {data.actionCenter.pendingItems.length ? data.actionCenter.pendingItems.slice(0,3).map(item=><button key={item.id} onClick={()=>router.push(`/workspace/${slug}/bookings`)}><span><b>{item.customer}</b><small>#{item.reference}</small></span><small>{new Date(item.startAt).toLocaleDateString("en-PH",{month:"short",day:"numeric"})}</small></button>) : <p>You&apos;re all caught up.</p>}
           </article>
           <article className="roam-action-card">
-            <div><b>Pickups today</b><strong>{data.actionCenter.pickupsToday.length}</strong></div>
+            <div><b>Pickups today</b><strong>{data.actionCenter.pickupCount}</strong></div>
             {data.actionCenter.pickupsToday.length ? data.actionCenter.pickupsToday.slice(0,3).map(item=><button key={item.id} onClick={()=>router.push(`/workspace/${slug}/bookings`)}><span><b>{item.customer}</b><small>#{item.reference}</small></span><small>{new Date(item.startAt).toLocaleTimeString("en-PH",{hour:"numeric",minute:"2-digit"})}</small></button>) : <p>No scheduled pickups today.</p>}
           </article>
           <article className="roam-action-card">
-            <div><b>Returns today</b><strong>{data.actionCenter.returnsToday.length}</strong></div>
+            <div><b>Returns today</b><strong>{data.actionCenter.returnCount}</strong></div>
             {data.actionCenter.returnsToday.length ? data.actionCenter.returnsToday.slice(0,3).map(item=><button key={item.id} onClick={()=>router.push(`/workspace/${slug}/bookings`)}><span><b>{item.customer}</b><small>#{item.reference}</small></span><small>{new Date(item.endAt).toLocaleTimeString("en-PH",{hour:"numeric",minute:"2-digit"})}</small></button>) : <p>No scheduled returns today.</p>}
           </article>
-          <article className={"roam-action-card"+(data.actionCenter.overdueReturns.length?" roam-action-warning":"")}>
-            <div><b>Overdue returns</b><strong>{data.actionCenter.overdueReturns.length}</strong></div>
+          <article className={"roam-action-card"+(data.actionCenter.overdueCount?" roam-action-warning":"")}>
+            <div><b>Overdue returns</b><strong>{data.actionCenter.overdueCount}</strong></div>
             {data.actionCenter.overdueReturns.length ? data.actionCenter.overdueReturns.slice(0,3).map(item=><button key={item.id} onClick={()=>router.push(`/workspace/${slug}/bookings`)}><span><b>{item.customer}</b><small>#{item.reference}</small></span><small>Past due</small></button>) : <p>No overdue returns.</p>}
           </article>
         </div>
@@ -135,25 +138,5 @@ export default function WorkspaceOverviewPage() {
       </section>
       <footer className="roam-footer">ROAM · Rental Operations and Asset Management <span>All figures reflect this workspace only.</span></footer>
     </main>
-    <style jsx global>{`
-      .roam-action-center{margin:18px 0}
-      .roam-action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-      .roam-action-card{min-width:0;border:1px solid var(--roam-border,#e5e7eb);border-radius:12px;padding:14px;background:var(--roam-card,#fff)}
-      .roam-action-card>div{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
-      .roam-action-card>div b{font-size:12px;font-weight:650}
-      .roam-action-card>div strong{font-size:22px;line-height:1}
-      .roam-action-card>button{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:9px 0;border:0;border-top:1px solid var(--roam-border,#e5e7eb);background:transparent;color:inherit;text-align:left;cursor:pointer}
-      .roam-action-card>button span{display:grid;gap:3px;min-width:0}
-      .roam-action-card>button b{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-      .roam-action-card>button small,.roam-action-card>p{font-size:10px;color:var(--roam-muted,#6b7280)}
-      .roam-action-card>button>small{white-space:nowrap}
-      .roam-action-warning{border-color:#f0b36a;background:color-mix(in srgb,#f59e0b 5%,var(--roam-card,#fff))}
-      .roam-action-finance{display:flex;align-items:center;gap:24px;margin-top:14px;padding:14px;border-radius:12px;background:var(--roam-surface,#f8fafc)}
-      .roam-action-finance>div{display:grid;gap:3px;flex:1}
-      .roam-action-finance span,.roam-action-finance small{font-size:10px;color:var(--roam-muted,#6b7280)}
-      .roam-action-finance b{font-size:18px}
-      @media(max-width:1050px){.roam-action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-      @media(max-width:600px){.roam-action-grid{grid-template-columns:1fr}.roam-action-finance{align-items:stretch;flex-direction:column;gap:12px}.roam-action-finance .roam-secondary-btn{width:100%}}
-    `}</style>
   </div>;
 }

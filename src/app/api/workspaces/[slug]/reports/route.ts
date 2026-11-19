@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTenantAccess } from "@/lib/tenant-access";
+import { getTenantAccess, hasWorkspaceTier } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -16,6 +16,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace access denied." }, { status: 403 });
+  if (!await hasWorkspaceTier(access.tenant.id, "PRO")) return NextResponse.json({ error: "Operational reports are available on the Pro plan and above. Upgrade your workspace to continue." }, { status: 403 });
   const now = new Date();
   const defaultTo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const defaultFrom = new Date(defaultTo.getTime() - 29 * 86400000);

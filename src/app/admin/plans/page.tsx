@@ -50,7 +50,16 @@ export default function PlatformPlansPage() {
   }
 
   async function assignPlan(tenant: Tenant) {
-    const tier = assignments[tenant.id] || "STARTER";
+    const tier = assignments[tenant.id] || tenant.subscription?.tier || plans.find(plan => plan.active)?.tier || "";
+    if (!tier || !plans.some(plan => plan.active && plan.tier === tier)) {
+      setError("Choose an active plan before assigning it.");
+      return;
+    }
+    if (tenant.subscription?.tier === tier) {
+      setNotice(tenant.name + " is already assigned to this plan.");
+      return;
+    }
+    if (!window.confirm(`Assign the ${tier} plan to ${tenant.name}? This changes the workspace's plan limits immediately. Payment is not collected by ROAM.`)) return;
     setBusy(tenant.id); setError(""); setNotice("");
     try {
       const response = await fetch("/api/admin/plans", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "assign-plan", tenantId: tenant.id, tier }) });
@@ -77,7 +86,7 @@ export default function PlatformPlansPage() {
         </article>)}</div> : <p className="rounded-xl border border-white/10 p-5 text-sm text-slate-400">No plans have been initialized yet. Create a workspace to initialize the standard plans.</p>}
       </section>
       <section className="border-t border-white/10 py-8"><h2 className="mb-4 text-xl font-semibold">Tenant plan assignment</h2>
-        <div className="overflow-x-auto rounded-2xl border border-white/10 bg-slate-900"><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-slate-950/70 text-xs uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-4">Tenant</th><th className="px-5 py-4">Current plan</th><th className="px-5 py-4">Subscription status</th><th className="px-5 py-4">Assign plan</th></tr></thead><tbody>{tenants.map(tenant=><tr key={tenant.id} className="border-t border-white/5"><td className="px-5 py-4"><b>{tenant.name}</b><p className="text-xs text-slate-500">{tenant.slug}</p></td><td className="px-5 py-4">{tenant.subscription?.tier || "None"}</td><td className="px-5 py-4">{tenant.subscription?.status || "Not configured"}</td><td className="px-5 py-4"><div className="flex items-center gap-2"><select className="rounded-lg border border-white/10 bg-slate-950 px-3 py-2" value={assignments[tenant.id] || "STARTER"} onChange={event => setAssignments(current => ({...current,[tenant.id]:event.target.value}))}>{plans.filter(plan=>plan.active).map(plan=><option key={plan.id} value={plan.tier}>{plan.name}</option>)}</select><button disabled={busy===tenant.id} onClick={()=>void assignPlan(tenant)} className="rounded-lg bg-cyan-400 px-3 py-2 font-semibold text-slate-950 disabled:opacity-50">{busy===tenant.id ? "…" : "Assign"}</button></div></td></tr>)}</tbody></table></div>
+        <div className="overflow-x-auto rounded-2xl border border-white/10 bg-slate-900"><table className="w-full min-w-[720px] text-left text-sm"><thead className="bg-slate-950/70 text-xs uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-4">Tenant</th><th className="px-5 py-4">Current plan</th><th className="px-5 py-4">Subscription status</th><th className="px-5 py-4">Assign plan</th></tr></thead><tbody>{tenants.map(tenant=><tr key={tenant.id} className="border-t border-white/5"><td className="px-5 py-4"><b>{tenant.name}</b><p className="text-xs text-slate-500">{tenant.slug}</p></td><td className="px-5 py-4">{tenant.subscription?.tier || "None"}</td><td className="px-5 py-4">{tenant.subscription?.status || "Not configured"}</td><td className="px-5 py-4"><div className="flex items-center gap-2"><select className="rounded-lg border border-white/10 bg-slate-950 px-3 py-2" value={assignments[tenant.id] || tenant.subscription?.tier || plans.find(plan=>plan.active)?.tier || ""} onChange={event => setAssignments(current => ({...current,[tenant.id]:event.target.value}))}>{!plans.some(plan=>plan.active) && <option value="">No active plans</option>}{plans.filter(plan=>plan.active).map(plan=><option key={plan.id} value={plan.tier}>{plan.name}</option>)}</select><button disabled={busy===tenant.id || !plans.some(plan=>plan.active)} onClick={()=>void assignPlan(tenant)} className="rounded-lg bg-cyan-400 px-3 py-2 font-semibold text-slate-950 disabled:opacity-50">{busy===tenant.id ? "…" : "Assign"}</button></div></td></tr>)}</tbody></table></div>
       </section>
     </>}
     <p className="mt-4 text-xs leading-5 text-slate-500">Plan assignment changes entitlements and records a manual-review subscription state for new assignments. ROAM does not currently collect payments, charge cards, or automatically renew subscriptions. Confirm payment separately before marking any account paid.</p>

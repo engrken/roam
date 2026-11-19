@@ -137,6 +137,11 @@ model Subscription {
   currentPeriodStart DateTime?
   currentPeriodEnd   DateTime?
   trialEndsAt        DateTime?
+  trialPolicyVersion Int              @default(0)
+  trialGraceEndsAt   DateTime?
+  trialReminderSentAt DateTime?
+  trialExpiredNoticeSentAt DateTime?
+  trialReadOnlyNoticeSentAt DateTime?
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
   tenant             Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)

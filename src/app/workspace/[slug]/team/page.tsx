@@ -2,12 +2,13 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, RefreshCw, UserPlus, Users, ShieldCheck, Trash2 } from "lucide-react";
+import { ArrowLeft, RefreshCw, UserPlus, Users, ShieldCheck, Trash2, Mail } from "lucide-react";
 import Link from "next/link";
 import { WorkspaceNav } from "@/components/workspace-nav";
 
 type Member = { id: string; userId: string; email: string; name: string | null; role: string; joinedAt: string };
-type TeamData = { members: Member[]; limits: { plan: string; maxMembers: number | null; currentMembers: number }; actorRole: string };
+type Invitation = { id: string; email: string; role: string; expiresAt: string; createdAt: string };
+type TeamData = { members: Member[]; invitations: Invitation[]; limits: { plan: string; maxMembers: number | null; currentMembers: number }; actorRole: string };
 
 const roleLabels: Record<string, string> = { OWNER: "Owner", ADMIN: "Administrator", MANAGER: "Manager", STAFF: "Staff" };
 
@@ -48,10 +49,23 @@ export default function TeamPage() {
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Unable to add team member.");
-      setEmail(""); setRole("STAFF"); setNotice("Team member added. They can now sign in and access this workspace.");
+      setEmail(""); setRole("STAFF"); setNotice(body.invited ? (body.message || "Invitation sent.") : "Team member added. They can now access this workspace.");
       await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to add team member.");
+    } finally { setBusy(false); }
+  }
+
+  async function revokeInvitation(invitation: Invitation) {
+    if (!window.confirm("Revoke the pending invitation sent to " + invitation.email + "?")) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/workspaces/" + encodeURIComponent(slug) + "/team?invitationId=" + encodeURIComponent(invitation.id), { method: "DELETE" });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Unable to revoke invitation.");
+      setNotice("Invitation revoked."); await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to revoke invitation.");
     } finally { setBusy(false); }
   }
 
@@ -102,15 +116,15 @@ export default function TeamPage() {
         <article><span>Workspace members</span><b>{data.limits.currentMembers}</b></article>
         <article><span>Plan</span><b>{data.limits.plan}</b></article>
         <article><span>Member allowance</span><b>{data.limits.maxMembers == null ? "Unlimited" : data.limits.maxMembers}</b></article>
-        <article><span>Available seats</span><b>{data.limits.maxMembers == null ? "Unlimited" : Math.max(0, data.limits.maxMembers - data.limits.currentMembers)}</b></article>
+        <article><span>Available seats</span><b>{data.limits.maxMembers == null ? "Unlimited" : Math.max(0, data.limits.maxMembers - data.limits.currentMembers - data.invitations.length)}</b></article>
       </section>
       <section className="roam-panel roam-vehicle-form">
-        <div className="roam-panel-heading"><div><span className="roam-eyebrow">ADD ACCESS</span><h2>Add an existing ROAM user</h2></div><UserPlus size={22}/></div>
-        <p className="roam-muted">The person must register for ROAM using this email address first. Adding them here grants access only to this workspace; it does not create or change their account.</p>
+        <div className="roam-panel-heading"><div><span className="roam-eyebrow">ADD ACCESS</span><h2>Invite a teammate</h2></div><UserPlus size={22}/></div>
+        <p className="roam-muted">If the email already belongs to a ROAM user, access is added immediately. Otherwise, ROAM emails a secure invitation link so they can register or sign in before accepting.</p>
         <form onSubmit={addMember} className="roam-form-grid">
           <label>Email address<input type="email" required maxLength={254} value={email} onChange={event => setEmail(event.target.value)} placeholder="teammate@example.com"/></label>
           <label>Workspace role<select value={role} onChange={event => setRole(event.target.value)}>{roles.map(item => <option key={item} value={item}>{roleLabels[item]}</option>)}</select></label>
-          <div className="roam-settings-actions"><button className="roam-primary-btn" disabled={busy || (data.limits.maxMembers != null && data.limits.currentMembers >= data.limits.maxMembers)}><UserPlus size={16}/>{busy ? "Saving…" : "Add team member"}</button></div>
+          <div className="roam-settings-actions"><button className="roam-primary-btn" disabled={busy || (data.limits.maxMembers != null && data.limits.currentMembers + data.invitations.length >= data.limits.maxMembers)}><UserPlus size={16}/>{busy ? "Saving…" : "Add team member"}</button></div>
         </form>
       </section>
       <section className="roam-panel roam-table-panel">
@@ -122,6 +136,12 @@ export default function TeamPage() {
             <td>{canManageTarget(member) ? <button className="roam-danger-btn" disabled={busy} onClick={() => void removeMember(member)}><Trash2 size={14}/> Remove</button> : <span className="roam-muted">Protected</span>}</td>
           </tr>)}
         </tbody></table></div> : <div className="roam-empty"><Users size={28}/><b>No team members yet</b><span>Add a registered ROAM user to share workspace access.</span></div>}
+      </section>
+      <section className="roam-panel roam-table-panel">
+        <div className="roam-panel-heading"><div><span className="roam-eyebrow">PENDING ACCESS</span><h2>Invitations</h2></div><span className="roam-panel-total">{data.invitations.length} pending</span></div>
+        {data.invitations.length ? <div className="roam-table-scroll"><table className="roam-table"><thead><tr><th>Email</th><th>Role</th><th>Expires</th><th>Actions</th></tr></thead><tbody>
+          {data.invitations.map(invitation => <tr key={invitation.id}><td><div className="roam-vehicle-cell"><span className="roam-vehicle-avatar"><Mail size={16}/></span><span><b>{invitation.email}</b><small>Invitation sent {new Date(invitation.createdAt).toLocaleDateString("en-PH")}</small></span></div></td><td>{roleLabels[invitation.role] || invitation.role}</td><td>{new Date(invitation.expiresAt).toLocaleDateString("en-PH")}</td><td><button className="roam-danger-btn" disabled={busy} onClick={() => void revokeInvitation(invitation)}><Trash2 size={14}/> Revoke</button></td></tr>)}
+        </tbody></table></div> : <div className="roam-empty"><Mail size={26}/><b>No pending invitations</b><span>Invitations will appear here until accepted or expired.</span></div>}
       </section>
       <footer className="roam-footer">ROAM Team Management <span>Removing a member does not delete their ROAM account or other workspace access.</span></footer>
     </main>

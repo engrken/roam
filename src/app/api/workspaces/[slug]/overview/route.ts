@@ -52,7 +52,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   const [
     vehicleCounts, bookingCounts, customerCount, branchCount, completedValue,
     upcoming, recent, fleetTotal, pendingItems, pickupItems, returnItems,
-    overdueItems, openBookings, recentPaymentTotals,
+    overdueItems, pickupCount, returnCount, overdueCount, openBookings, recentPaymentTotals,
   ] = await Promise.all([
     prisma.vehicle.groupBy({ by: ["status"], where: { tenantId }, _count: { _all: true } }),
     prisma.booking.groupBy({ by: ["status"], where: { tenantId }, _count: { _all: true } }),
@@ -85,6 +85,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
       orderBy: { endAt: "asc" }, take: 5,
       select: { id: true, reference: true, startAt: true, endAt: true, customer: { select: { name: true } } },
     }),
+    prisma.booking.count({ where: { tenantId, status: "CONFIRMED", startAt: { gte: todayStart, lt: tomorrowStart } } }),
+    prisma.booking.count({ where: { tenantId, status: "ACTIVE", endAt: { gte: todayStart, lt: tomorrowStart } } }),
+    prisma.booking.count({ where: { tenantId, status: "ACTIVE", endAt: { lt: now } } }),
     prisma.booking.findMany({
       where: { tenantId, status: { in: ["CONFIRMED", "ACTIVE"] } },
       select: { totalAmount: true, payments: { select: { amount: true, kind: true } } },
@@ -135,8 +138,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     actionCenter: {
       pendingCount: bookingMap.pending || 0,
       pendingItems: pendingItems.map(actionItem),
+      pickupCount,
       pickupsToday: pickupItems.map(actionItem),
+      returnCount,
       returnsToday: returnItems.map(actionItem),
+      overdueCount,
       overdueReturns: overdueItems.map(actionItem),
       outstandingCount: openBookings.filter((booking) => {
         const netPaid = booking.payments.reduce((paid, payment) => paid + (payment.kind === "REFUND" ? -Number(payment.amount) : Number(payment.amount)), 0);

@@ -190,3 +190,30 @@
 
 
 .roam-public-help section{padding:20px 0;border-top:1px solid var(--line)}.roam-public-help section h2{display:flex;align-items:center;gap:10px;font-size:20px;margin:0 0 9px}.roam-public-help section h2 svg{color:var(--green);flex:0 0 auto}.roam-public-help section p{margin:0}.roam-public-help-back{display:inline-flex;align-items:center;gap:8px;margin-top:18px;color:var(--green);font-size:13px;font-weight:700;text-decoration:none}
+
+
+/* Rental terms editor and customer acceptance */
+.roam-settings-panel{max-width:920px;padding:28px;display:grid;gap:20px}
+.roam-settings-heading{display:flex;align-items:flex-start;gap:14px}
+.roam-settings-heading h2{margin:0 0 6px;font-size:1.15rem}
+.roam-settings-heading p{margin:0;color:var(--muted,#68716a);line-height:1.6}
+.roam-legal-notice{padding:14px 16px;border:1px solid #e5e8df;border-radius:12px;background:#f8faf5;color:#5f675c;font-size:.9rem;line-height:1.6}
+.roam-settings-form{display:grid;gap:12px}
+.roam-settings-form>label{font-weight:650}
+.roam-settings-form textarea{width:100%;min-height:300px;resize:vertical;padding:15px;border:1px solid #d9ded5;border-radius:12px;background:#fff;color:#202720;font:inherit;line-height:1.65}
+.roam-settings-form textarea:focus{outline:3px solid #c8f078;outline-offset:1px;border-color:#607b39}
+.roam-settings-meta,.roam-settings-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.roam-settings-meta,.roam-settings-footnote{font-size:.82rem;color:#737c71}
+.roam-settings-actions button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:0 16px;border-radius:10px;font:inherit;font-weight:650;cursor:pointer}
+.roam-secondary-button{background:#fff;border:1px solid #d9ded5;color:#344033}
+.roam-primary-button{background:#243324;border:1px solid #243324;color:#fff}
+.roam-primary-button:disabled{opacity:.45;cursor:not-allowed}
+.client-rental-terms{display:grid;gap:12px;padding:18px;border:1px solid #dfe5d8;border-radius:14px;background:#fbfcf9}
+.client-rental-terms>div:first-child strong{display:block;font-size:1rem}
+.client-rental-terms>div:first-child p{margin:5px 0 0;color:#68716a;font-size:.88rem;line-height:1.5}
+.client-rental-terms-copy{max-height:220px;overflow:auto;white-space:pre-wrap;padding:14px;border:1px solid #e5e8df;border-radius:10px;background:#fff;color:#30392f;font-size:.9rem;line-height:1.65}
+.client-terms-check{display:flex;align-items:flex-start;gap:10px;font-size:.9rem;line-height:1.5;cursor:pointer}
+.client-terms-check input{width:18px;height:18px;flex:0 0 18px;margin-top:2px;accent-color:#31482b}
+.client-privacy a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+.client-success-inline{padding:12px 14px;border-radius:10px;background:#f1f8e9;color:#31482b;font-size:.9rem}
+@media(max-width:640px){.roam-settings-panel{padding:18px}.roam-settings-actions{align-items:stretch}.roam-settings-actions button{flex:1}.client-rental-terms{padding:14px}}

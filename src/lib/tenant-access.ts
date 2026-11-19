@@ -18,3 +18,19 @@ export async function getTenantAccess(slug: string) {
 export function canManageFleet(role: string) {
   return ["OWNER", "ADMIN", "MANAGER"].includes(role);
 }
+
+const planTierRank: Record<string, number> = {
+  FREE: 0,
+  STARTER: 1,
+  PRO: 2,
+  BUSINESS: 3,
+  ENTERPRISE: 4,
+};
+
+export async function hasWorkspaceTier(tenantId: string, minimumTier: "STARTER" | "PRO" | "BUSINESS" | "ENTERPRISE") {
+  const subscription = await prisma.subscription.findUnique({
+    where: { tenantId },
+    select: { tier: true },
+  });
+  return (planTierRank[subscription?.tier || "FREE"] ?? 0) >= planTierRank[minimumTier];
+}

@@ -97,8 +97,8 @@ export default function Home() {
     ["What types of vehicles can ROAM manage?", "ROAM is being designed for private vehicle rental operators managing motorcycles, scooters, cars, SUVs, MPVs, vans, pickups, buses, trucks, and other rentable vehicle types."],
     ["Can more than one rental business use ROAM?", "Yes. Each rental business gets its own workspace, team membership, and operational records."],
     ["How do I get started?", "Create an account using your email, verify your one-time code, then create your rental business workspace with a 14-day free trial."],
-    ["What happens after the free trial?", plans.length ? "Choose the plan that fits your rental operation: " + configuredPlanSummary + ". All active tiers include the same core ROAM tools." : "Our plan options are temporarily unavailable. Please check back shortly."],
-    ["What changes when I upgrade?", plans.length ? "You get more operating capacity based on the selected plan: " + configuredCapacitySummary + " The core feature set is included in every tier." : "Plan limits depend on the active plan configured by ROAM."]
+    ["What happens after the free trial?", plans.length ? "Choose the plan that fits your rental operation: " + configuredPlanSummary + ". Every tier includes core fleet, booking, customer, messaging, and financial workflows. Branch management and operational reports start on Pro; team invitations and role management start on Business." : "Our plan options are temporarily unavailable. Please check back shortly."],
+    ["What changes when I upgrade?", plans.length ? "You get more operating capacity based on the selected plan: " + configuredCapacitySummary + " Feature availability also expands by tier: multi-branch management and operational reports start on Pro, while team access starts on Business." : "Plan limits depend on the active plan configured by ROAM."]
   ];
 
   return <main className={`site ${dark ? "theme-dark" : ""}`}>

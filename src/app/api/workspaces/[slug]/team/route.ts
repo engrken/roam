@@ -72,12 +72,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: `Your ${subscription.plan.name} plan allows ${subscription.plan.maxStaff} workspace members. Upgrade your plan to add another member.` }, { status: 403 });
   }
 
-  const membership = await prisma.membership.create({
-    data: { tenantId: access.tenant.id, userId: user.id, role },
-  });
-  return NextResponse.json({
-    member: { id: membership.id, userId: user.id, email: user.email, name: user.name, role: membership.role, joinedAt: membership.createdAt },
-  }, { status: 201 });
+  try {
+    const membership = await prisma.membership.create({
+      data: { tenantId: access.tenant.id, userId: user.id, role },
+    });
+    return NextResponse.json({
+      member: { id: membership.id, userId: user.id, email: user.email, name: user.name, role: membership.role, joinedAt: membership.createdAt },
+    }, { status: 201 });
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
+      return NextResponse.json({ error: "That user is already a member of this workspace." }, { status: 409 });
+    }
+    console.error("Workspace member creation failed", error);
+    return NextResponse.json({ error: "Unable to add the team member right now." }, { status: 500 });
+  }
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {

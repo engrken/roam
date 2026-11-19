@@ -231,7 +231,7 @@ export default function AccountPage() {
             <h3>Your referrals</h3>
             {data.tenant.referralsSent.length ? <div className="roam-table-wrap"><table><thead><tr><th>Business</th><th>Registered</th><th>Payment deadline</th><th>Status</th></tr></thead><tbody>{data.tenant.referralsSent.map(item=><tr key={item.id}><td>{item.referredBusiness}</td><td>{date(item.registeredAt)}</td><td>{date(item.expiresAt)}</td><td><span className={"roam-account-table-status " + statusClass(item.status)}>{titleCase(item.status)}</span></td></tr>)}</tbody></table></div> : <p className="roam-account-plan-caption">No referrals yet. Copy your link and share it with another rental business.</p>}
           </div>
-          <p className="roam-account-disclaimer"><ShieldCheck size={15}/> A referral qualifies only after the new workspace's first paid subscription payment is verified by ROAM. Both one-month rewards are applied automatically after qualification. Self-referrals and duplicate claims are not eligible.</p>
+          <p className="roam-account-disclaimer"><ShieldCheck size={15}/> A referral qualifies only after the new workspace&apos;s first paid subscription payment is verified by ROAM. Both one-month rewards are applied automatically after qualification. Self-referrals and duplicate claims are not eligible.</p>
         </section>
 
         <section className="roam-panel roam-account-section" id="billing-history">

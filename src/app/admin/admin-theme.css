@@ -1,0 +1,115 @@
+@import url("https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css");
+
+/* Bootstrap is scoped to the platform admin segment; the rest of ROAM is unchanged. */
+.roam-admin-theme-root {
+  --admin-page: #080f1d;
+  --admin-surface: #111c2e;
+  --admin-surface-raised: #17243a;
+  --admin-input: #0b1424;
+  --admin-ink: #edf4ff;
+  --admin-muted: #9aabc2;
+  --admin-subtle: #71839d;
+  --admin-border: rgba(183, 202, 230, .14);
+  --admin-accent: #67e8f9;
+  --admin-accent-ink: #08202b;
+  min-height: 100vh;
+  color: var(--admin-ink);
+  background: var(--admin-page);
+  transition: color .18s ease, background-color .18s ease;
+}
+.roam-admin-theme-root[data-theme="light"] {
+  --admin-page: #f3f6fb;
+  --admin-surface: #ffffff;
+  --admin-surface-raised: #f8faff;
+  --admin-input: #ffffff;
+  --admin-ink: #17243a;
+  --admin-muted: #52627a;
+  --admin-subtle: #718096;
+  --admin-border: #dce4ef;
+  --admin-accent: #087e9b;
+  --admin-accent-ink: #ffffff;
+}
+.roam-admin-theme-root,
+.roam-admin-theme-root * { box-sizing: border-box; }
+.roam-admin-theme-root a { color: var(--admin-accent); }
+.roam-admin-theme-root button,
+.roam-admin-theme-root input,
+.roam-admin-theme-root select,
+.roam-admin-theme-root textarea { font: inherit; }
+.roam-admin-theme-root .bg-slate-950 { background-color: var(--admin-page) !important; }
+.roam-admin-theme-root .bg-slate-900 { background-color: var(--admin-surface) !important; }
+.roam-admin-theme-root .bg-slate-800 { background-color: var(--admin-surface-raised) !important; }
+.roam-admin-theme-root .bg-slate-950\/70,
+.roam-admin-theme-root .bg-slate-950\/60 { background-color: color-mix(in srgb, var(--admin-page) 88%, transparent) !important; }
+.roam-admin-theme-root .bg-slate-900\/60,
+.roam-admin-theme-root .bg-slate-900\/50 { background-color: color-mix(in srgb, var(--admin-surface-raised) 88%, transparent) !important; }
+.roam-admin-theme-root .text-white,
+.roam-admin-theme-root .text-slate-100,
+.roam-admin-theme-root .text-slate-200 { color: var(--admin-ink) !important; }
+.roam-admin-theme-root .text-slate-300 { color: var(--admin-muted) !important; }
+.roam-admin-theme-root .text-slate-400 { color: var(--admin-muted) !important; }
+.roam-admin-theme-root .text-slate-500,
+.roam-admin-theme-root .text-slate-600 { color: var(--admin-subtle) !important; }
+.roam-admin-theme-root .border-white\/5,
+.roam-admin-theme-root .border-white\/10,
+.roam-admin-theme-root .border-white\/15 { border-color: var(--admin-border) !important; }
+.roam-admin-theme-root .divide-white\/5 > :not([hidden]) ~ :not([hidden]) { border-color: var(--admin-border) !important; }
+.roam-admin-theme-root input:not([type="checkbox"]):not([type="radio"]),
+.roam-admin-theme-root select,
+.roam-admin-theme-root textarea {
+  color: var(--admin-ink);
+  background-color: var(--admin-input);
+  border-color: var(--admin-border);
+}
+.roam-admin-theme-root input::placeholder,
+.roam-admin-theme-root textarea::placeholder { color: var(--admin-subtle); }
+.roam-admin-theme-root option { color: var(--admin-ink); background: var(--admin-surface); }
+.roam-admin-theme-root table { color: var(--admin-ink); }
+.roam-admin-theme-root thead,
+.roam-admin-theme-root .bg-slate-950\/70 { background-color: var(--admin-surface-raised) !important; }
+.roam-admin-theme-root .hover\:bg-white\/5:hover,
+.roam-admin-theme-root .hover\:bg-white\/\[\.025\]:hover { background-color: color-mix(in srgb, var(--admin-accent) 7%, transparent) !important; }
+.roam-admin-theme-root .text-cyan-200,
+.roam-admin-theme-root .text-cyan-300,
+.roam-admin-theme-root .text-cyan-400 { color: var(--admin-accent) !important; }
+.roam-admin-theme-root .bg-cyan-400 { background-color: var(--admin-accent) !important; color: var(--admin-accent-ink) !important; }
+.roam-admin-theme-root .border-cyan-300\/50 { border-color: color-mix(in srgb, var(--admin-accent) 55%, transparent) !important; }
+.roam-admin-theme-root .bg-cyan-300\/10 { background-color: color-mix(in srgb, var(--admin-accent) 12%, transparent) !important; }
+.roam-admin-theme-root .roam-admin-theme-toggle {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 1050;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--admin-border);
+  border-radius: 999px;
+  color: var(--admin-ink);
+  background: var(--admin-surface);
+  box-shadow: 0 8px 30px rgba(0,0,0,.18);
+  font-size: 12px;
+  font-weight: 700;
+}
+.roam-admin-theme-root .roam-admin-theme-toggle:hover {
+  color: var(--admin-accent);
+  border-color: var(--admin-accent);
+  background: var(--admin-surface-raised);
+}
+.roam-admin-theme-root .roam-admin-theme-toggle:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--admin-accent) 45%, transparent);
+  outline-offset: 3px;
+}
+.roam-admin-theme-root .btn { --bs-btn-font-weight: 650; }
+.roam-admin-theme-root .card {
+  color: var(--admin-ink);
+  background: var(--admin-surface);
+  border-color: var(--admin-border);
+}
+@media (max-width: 640px) {
+  .roam-admin-theme-root .roam-admin-theme-toggle { right: 14px; bottom: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .roam-admin-theme-root { transition: none; }
+}

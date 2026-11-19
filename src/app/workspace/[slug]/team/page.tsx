@@ -96,7 +96,7 @@ export default function TeamPage() {
         <div className="roam-topbar-actions"><button className="roam-secondary-btn" onClick={() => void load()}><RefreshCw size={15}/> Refresh</button></div>
       </header>
       {error && <p className="roam-error" role="alert">{error}</p>}
-      {notice && <p className="roam-success" role="status">{notice}</p>}
+      {notice && <p className="client-notice" role="status">{notice}</p>}
       <section className="roam-booking-stats">
         <article><span>Workspace members</span><b>{data.limits.currentMembers}</b></article>
         <article><span>Plan</span><b>{data.limits.plan}</b></article>

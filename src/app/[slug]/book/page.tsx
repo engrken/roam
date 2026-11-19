@@ -109,7 +109,7 @@ export default function PublicBookPage() {
   }
 
   return <main className="client-page">
-    <header className="client-topbar"><Link href="/" className="client-brand"><span>R</span> ROAM</Link><span>SECURE BOOKING REQUEST</span></header>
+    <header className="client-topbar"><Link href="/" className="client-brand"><span>R</span> ROAM</Link><div className="client-topbar-links"><span>SECURE BOOKING REQUEST</span><Link href="/help">Booking help</Link></div></header>
     <div className="client-container">
       <div className="client-heading"><div className="client-eyebrow">RENT DIRECTLY WITH THE OWNER</div><h1>{business ? business.name : "Book your next ride"}</h1><p>Choose your vehicle, set your rental dates, and send a request. The rental team will confirm availability and next steps.</p></div>
       {error && <div className="client-alert" role="alert">{error}</div>}

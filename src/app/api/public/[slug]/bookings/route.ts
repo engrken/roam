@@ -18,21 +18,21 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const startValue = search.get("startAt");
   const endValue = search.get("endAt");
   const branchId = search.get("branchId") || "";
-  let requestedStart: Date | null = null;
-  let requestedEnd: Date | null = null;
-  if (startValue || endValue) {
-    requestedStart = rentalDateTimeToUtc(startValue, "Asia/Manila");
-    requestedEnd = rentalDateTimeToUtc(endValue, "Asia/Manila");
-    if (!startValue || !endValue || !requestedStart || !requestedEnd || requestedStart <= new Date() || requestedEnd <= requestedStart) {
-      return NextResponse.json({ error: "Choose a valid future pickup and return time." }, { status: 400 });
-    }
-  }
   const tenant = await prisma.tenant.findUnique({
     where: { slug },
     select: { id: true, name: true, phone: true, currency: true, timezone: true, status: true, rentalTerms: true },
   });
   if (!tenant || !["ACTIVE", "TRIAL"].includes(tenant.status)) {
     return NextResponse.json({ error: "Rental business not found." }, { status: 404 });
+  }
+  let requestedStart: Date | null = null;
+  let requestedEnd: Date | null = null;
+  if (startValue || endValue) {
+    requestedStart = rentalDateTimeToUtc(startValue, tenant.timezone);
+    requestedEnd = rentalDateTimeToUtc(endValue, tenant.timezone);
+    if (!startValue || !endValue || !requestedStart || !requestedEnd || requestedStart <= new Date() || requestedEnd <= requestedStart) {
+      return NextResponse.json({ error: "Choose a valid future pickup and return time." }, { status: 400 });
+    }
   }
 
   const [branches, vehicles] = await Promise.all([

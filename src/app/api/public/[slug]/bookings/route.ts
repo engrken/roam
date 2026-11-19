@@ -56,7 +56,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   const phone = typeof body?.phone === "string" ? body.phone.trim() : "";
   const vehicleId = typeof body?.vehicleId === "string" ? body.vehicleId : "";
-  const rentalTerms = tenant.rentalTerms?.trim() || "";\n  if (!rentalTerms) return NextResponse.json({ error: "This rental business has not published its rental terms yet. Please contact the business directly." }, { status: 409 });
+  const rentalTerms = tenant.rentalTerms?.trim() || "";
+  if (!rentalTerms) return NextResponse.json({ error: "This rental business has not published its rental terms yet. Please contact the business directly." }, { status: 409 });
   const rentalTermsVersion = hash(rentalTerms);
   if (body?.acceptedRentalTerms !== true || body?.rentalTermsVersion !== rentalTermsVersion) {
     return NextResponse.json({ error: "Please review and accept the current rental terms before submitting your request." }, { status: 400 });

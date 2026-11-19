@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTenantAccess, canManageFleet } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
-import { sendBookingMessageNotification } from "@/lib/email";
+import { sendBookingMessageNotification, sendBookingStatusNotification } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -160,11 +160,33 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           body: "Booking status changed from " + current.status + " to " + nextStatus + " by the rental team.",
         },
       });
-      return { updated: true };
+      return {
+        updated: true,
+        previousStatus: current.status,
+        nextStatus,
+        startAt: current.startAt,
+        endAt: current.endAt,
+      };
     });
 
     if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
-    return NextResponse.json({ updated: true });
+    let notification: "attempted" | "no_customer_email" | "failed" = booking.customer.email ? "attempted" : "no_customer_email";
+    if (booking.customer.email) {
+      try {
+        await sendBookingStatusNotification({
+          recipient: booking.customer.email,
+          tenantName: access.tenant.name,
+          bookingReference: reference,
+          status: result.nextStatus,
+          startAt: result.startAt,
+          endAt: result.endAt,
+        });
+      } catch (error) {
+        notification = "failed";
+        console.error("Booking status email notification failed", error);
+      }
+    }
+    return NextResponse.json({ updated: true, notification });
   }
 
   if (typeof body?.documentId === "string" && ["APPROVED", "REJECTED"].includes(body.reviewStatus)) {

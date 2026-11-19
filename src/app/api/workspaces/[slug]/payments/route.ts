@@ -11,7 +11,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   if (!access) return NextResponse.json({ error: "Workspace access denied." }, { status: 404 });
   if (!canManageFleet(access.role)) return NextResponse.json({ error: "You cannot view financial records." }, { status: 403 });
 
-  const [payments, bookings] = await Promise.all([
+  const [payments, bookings, paymentTotals] = await Promise.all([
     prisma.rentalPayment.findMany({
       where: { tenantId: access.tenant.id },
       orderBy: { receivedAt: "desc" },
@@ -21,8 +21,13 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     prisma.booking.findMany({
       where: { tenantId: access.tenant.id, status: { notIn: ["CANCELLED", "REJECTED"] } },
       orderBy: { updatedAt: "desc" },
-      take: 200,
       include: { customer: { select: { name: true } }, payments: { select: { amount: true, kind: true } } },
+    }),
+    prisma.rentalPayment.groupBy({
+      by: ["kind"],
+      where: { tenantId: access.tenant.id },
+      _sum: { amount: true },
+      _count: { _all: true },
     }),
   ]);
 
@@ -31,11 +36,16 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     const total = Number(booking.totalAmount);
     return { reference: booking.reference, customer: booking.customer.name, status: booking.status, total, collected: paid, outstanding: Math.max(0, total - paid) };
   });
-  const collected = payments.reduce((sum, payment) => sum + (payment.kind === "REFUND" ? -Number(payment.amount) : Number(payment.amount)), 0);
+  const collected = paymentTotals.reduce((sum, row) => {
+    const amount = Number(row._sum.amount || 0);
+    return sum + (row.kind === "REFUND" ? -amount : amount);
+  }, 0);
+  const paymentCount = paymentTotals.find((row) => row.kind === "PAYMENT")?._count._all || 0;
+  const refundCount = paymentTotals.find((row) => row.kind === "REFUND")?._count._all || 0;
   const outstanding = bookingBalances.reduce((sum, booking) => sum + booking.outstanding, 0);
 
   return NextResponse.json({
-    summary: { collected, outstanding, payments: payments.filter((payment) => payment.kind === "PAYMENT").length, refunds: payments.filter((payment) => payment.kind === "REFUND").length },
+    summary: { collected, outstanding, payments: paymentCount, refunds: refundCount },
     payments: payments.map((payment) => ({
       id: payment.id, amount: Number(payment.amount), currency: payment.currency, method: payment.method, kind: payment.kind,
       reference: payment.reference, notes: payment.notes, receivedAt: payment.receivedAt,
@@ -64,6 +74,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   try {
     const payment = await prisma.$transaction(async (tx) => {
+      await tx.$queryRawUnsafe(
+        "SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))) AS advisory_lock",
+        access.tenant.id,
+        bookingReference,
+      );
       const booking = await tx.booking.findFirst({
         where: { tenantId: access.tenant.id, reference: bookingReference, status: { notIn: ["CANCELLED", "REJECTED"] } },
         include: { payments: { select: { amount: true, kind: true } } },

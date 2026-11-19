@@ -51,8 +51,15 @@ export async function GET(request: NextRequest) {
       data: [{ bookingId: booking.id, noticeKey, noticeType: booking.type, scheduledFor: booking.scheduledFor }],
       skipDuplicates: true,
     });
+    const staleProcessingBefore = new Date(now.getTime() - 10 * 60 * 1000);
     const claim = await prisma.bookingAutomationNotice.updateMany({
-      where: { noticeKey, status: { in: ["PENDING", "FAILED"] } },
+      where: {
+        noticeKey,
+        OR: [
+          { status: { in: ["PENDING", "FAILED"] } },
+          { status: "PROCESSING", updatedAt: { lt: staleProcessingBefore } },
+        ],
+      },
       data: { status: "PROCESSING", lastError: null },
     });
     if (claim.count === 0) { skipped++; continue; }

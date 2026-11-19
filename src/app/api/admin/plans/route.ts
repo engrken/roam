@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPlatformAdmin } from "@/lib/platform-admin";
 import { prisma } from "@/lib/prisma";
 import { addCalendarMonths, grantReferralMonth } from "@/lib/referrals";
+import { sendReferralRewardEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -105,6 +106,7 @@ export async function PATCH(request: NextRequest) {
         const periodStart = subscription.currentPeriodEnd && subscription.currentPeriodEnd > now ? subscription.currentPeriodEnd : now;
         let periodEnd = addCalendarMonths(periodStart, 1 + subscription.referralCreditMonths);
         let referralQualified = false;
+        let referralReferrerTenantId: string | null = null;
         if (previousPaidCount === 0) {
           const referral = await tx.referral.findUnique({ where: { referredTenantId: tenantId } });
           if (referral && referral.status === "PENDING") {
@@ -115,6 +117,7 @@ export async function PATCH(request: NextRequest) {
               });
               periodEnd = addCalendarMonths(periodEnd, 1);
               await grantReferralMonth(tx, referral.referrerTenantId);
+              referralReferrerTenantId = referral.referrerTenantId;
               referralQualified = true;
             } else {
               await tx.referral.update({ where: { id: referral.id }, data: { status: "EXPIRED" } });
@@ -136,12 +139,38 @@ export async function PATCH(request: NextRequest) {
             details: { billingRecordId: record.id, reference, amount, currency: subscription.tenant.currency || "PHP", referralQualified },
           },
         });
-        return { record, subscription: updated, referralQualified };
+        return { record, subscription: updated, referralQualified, referralReferrerTenantId };
       });
+      let referralEmailsSent = 0;
+      if (result.referralQualified && result.referralReferrerTenantId) {
+        try {
+          const rewardedTenants = await prisma.tenant.findMany({
+            where: { id: { in: [tenantId, result.referralReferrerTenantId] } },
+            select: { id: true, name: true, slug: true, memberships: { where: { role: "OWNER" }, select: { user: { select: { email: true } } }, take: 1 } },
+          });
+          const referred = rewardedTenants.find(item => item.id === tenantId);
+          const referrer = rewardedTenants.find(item => item.id === result.referralReferrerTenantId);
+          const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\\/+$/, "");
+          const emails = await Promise.allSettled([
+            ...(referred?.memberships[0]?.user.email && referrer ? [sendReferralRewardEmail({
+              recipient: referred.memberships[0].user.email, businessName: referred.name,
+              referredBusinessName: referrer.name, accountUrl: baseUrl + "/workspace/" + encodeURIComponent(referred.slug) + "/account",
+            })] : []),
+            ...(referrer?.memberships[0]?.user.email && referred ? [sendReferralRewardEmail({
+              recipient: referrer.memberships[0].user.email, businessName: referrer.name,
+              referredBusinessName: referred.name, accountUrl: baseUrl + "/workspace/" + encodeURIComponent(referrer.slug) + "/account",
+            })] : []),
+          ]);
+          referralEmailsSent = emails.filter(item => item.status === "fulfilled").length;
+        } catch (emailError) {
+          console.error("Referral reward email notification failed", emailError);
+        }
+      }
       return NextResponse.json({
         payment: { id: result.record.id, reference: result.record.reference, amount: Number(result.record.amount), paidAt: result.record.paidAt?.toISOString() || null },
         subscription: { ...result.subscription, currentPeriodStart: result.subscription.currentPeriodStart?.toISOString() || null, currentPeriodEnd: result.subscription.currentPeriodEnd?.toISOString() || null },
         referralQualified: result.referralQualified,
+        referralEmailsSent,
         message: result.referralQualified
           ? "Payment recorded. Referral qualified: one free month has been credited to both workspaces."
           : "Payment recorded and subscription activated.",

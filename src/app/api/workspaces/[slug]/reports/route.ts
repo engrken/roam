@@ -25,13 +25,22 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (to.getTime() - from.getTime() > 365 * 86400000) return NextResponse.json({ error: "Report range cannot exceed 366 days." }, { status: 400 });
   const endExclusive = new Date(to.getTime() + 86400000);
   const tenantId = access.tenant.id;
+  const requestedBranchId = request.nextUrl.searchParams.get("branchId")?.trim() || null;
+  if (requestedBranchId) {
+    const branch = await prisma.branch.findFirst({
+      where: { id: requestedBranchId, tenantId, isActive: true },
+      select: { id: true },
+    });
+    if (!branch) return NextResponse.json({ error: "That branch is unavailable in this workspace." }, { status: 404 });
+  }
+  const branchFilter = requestedBranchId ? { branchId: requestedBranchId } : {};
   const [bookings, fleetCount] = await Promise.all([
     prisma.booking.findMany({
-      where: { tenantId, startAt: { gte: from, lt: endExclusive } },
-      select: { id: true, reference: true, status: true, startAt: true, endAt: true, totalAmount: true, customer: { select: { name: true } } },
+      where: { tenantId, ...branchFilter, startAt: { gte: from, lt: endExclusive } },
+      select: { id: true, reference: true, status: true, startAt: true, endAt: true, totalAmount: true, customer: { select: { name: true } }, branch: { select: { name: true } } },
       orderBy: { startAt: "asc" },
     }),
-    prisma.vehicle.count({ where: { tenantId, status: { not: "INACTIVE" } } }),
+    prisma.vehicle.count({ where: { tenantId, ...branchFilter, status: { not: "INACTIVE" } } }),
   ]);
   const byDay = new Map<string, { date: string; bookings: number; completed: number; revenue: number }>();
   for (let cursor = new Date(from); cursor < endExclusive; cursor = new Date(cursor.getTime() + 86400000)) {
@@ -56,7 +65,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (["PENDING", "CONFIRMED", "ACTIVE"].includes(booking.status)) pendingValue += Number(booking.totalAmount);
   }
   return NextResponse.json({
-    range: { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) },
+    range: { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10), branchId: requestedBranchId },
     summary: {
       bookings: bookings.length,
       completed: statusCounts.COMPLETED || 0,
@@ -78,6 +87,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       startAt: booking.startAt,
       endAt: booking.endAt,
       totalAmount: Number(booking.totalAmount),
+      branch: booking.branch?.name || "Unassigned",
     })),
   });
 }

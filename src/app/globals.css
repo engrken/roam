@@ -244,3 +244,11 @@
 .roam-guide-footer>span{font-size:11px;color:var(--muted)}
 .roam-guide-footer button{display:inline-flex;align-items:center;gap:5px}
 @media(max-width:760px){.roam-getting-started{padding:18px}.roam-guide-steps{grid-template-columns:1fr}.roam-guide-footer{align-items:flex-start;flex-direction:column}}
+
+
+/* Tenant booking-page sharing */
+.roam-share-link-row{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:11px;background:var(--surface-2)}
+.roam-share-link-row>span{flex:1;min-width:0;overflow-wrap:anywhere;color:var(--ink);font-size:12px}
+.roam-share-link-row button,.roam-share-socials a,.roam-share-socials button{display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;white-space:nowrap}
+.roam-share-socials{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:12px}
+@media(max-width:600px){.roam-share-link-row{align-items:stretch;flex-direction:column}.roam-share-link-row button{width:100%}.roam-share-socials>*{flex:1 1 140px}}

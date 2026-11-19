@@ -179,8 +179,8 @@ export default function MessagesPage() {
                   {selected.messages.length === 0 ? (
                     <div className="roam-thread-first-message"><MessageCircle size={24} /><strong>No messages yet</strong><span>Send the customer an update or answer their question.</span></div>
                   ) : selected.messages.map((message) => (
-                    <article key={message.id} className={`roam-chat-message ${message.sender === "OWNER" ? "from-team" : "from-customer"}`}>
-                      <span className="roam-chat-sender">{message.sender === "OWNER" ? "Your team" : "Customer"}</span>
+                    <article key={message.id} className={`roam-chat-message ${message.sender === "OWNER" || message.sender === "SYSTEM" ? "from-team" : "from-customer"}`}>
+                      <span className="roam-chat-sender">{message.sender === "OWNER" ? "Your team" : message.sender === "SYSTEM" ? "ROAM system" : "Customer"}</span>
                       <p>{message.body}</p>
                       <time dateTime={message.createdAt}>{formatTime(message.createdAt)}</time>
                     </article>

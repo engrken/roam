@@ -17,6 +17,17 @@ export function EmailOtpForm({ mode = "login" }: { mode?: "login" | "register" }
 
   useEffect(()=>{fetch("/api/auth/me",{cache:"no-store"}).then(r=>{if(r.ok)router.replace("/workspace");}).catch(()=>undefined);},[router]);
 
+  async function resendCode(){
+    setBusy(true);setError("");setMessage("");
+    try{
+      const response=await fetch("/api/auth/request-otp",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,purpose:registering?"register":"login"})});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||"Unable to send another code.");
+      setCode("");setMessage("A new verification code has been sent if this email is eligible. Your previous code is no longer valid.");
+    }catch(e){setError(e instanceof Error?e.message:"Please try again.");}
+    finally{setBusy(false);}
+  }
+
   async function submit(event:FormEvent){
     event.preventDefault();setBusy(true);setError("");setMessage("");
     try{
@@ -44,7 +55,7 @@ export function EmailOtpForm({ mode = "login" }: { mode?: "login" | "register" }
         {error&&<p className="roam-auth-error" role="alert">{error}</p>}
         <button className="roam-primary-btn roam-auth-submit" disabled={busy}>{busy?"Please wait…":step==="email"?(registering?"Create account":"Email me a sign-in code"):"Verify and continue"}<ArrowRight size={16}/></button>
       </form>
-      {step==="code"&&<button className="roam-auth-back" onClick={()=>{setStep("email");setCode("");setMessage("");setError("");}}><ArrowLeft size={14}/> Use a different email</button>}
+      {step==="code"&&<div className="roam-auth-code-actions"><button type="button" className="roam-auth-back" onClick={()=>{setStep("email");setCode("");setMessage("");setError("");}}><ArrowLeft size={14}/> Change email</button><button type="button" className="roam-auth-back" disabled={busy} onClick={resendCode}>Resend code</button></div>}
       <div className="roam-auth-switch">{registering?"Already have an account?":"New to ROAM?"} <Link href={registering?"/login":"/register"}>{registering?"Sign in":"Create a free account"}</Link></div>
       <Link href="/" className="roam-auth-home">Back to ROAM home</Link>
     </section>

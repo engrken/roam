@@ -20,7 +20,7 @@ type AccountData = {
 
 const money = (amount: number, currency = "PHP") => new Intl.NumberFormat("en-PH", { style: "currency", currency }).format(amount);
 const date = (value: string | null) => value ? new Date(value).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }) : "—";
-const titleCase = (value: string) => value.toLowerCase().replace(/_/g, " ").replace(/\\b\\w/g, letter => letter.toUpperCase());
+const titleCase = (value: string) => value.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, letter => letter.toUpperCase());
 const capacity = (value: number | null) => value == null ? "Unlimited" : String(value);
 const statusClass = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
@@ -189,7 +189,7 @@ export default function AccountPage() {
             <div className="roam-account-subheading"><Mail size={17}/><div><strong>Change sign-in email</strong><p>We’ll send a one-time verification code to the new address.</p></div></div>
             <div className="roam-account-email-controls">
               <div className="roam-account-field"><label htmlFor="new-signin-email">New email address</label><input id="new-signin-email" type="email" value={newEmail} onChange={event => setNewEmail(event.target.value)} placeholder="name@example.com" disabled={emailStep}/></div>
-              {!emailStep ? <button className="roam-secondary-button" type="button" disabled={!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail) || emailBusy} onClick={sendEmailCode}>{emailBusy ? "Sending…" : "Send verification code"}</button> : <div className="roam-account-code-group"><div className="roam-account-field"><label htmlFor="email-change-code">6-digit verification code</label><input id="email-change-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={emailCode} onChange={event => setEmailCode(event.target.value.replace(/\\D/g, "").slice(0, 6))} placeholder="000000"/></div><button className="roam-primary-button" type="button" disabled={emailCode.length !== 6 || emailBusy} onClick={verifyEmail}>{emailBusy ? "Verifying…" : "Verify email"}</button><button className="roam-text-button" type="button" onClick={() => { setEmailStep(false); setEmailCode(""); }}>Cancel</button></div>}
+              {!emailStep ? <button className="roam-secondary-button" type="button" disabled={!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail) || emailBusy} onClick={sendEmailCode}>{emailBusy ? "Sending…" : "Send verification code"}</button> : <div className="roam-account-code-group"><div className="roam-account-field"><label htmlFor="email-change-code">6-digit verification code</label><input id="email-change-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={emailCode} onChange={event => setEmailCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000"/></div><button className="roam-primary-button" type="button" disabled={emailCode.length !== 6 || emailBusy} onClick={verifyEmail}>{emailBusy ? "Verifying…" : "Verify email"}</button><button className="roam-text-button" type="button" onClick={() => { setEmailStep(false); setEmailCode(""); }}>Cancel</button></div>}
             </div>
           </div>
         </section>

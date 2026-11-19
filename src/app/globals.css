@@ -414,3 +414,26 @@
 @media(max-width:900px){.roam-account-hero{grid-template-columns:minmax(0,1fr) 270px}.roam-account-request{align-items:stretch;flex-direction:column}.roam-account-request-controls{flex-basis:auto}.roam-account-request-controls select{flex:1}.roam-account-form{grid-template-columns:1fr 1fr}}
 @media(max-width:650px){.roam-account-topbar{align-items:flex-start;flex-direction:column}.roam-account-security-link{align-self:flex-start}.roam-account-hero{grid-template-columns:1fr;padding:19px}.roam-account-plan-summary{padding:17px}.roam-account-hero-meta{gap:9px;flex-direction:column}.roam-account-jumpnav{flex-wrap:nowrap;overflow-x:auto;padding-bottom:12px}.roam-account-jumpnav a{flex:0 0 auto}.roam-account-pending{align-items:flex-start;flex-wrap:wrap}.roam-account-pending>div{flex-basis:calc(100% - 55px)}.roam-account-pending-tag{margin-left:49px}.roam-account-section{padding:17px}.roam-account-section-heading h2{font-size:19px}.roam-account-plan-grid{grid-template-columns:1fr 1fr}.roam-account-plan-card{padding:14px}.roam-account-plan-card-price{font-size:20px}.roam-account-request-controls{align-items:stretch;flex-direction:column}.roam-account-request-controls .roam-primary-button{width:100%}.roam-account-form{grid-template-columns:1fr}.roam-account-email-controls{align-items:stretch;flex-direction:column}.roam-account-email-controls>.roam-secondary-button{width:100%}.roam-account-code-group{align-items:stretch;flex-direction:column}.roam-account-code-group>.roam-account-field{max-width:none}.roam-account-code-group>.roam-primary-button{width:100%}.roam-account-business-card{align-items:flex-start;flex-wrap:wrap}.roam-account-business-copy{flex-basis:calc(100% - 60px)}.roam-account-business-card>a{width:100%;justify-content:center}.roam-account-security{align-items:flex-start;flex-wrap:wrap}.roam-account-security>div{flex-basis:calc(100% - 55px)}.roam-account-security>a{margin-left:51px}.roam-account-empty-state{padding:14px}}
 @media(max-width:420px){.roam-account-plan-grid{grid-template-columns:1fr}.roam-account-plan-caption{min-height:0}.roam-account-plan-card{padding:16px}.roam-account-heading-icon{flex-basis:36px;width:36px;height:36px}.roam-account-footer{align-items:flex-start;line-height:1.5}}
+
+/* Compact, accessible mobile workspace navigation */
+.roam-mobile-menu-toggle{display:none}
+@media(max-width:760px){
+  .roam-sidebar{position:sticky;top:0;inset:auto;width:100%;height:auto;min-height:62px;padding:10px 16px;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:10px;z-index:30;box-shadow:0 5px 18px #142a2412}
+  .roam-sidebar .roam-brand{padding:0;font-size:15px;flex:0 0 auto}
+  .roam-mobile-menu-toggle{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:40px;padding:0 12px;border:1px solid #476052;border-radius:10px;background:#21364a;color:#f1f7ee;font:700 12px 'DM Sans',sans-serif;cursor:pointer}
+  .roam-mobile-menu-toggle:focus-visible{outline:3px solid #d3f58b;outline-offset:2px}
+  .roam-side-label,.roam-workspace-name,.roam-sidebar-bottom{display:none}
+  .roam-side-nav{display:none;position:absolute;top:100%;left:0;right:0;max-height:min(72vh,620px);overflow-y:auto;margin:0;padding:12px 14px 16px;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;background:#17243a;border-top:1px solid #30483f;box-shadow:0 16px 28px #10251d2e}
+  .roam-sidebar.roam-sidebar-open .roam-side-nav{display:grid}
+  .roam-side-nav a{min-width:0;min-height:43px;padding:10px 11px;gap:9px;border-radius:9px;color:#c0d0c6;font-size:11px;line-height:1.25}
+  .roam-side-nav a svg{width:17px;height:17px;flex:0 0 17px}
+  .roam-side-nav a.active{background:#24463d;color:#e1f6bf}
+  .roam-side-nav .roam-admin-link{grid-column:1/-1;margin-top:5px;padding-top:12px;border-top:1px solid #2b4940;border-radius:9px}
+  .roam-sidebar.roam-sidebar-open .roam-sidebar-bottom{display:flex;position:absolute;top:calc(100% + min(72vh,620px));left:0;right:0;margin:0;padding:12px 18px 15px;background:#17243a;border-top:1px solid #2a473e}
+  .roam-sidebar-bottom button{min-height:36px}
+  .roam-main{width:100%;margin:0;padding:23px 16px}
+}
+@media(max-width:390px){
+  .roam-side-nav{grid-template-columns:1fr}
+  .roam-side-nav .roam-admin-link{grid-column:auto}
+}

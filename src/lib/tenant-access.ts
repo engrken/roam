@@ -48,3 +48,14 @@ export function workspaceWriteBlock(access: { trialReadOnly?: boolean }) {
     code: "TRIAL_READ_ONLY",
   }, { status: 423 });
 }
+
+export async function isTenantTrialReadOnly(tenantId: string) {
+  const subscription = await prisma.subscription.findUnique({
+    where: { tenantId },
+    select: { status: true, trialPolicyVersion: true, trialGraceEndsAt: true },
+  });
+  return subscription?.trialPolicyVersion === 1
+    && subscription.status === "trialing"
+    && !!subscription.trialGraceEndsAt
+    && subscription.trialGraceEndsAt <= new Date();
+}

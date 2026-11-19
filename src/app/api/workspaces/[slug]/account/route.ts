@@ -47,6 +47,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       currentPeriodStart: tenant.subscription.currentPeriodStart?.toISOString() || null,
       currentPeriodEnd: tenant.subscription.currentPeriodEnd?.toISOString() || null,
       trialEndsAt: tenant.subscription.trialEndsAt?.toISOString() || null,
+      referralCreditMonths: tenant.subscription.referralCreditMonths,
       plan: { ...tenant.subscription.plan, monthlyPrice: Number(tenant.subscription.plan.monthlyPrice) },
     } : null,
     plans: plans.map(plan => ({ ...plan, monthlyPrice: Number(plan.monthlyPrice) })),

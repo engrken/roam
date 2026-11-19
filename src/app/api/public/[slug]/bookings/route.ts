@@ -12,8 +12,21 @@ export const dynamic = "force-dynamic";
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 const reservingStatuses = ["PENDING", "CONFIRMED", "ACTIVE"] as const;
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const search = request.nextUrl.searchParams;
+  const startValue = search.get("startAt");
+  const endValue = search.get("endAt");
+  const branchId = search.get("branchId") || "";
+  let requestedStart: Date | null = null;
+  let requestedEnd: Date | null = null;
+  if (startValue || endValue) {
+    requestedStart = rentalDateTimeToUtc(startValue, "Asia/Manila");
+    requestedEnd = rentalDateTimeToUtc(endValue, "Asia/Manila");
+    if (!startValue || !endValue || !requestedStart || !requestedEnd || requestedStart <= new Date() || requestedEnd <= requestedStart) {
+      return NextResponse.json({ error: "Choose a valid future pickup and return time." }, { status: 400 });
+    }
+  }
   const tenant = await prisma.tenant.findUnique({
     where: { slug },
     select: { id: true, name: true, phone: true, currency: true, timezone: true, status: true, rentalTerms: true },
@@ -22,18 +35,41 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Rental business not found." }, { status: 404 });
   }
 
-  const vehicles = await prisma.vehicle.findMany({
-    where: { tenantId: tenant.id, status: "AVAILABLE" },
+  const [branches, vehicles] = await Promise.all([
+    prisma.branch.findMany({
+      where: { tenantId: tenant.id, isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, address: true },
+    }),
+    prisma.vehicle.findMany({
+    where: {
+      tenantId: tenant.id,
+      status: "AVAILABLE",
+      ...(branchId ? { branchId } : {}),
+      ...(requestedStart && requestedEnd ? {
+        bookingItems: {
+          none: {
+            booking: {
+              status: { in: [...reservingStatuses] },
+              startAt: { lt: requestedEnd },
+              endAt: { gt: requestedStart },
+            },
+          },
+        },
+      } : {}),
+    },
     orderBy: { createdAt: "desc" },
     select: {
       id: true, type: true, make: true, model: true, year: true, color: true,
       seats: true, transmission: true, dailyRate: true, securityDeposit: true,
-      branch: { select: { name: true, address: true } },
+      branch: { select: { id: true, name: true, address: true } },
     },
-  });
+  }),
+  ]);
 
   return NextResponse.json({
     business: { name: tenant.name, phone: tenant.phone, currency: tenant.currency, timezone: tenant.timezone, rentalTerms: tenant.rentalTerms?.trim() || "", rentalTermsVersion: hash(tenant.rentalTerms?.trim() || "") },
+    branches,
     vehicles: vehicles.map((vehicle) => ({
       ...vehicle,
       dailyRate: Number(vehicle.dailyRate),

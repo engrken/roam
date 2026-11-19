@@ -31,7 +31,16 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Choose a valid tenant and status." }, { status: 400 });
   }
   try {
-    const tenant = await prisma.tenant.update({ where: { id: tenantId }, data: { status } });
+    const tenant = await prisma.$transaction(async (tx) => {
+      const previous = await tx.tenant.findUnique({ where: { id: tenantId }, select: { status: true } });
+      if (!previous) throw new Error("TENANT_NOT_FOUND");
+      const updated = await tx.tenant.update({ where: { id: tenantId }, data: { status } });
+      await tx.platformAuditLog.create({ data: {
+        actorUserId: admin.id, actorEmail: admin.email, action: "tenant.status.updated",
+        entityType: "tenant", entityId: tenantId, details: { from: previous.status, to: updated.status },
+      } });
+      return updated;
+    });
     return NextResponse.json({ tenant: { id: tenant.id, status: tenant.status } });
   } catch {
     return NextResponse.json({ error: "Tenant not found or update failed." }, { status: 404 });

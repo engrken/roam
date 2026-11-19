@@ -22,7 +22,7 @@ const statusStyle: Record<string, string> = {
 
 function csvCell(value: unknown) {
   const raw = String(value ?? "");
-  const text = /^[=+\\-@\\t\\r]/.test(raw) ? "'" + raw : raw;
+  const text = /^[=+\-@\t\r]/.test(raw) ? "'" + raw : raw;
   return '"' + text.replace(/"/g, '""') + '"';
 }
 
@@ -98,7 +98,7 @@ export default function AdminPage() {
         tenant.counts.bookings, new Date(tenant.createdAt).toISOString(),
       ]),
     ];
-    const blob = new Blob([rows.map(row => row.map(csvCell).join(",")).join("\\r\\n")], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob([rows.map(row => row.map(csvCell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url; anchor.download = "roam-tenants.csv"; anchor.click();

@@ -150,7 +150,7 @@ export async function PATCH(request: NextRequest) {
           });
           const referred = rewardedTenants.find(item => item.id === tenantId);
           const referrer = rewardedTenants.find(item => item.id === result.referralReferrerTenantId);
-          const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\\/+$/, "");
+          const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\/+$/, "");
           const emails = await Promise.allSettled([
             ...(referred?.memberships[0]?.user.email && referrer ? [sendReferralRewardEmail({
               recipient: referred.memberships[0].user.email, businessName: referred.name,

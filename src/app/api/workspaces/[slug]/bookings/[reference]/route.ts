@@ -83,7 +83,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (body?.action === "shareLink") {
     const token = randomBytes(32).toString("hex");
     await prisma.booking.update({ where: { id: booking.id }, data: { publicTokenHash: hashToken(token) } });
-    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\\/$/, "");
+    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\/$/, "");
     return NextResponse.json({ url: baseUrl + "/booking/" + encodeURIComponent(reference) + "?token=" + token });
   }
 

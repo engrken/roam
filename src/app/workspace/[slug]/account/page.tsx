@@ -16,7 +16,7 @@ type AccountData = {
     referralsSent: { id: string; referredBusiness: string; status: string; registeredAt: string; expiresAt: string; qualifiedAt: string | null; rewardedAt: string | null }[];
     referralReceived: null | { status: string; registeredAt: string; expiresAt: string; qualifiedAt: string | null; rewardedAt: string | null; referrerBusiness: string };
   };
-  subscription: null | { tier: string; status: string; currentPeriodStart: string | null; currentPeriodEnd: string | null; trialEndsAt: string | null; plan: { name: string; monthlyPrice: number; maxVehicles: number | null; maxBranches: number | null; maxStaff: number | null } };
+  subscription: null | { tier: string; status: string; currentPeriodStart: string | null; currentPeriodEnd: string | null; trialEndsAt: string | null; referralCreditMonths: number; plan: { name: string; monthlyPrice: number; maxVehicles: number | null; maxBranches: number | null; maxStaff: number | null } };
   plans: { tier: string; name: string; monthlyPrice: number; maxVehicles: number | null; maxBranches: number | null; maxStaff: number | null }[];
   billingRecords: { id: string; description: string; reference: string | null; amount: number; currency: string; status: string; issuedAt: string; dueAt: string | null; paidAt: string | null }[];
   requests: { id: string; currentTier: string; requestedTier: string; status: string; createdAt: string }[];
@@ -225,6 +225,7 @@ export default function AccountPage() {
             <button className="roam-secondary-button" type="button" onClick={copyReferralLink}>{referralCopied ? "Copied!" : "Copy referral link"} <ArrowUpRight size={15}/></button>
           </div>
           <div className="roam-account-referral-code"><span>Your referral code</span><strong>{data.tenant.referralCode}</strong></div>
+          {subscription && subscription.referralCreditMonths > 0 && <p className="roam-account-referral-note"><strong>{subscription.referralCreditMonths} free month{subscription.referralCreditMonths === 1 ? "" : "s"} waiting to be applied.</strong> Your referral credit will extend your next verified paid subscription.</p>}
           {data.tenant.referralReceived && <p className="roam-account-referral-note">You joined through {data.tenant.referralReceived.referrerBusiness}. Referral status: <strong>{titleCase(data.tenant.referralReceived.status)}</strong>{data.tenant.referralReceived.status === "PENDING" ? " · Qualifying payment deadline " + date(data.tenant.referralReceived.expiresAt) : ""}</p>}
           <div className="roam-account-history">
             <h3>Your referrals</h3>

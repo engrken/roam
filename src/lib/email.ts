@@ -28,9 +28,10 @@ export async function sendLoginCode(email: string, code: string) {
 export async function sendTeamInvitation(email: string, tenantName: string, role: string, invitationUrl: string) {
   const from = process.env.SMTP_FROM || process.env.SMTP_USER;
   if (!from) throw new Error("Email sender is not configured.");
-  const safeTenantName = tenantName.replace(/[&<>"']/g, character => ({
+  const htmlEscapes: Record<string, string> = {
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  })[character] || character);
+  };
+  const safeTenantName = tenantName.replace(/[&<>"']/g, character => htmlEscapes[character] || character);
   const safeRole = role.toLowerCase();
   await getTransport().sendMail({
     from,

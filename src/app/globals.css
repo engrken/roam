@@ -437,3 +437,9 @@
   .roam-side-nav{grid-template-columns:1fr}
   .roam-side-nav .roam-admin-link{grid-column:auto}
 }
+
+@media(max-width:760px){
+  .roam-sidebar.roam-sidebar-open{position:fixed;inset:0;width:100%;height:100dvh;min-height:100dvh;overflow-y:auto;align-content:flex-start;align-items:center;flex-wrap:wrap;justify-content:space-between}
+  .roam-sidebar.roam-sidebar-open .roam-side-nav{position:static;flex:1 0 100%;width:100%;max-height:none;overflow:visible;margin:0;padding:12px 0 18px;box-shadow:none}
+  .roam-sidebar.roam-sidebar-open .roam-sidebar-bottom{position:static;display:flex;flex:1 0 100%;width:100%;margin-top:auto;padding:14px 10px 8px}
+}

@@ -107,7 +107,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const result = await prisma.$transaction(async (tx) => {
       const current = await tx.booking.findFirst({
         where: { id: booking.id, tenantId: access.tenant.id },
-        select: { id: true, status: true, startAt: true, endAt: true, items: { select: { vehicleId: true } }, payments: { where: { kind: "PAYMENT" }, select: { id: true } }, documents: { where: { kind: "PAYMENT_EVIDENCE", reviewStatus: "APPROVED" }, select: { id: true } } },
+        select: { id: true, status: true, startAt: true, endAt: true, items: { select: { vehicleId: true } }, payments: { select: { amount: true, kind: true } } },
       });
       if (!current) return { error: "Booking not found.", status: 404 as const };
 
@@ -119,8 +119,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         };
       }
 
-      if (nextStatus === "CONFIRMED" && current.payments.length === 0 && current.documents.length === 0) {
-        return { error: "Before confirming, record a customer payment in Financials or approve the customer uploaded proof of payment.", status: 409 as const };
+      if (nextStatus === "CONFIRMED" && current.payments.reduce((sum, payment) => sum + (payment.kind === "REFUND" ? -Number(payment.amount) : Number(payment.amount)), 0) <= 0) {
+        return { error: "Before confirming, review any uploaded proof and record the verified deposit or payment in Financials.", status: 409 as const };
       }
 
       if (nextStatus === "CONFIRMED" || nextStatus === "ACTIVE") {

@@ -143,6 +143,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           startAt,
           endAt,
           totalAmount: vehicle.dailyRate.mul(days),
+          rentalTermsSnapshot: rentalTerms,
+          rentalTermsVersion,
+          rentalTermsAcceptedAt: new Date(),
           publicTokenHash: hash(token),
           items: { create: { vehicleId: vehicle.id, rate: vehicle.dailyRate } },
           messages: {

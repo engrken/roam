@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         bookingReference: reference,
         bookingUrl,
       });
-      await prisma.booking.update({
+      await prisma.booking.updateMany({
         where: { reference },
         data: { publicTokenHash: hash(token) },
       });

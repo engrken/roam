@@ -29,6 +29,7 @@ export default function PlatformPlansPage() {
     } finally { setLoading(false); }
   }
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- load fetches platform plans and tenant assignments on entry.
   useEffect(() => { void load(); }, []);
 
   function editPlan(id: string, field: keyof Plan, value: string | number | boolean) {

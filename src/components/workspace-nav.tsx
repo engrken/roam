@@ -1,21 +1,26 @@
  "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { LayoutDashboard, CarFront, LogOut, ShieldCheck, CalendarDays, MapPin, Users, BookOpen, FileText, UserCog, MessageCircle, Wallet } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { LayoutDashboard, CarFront, LogOut, ShieldCheck, CalendarDays, MapPin, Users, BookOpen, FileText, UserCog, MessageCircle, Wallet, Menu, X } from "lucide-react";
 
 export function WorkspaceNav({ slug, name, role, active }: { slug: string; name: string; role: string; active: "overview" | "fleet" | "bookings" | "messages" | "finance" | "branches" | "customers" | "help" | "rental-terms" | "team" | "settings" | "reports" | "account" }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => { setMenuOpen(false); }, [pathname]);
   async function signOut() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.replace("/login");
     router.refresh();
   }
-  return <aside className="roam-sidebar">
+  return <aside className={"roam-sidebar" + (menuOpen ? " roam-sidebar-open" : "")}>
     <Link href="/" className="roam-brand"><span className="roam-brand-mark">R</span><span>ROAM</span></Link>
+    <button className="roam-mobile-menu-toggle" type="button" aria-label={menuOpen ? "Close workspace menu" : "Open workspace menu"} aria-expanded={menuOpen} aria-controls="roam-workspace-menu" onClick={() => setMenuOpen(open => !open)}><span>{menuOpen ? "Close menu" : "Menu"}</span>{menuOpen ? <X size={19}/> : <Menu size={19}/>}</button>
     <div className="roam-side-label">WORKSPACE</div>
     <div className="roam-workspace-name">{name}</div>
-    <nav className="roam-side-nav" aria-label="Workspace navigation">
+    <nav className="roam-side-nav" id="roam-workspace-menu" aria-label="Workspace navigation">
       <Link className={active === "overview" ? "active" : ""} href={`/workspace/${slug}`}><LayoutDashboard size={18}/> Overview</Link>
       <Link className={active === "fleet" ? "active" : ""} href={`/workspace/${slug}/fleet`}><CarFront size={18}/> Fleet management</Link>
       <Link className={active === "bookings" ? "active" : ""} href={`/workspace/${slug}/bookings`}><CalendarDays size={18}/> Bookings</Link>

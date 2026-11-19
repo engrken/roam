@@ -24,6 +24,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   ]);
   if (!tenant) return NextResponse.json({ error: "Workspace not found." }, { status: 404 });
   return NextResponse.json({
+    user: { id: true, name: true, email: true },
+        user: { id: access.user.id, name: access.user.name, email: access.user.email },
     tenant: { ...tenant, createdAt: tenant.createdAt.toISOString() },
     subscription: tenant.subscription ? {
       tier: tenant.subscription.tier, status: tenant.subscription.status,
@@ -36,6 +38,18 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     billingRecords: billingRecords.map(record => ({ ...record, amount: Number(record.amount), issuedAt: record.issuedAt.toISOString(), dueAt: record.dueAt?.toISOString() || null, paidAt: record.paidAt?.toISOString() || null, createdAt: record.createdAt.toISOString() })),
     requests: requests.map(request => ({ ...request, createdAt: request.createdAt.toISOString(), reviewedAt: request.reviewedAt?.toISOString() || null })),
   });
+}
+
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const access = await getTenantAccess(slug);
+  if (!access) return NextResponse.json({ error: "Workspace access denied." }, { status: 403 });
+  if (access.role !== "OWNER") return NextResponse.json({ error: "Only the workspace owner can edit account details." }, { status: 403 });
+  const body = await request.json().catch(() => null);
+  const name = typeof body?.name === "string" ? body.name.trim() : "";
+  if (name.length > 100) return NextResponse.json({ error: "Your name must be 100 characters or fewer." }, { status: 400 });
+  const user = await prisma.user.update({ where: { id: access.user.id }, data: { name: name || null }, select: { id: true, name: true, email: true } });
+  return NextResponse.json({ user });
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {

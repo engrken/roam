@@ -1,5 +1,3 @@
-@import url("https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css");
-
 /* Bootstrap is scoped to the platform admin segment; the rest of ROAM is unchanged. */
 .roam-admin-theme-root {
   --admin-page: #080f1d;

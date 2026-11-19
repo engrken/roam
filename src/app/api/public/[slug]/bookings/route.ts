@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { rentalDateTimeToUtc } from "@/lib/datetime";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { sendBookingRequestReceived } from "@/lib/email";
+import { isTenantTrialReadOnly } from "@/lib/tenant-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,6 +52,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (!tenant || !["ACTIVE", "TRIAL"].includes(tenant.status)) {
     return NextResponse.json({ error: "Rental business is unavailable." }, { status: 404 });
+  }
+
+  if (await isTenantTrialReadOnly(tenant.id)) {
+    return NextResponse.json({ error: "This rental business is temporarily not accepting new booking requests. Please contact the business directly." }, { status: 423 });
   }
 
   const name = typeof body?.name === "string" ? body.name.trim() : "";

@@ -80,3 +80,32 @@
  .roam-booking-actions button{flex:1;justify-content:center}
 }
 @media(prefers-reduced-motion:no-preference){.roam-booking-vehicle,.roam-booking-step>span{transition:background .16s,border-color .16s,color .16s}}
+
+
+/* Customer booking portal rental and payment summary */
+.roam-customer-vehicle-list{display:grid;gap:10px}
+.roam-customer-vehicle-list>div{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:11px;padding:12px;border:1px solid var(--line);border-radius:11px}
+.roam-customer-vehicle-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:10px;background:var(--surface-2);font-size:21px}
+.roam-customer-vehicle-list>div>span:nth-child(2){display:grid;gap:4px;min-width:0}
+.roam-customer-vehicle-list b{font-size:11px;color:var(--ink)}
+.roam-customer-vehicle-list small{font-size:9px;color:var(--muted);line-height:1.45}
+.roam-customer-vehicle-list>div>strong{font-size:11px;color:var(--ink);white-space:nowrap}
+.roam-customer-vehicle-list>div>strong small{display:block;text-align:right}
+.roam-customer-payment-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:16px}
+.roam-customer-payment-summary>div{display:grid;gap:6px;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
+.roam-customer-payment-summary small{font-size:8px;font-weight:850;letter-spacing:.05em;color:var(--muted)}
+.roam-customer-payment-summary b{font-size:12px;color:var(--ink);overflow-wrap:anywhere}
+.roam-customer-payment-list{display:grid;gap:0;margin-top:12px;border-top:1px solid var(--line)}
+.roam-customer-payment-list>div{display:flex;justify-content:space-between;gap:12px;padding:11px 2px;border-bottom:1px solid var(--line)}
+.roam-customer-payment-list>div>span{display:grid;gap:4px}
+.roam-customer-payment-list b{font-size:10px;color:var(--ink)}
+.roam-customer-payment-list small{font-size:9px;color:var(--muted);line-height:1.45}
+.roam-customer-payment-list strong{font-size:11px;color:var(--ink);white-space:nowrap}
+.roam-customer-finance-note{margin:12px 0 0;padding:10px 12px;border-radius:9px;background:var(--surface-2);color:var(--muted);font-size:9px;line-height:1.6}
+@media(max-width:520px){
+ .roam-customer-payment-summary{grid-template-columns:1fr}
+ .roam-customer-vehicle-list>div{grid-template-columns:36px minmax(0,1fr) auto;gap:8px;padding:10px}
+ .roam-customer-vehicle-icon{width:35px;height:35px;font-size:18px}
+ .roam-customer-payment-summary>div{grid-template-columns:1fr auto;align-items:center}
+ .roam-customer-payment-summary b{text-align:right}
+}

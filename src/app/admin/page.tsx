@@ -160,7 +160,7 @@ export default function AdminPage() {
           <label className="text-xs text-slate-400">Filter by status<select value={statusFilter} onChange={event => setStatusFilter(event.target.value as StatusFilter)} className="mt-1.5 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm text-white"><option value="ALL">All statuses</option><option value="TRIAL">Trial</option><option value="ACTIVE">Active</option><option value="SUSPENDED">Suspended</option><option value="CANCELLED">Cancelled</option></select></label>
         </div>
         {error && <div role="alert" className="m-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-400/20 bg-red-950/60 p-3 text-sm text-red-200"><span>{error}</span><button onClick={() => void load()} disabled={loading} className="rounded-lg border border-red-200/20 px-3 py-2 text-xs font-semibold hover:bg-red-200/10 disabled:opacity-50">{loading ? "Retrying…" : "Retry"}</button></div>}
-        {filteredTenants.length === 0 ? <div className="p-10 text-center"><Building2 className="mx-auto mb-3 text-slate-600" size={28}/><p className="font-medium text-slate-300">{tenants.length ? "No tenants match your filters." : "No tenant workspaces registered yet."}</p><p className="mt-1 text-xs text-slate-500">{tenants.length ? "Try another search or status filter." : "New rental businesses will appear here after registration."}</p></div> :
+        {filteredTenants.length === 0 ? <div className="p-10 text-center"><Building2 className="mx-auto mb-3 text-slate-600" size={28}/><p className="font-medium text-slate-300">{tenants.length ? "No tenants match your filters." : "No tenant workspaces registered yet."}</p><p className="mt-1 text-xs text-slate-500">{tenants.length ? "Try another search or status filter." : "New rental businesses will appear here after registration."}</p></div> : <>
           <div className="grid gap-3 p-4 lg:hidden">
             {filteredTenants.map(tenant => <article key={tenant.id} className="rounded-xl border border-white/10 bg-slate-950/70 p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -195,7 +195,7 @@ export default function AdminPage() {
                 {busy===tenant.id && <span className="self-center text-[10px] text-slate-500">Saving…</span>}
               </div></td>
             </tr>)}</tbody>
-          </table></div>}
+          </table></div></>}
         <div className="border-t border-white/10 px-5 py-3 text-[11px] text-slate-500">Showing {filteredTenants.length} of {tenants.length} tenants. Status changes take effect immediately and are recorded in audit history.</div>
       </section>
 

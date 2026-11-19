@@ -19,6 +19,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace access denied." }, { status: 404 });
+  if (!await hasWorkspaceTier(access.tenant.id, "BUSINESS")) return NextResponse.json({ error: "Team management is available on the Business plan and above. Upgrade your workspace to continue." }, { status: 403 });
   if (!canManageTeam(access.role)) return NextResponse.json({ error: "Only workspace owners and admins can manage team access." }, { status: 403 });
 
   const [memberships, subscription, invitations] = await Promise.all([
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace access denied." }, { status: 404 });
+  if (!await hasWorkspaceTier(access.tenant.id, "BUSINESS")) return NextResponse.json({ error: "Team management is available on the Business plan and above. Upgrade your workspace to continue." }, { status: 403 });
   if (!canManageTeam(access.role)) return NextResponse.json({ error: "Only workspace owners and admins can add team members." }, { status: 403 });
 
   const body = await request.json().catch(() => null);
@@ -128,6 +130,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace access denied." }, { status: 404 });
+  if (!await hasWorkspaceTier(access.tenant.id, "BUSINESS")) return NextResponse.json({ error: "Team management is available on the Business plan and above. Upgrade your workspace to continue." }, { status: 403 });
   if (!canManageTeam(access.role)) return NextResponse.json({ error: "Only workspace owners and admins can change team roles." }, { status: 403 });
 
   const body = await request.json().catch(() => null);
@@ -151,6 +154,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace access denied." }, { status: 404 });
+  if (!await hasWorkspaceTier(access.tenant.id, "BUSINESS")) return NextResponse.json({ error: "Team management is available on the Business plan and above. Upgrade your workspace to continue." }, { status: 403 });
   if (!canManageTeam(access.role)) return NextResponse.json({ error: "Only workspace owners and admins can remove team members." }, { status: 403 });
 
   const invitationId = request.nextUrl.searchParams.get("invitationId") || "";

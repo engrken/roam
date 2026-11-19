@@ -17,6 +17,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
 
   return NextResponse.json({
     tier: subscription?.tier || "FREE",
+    role: access.role,
     subscriptionStatus: subscription?.status || "inactive",
     trial: access.tenant.subscription?.trialPolicyVersion === 1 && access.tenant.subscription.status === "trialing" ? {
       endsAt: access.tenant.subscription.trialEndsAt?.toISOString() || null,

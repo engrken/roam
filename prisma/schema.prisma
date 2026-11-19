@@ -86,6 +86,7 @@ model Tenant {
   bookings     Booking[]
   inspections  VehicleInspection[]
   subscription Subscription?
+  invitations  TeamInvitation[]
 }
 
 model User {
@@ -333,4 +334,36 @@ model LegalAcceptance {
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([userId, termsVersion, privacyVersion])
   @@index([userId, acceptedAt])
+}
+
+
+model TeamInvitation {
+  id              String         @id @default(cuid())
+  tenantId        String
+  email           String
+  role            MembershipRole @default(STAFF)
+  tokenHash       String         @unique
+  invitedByUserId String
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  createdAt       DateTime       @default(now())
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, email, acceptedAt])
+  @@index([expiresAt])
+}
+
+model PlatformAuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String
+  actorEmail  String
+  action      String
+  entityType  String
+  entityId    String
+  details     Json?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([entityType, entityId, createdAt])
 }

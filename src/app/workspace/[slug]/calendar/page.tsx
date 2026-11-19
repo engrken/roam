@@ -28,6 +28,16 @@ function localKey(value: string, timeZone: string) {
   const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
   return values.year + "-" + values.month + "-" + values.day;
 }
+function localClock(value: string, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).formatToParts(new Date(value));
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${values.hour}:${values.minute}:${values.second}`;
+}
+function overlapsLocalDay(booking: Booking, day: string, timeZone: string) {
+  const startDay = localKey(booking.startAt, timeZone);
+  const endDay = localKey(booking.endAt, timeZone);
+  return startDay <= day && (endDay > day || (endDay === day && localClock(booking.endAt, timeZone) !== "00:00:00"));
+}
 function moneyDate(value: string, timeZone: string) {
   return new Intl.DateTimeFormat("en-PH", { timeZone, hour: "numeric", minute: "2-digit" }).format(new Date(value));
 }
@@ -78,7 +88,7 @@ export default function FleetCalendarPage() {
               <div className="roam-calendar-vehicle"><b>{vehicle.make} {vehicle.model}</b><span>{vehicle.plateNumber}</span><small>{vehicle.branch}</small>{vehicle.status==="MAINTENANCE"&&<em>Maintenance</em>}{vehicle.status==="INACTIVE"&&<em>Inactive</em>}</div>
               {days.map(day => {
                 const key = dateKey(day);
-                const matches = data.bookings.filter(booking => booking.vehicleIds.includes(vehicle.id) && localKey(booking.startAt,timeZone)<=key && localKey(booking.endAt,timeZone)>=key);
+                const matches = data.bookings.filter(booking => booking.vehicleIds.includes(vehicle.id) && overlapsLocalDay(booking,key,timeZone));
                 return <div className={"roam-calendar-cell"+(key===dateKey(new Date())?" is-today":"")} key={vehicle.id+key}>
                   {vehicle.status==="MAINTENANCE" && <span className="roam-calendar-maintenance">Unavailable</span>}
                   {matches.map(booking => <Link key={booking.id} href={`/workspace/${slug}/bookings`} className={"roam-calendar-booking "+booking.status.toLowerCase()} title={booking.customer+" · "+booking.reference}>

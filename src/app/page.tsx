@@ -36,8 +36,15 @@ export default function Home() {
   const [faqOpen, setFaqOpen] = useState(0);
 
   useEffect(() => {
-    localStorage.setItem("roam-theme", dark ? "dark" : "light");
-  }, [dark]);
+    const saved = localStorage.getItem("roam-theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    setDark(saved === "dark" || (saved !== "light" && prefersDark));
+  }, []);
+  function toggleTheme() {
+    const next = !dark;
+    setDark(next);
+    localStorage.setItem("roam-theme", next ? "dark" : "light");
+  }
   const faqs = [
     ["What types of vehicles can ROAM manage?", "ROAM is being designed for private vehicle rental operators managing motorcycles, scooters, cars, SUVs, MPVs, vans, pickups, buses, trucks, and other rentable vehicle types."],
     ["Can more than one rental business use ROAM?", "Yes. Each rental business gets its own workspace, team membership, and operational records."],
@@ -57,7 +64,7 @@ export default function Home() {
           <Link className="nav-mobile-cta" href="/register" onClick={() => setMenuOpen(false)}>Create free account <ArrowRight size={15}/></Link>
         </nav>
         <div className="nav-actions">
-          <button className="icon-button theme-toggle" onClick={() => setDark(!dark)} aria-label={dark ? "Switch to light theme" : "Switch to dark theme"} title={dark ? "Light theme" : "Dark theme"}>{dark ? <Sun size={18}/> : <Moon size={18}/>}</button>
+          <button className="icon-button theme-toggle" onClick={toggleTheme} aria-label={dark ? "Switch to light theme" : "Switch to dark theme"} title={dark ? "Light theme" : "Dark theme"}>{dark ? <Sun size={18}/> : <Moon size={18}/>}</button>
           <Link className="text-link" href="/login">Sign in</Link>
           <Link className="button button-small button-dark" href="/register">Start free <ArrowRight size={15}/></Link>
           <button className="icon-button menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? "Close menu" : "Open menu"}>{menuOpen ? <X/> : <Menu/>}</button>

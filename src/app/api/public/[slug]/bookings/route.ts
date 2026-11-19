@@ -44,7 +44,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     prisma.vehicle.findMany({
     where: {
       tenantId: tenant.id,
-      status: "AVAILABLE",
+      status: { in: ["AVAILABLE", "RESERVED"] },
       ...(branchId ? { branchId } : {}),
       ...(requestedStart && requestedEnd ? {
         bookingItems: {
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       );
 
       const vehicle = await tx.vehicle.findFirst({
-        where: { id: vehicleId, tenantId: tenant.id, status: "AVAILABLE" },
+        where: { id: vehicleId, tenantId: tenant.id, status: { in: ["AVAILABLE", "RESERVED"] } },
         select: { id: true, branchId: true, dailyRate: true },
       });
       if (!vehicle) return { conflict: "This vehicle is not currently available." as const };

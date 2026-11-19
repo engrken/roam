@@ -2,6 +2,7 @@ import { createHash, createHmac, randomInt } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendLoginCode } from "@/lib/email";
+import { getCurrentUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -16,7 +17,14 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => null);
     const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
-    const purpose = body?.purpose === "register" ? "register" : "login";
+    const purpose = body?.purpose === "register" ? "register" : body?.purpose === "change-email" ? "change-email" : "login";
+    if (purpose === "change-email") {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) return NextResponse.json({ error: "Sign in before changing your email." }, { status: 401 });
+      if (currentUser.email === email) return NextResponse.json({ error: "That is already your sign-in email." }, { status: 400 });
+      const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+      if (existing) return NextResponse.json({ error: "That email is already associated with a ROAM account." }, { status: 409 });
+    }
     if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
     }

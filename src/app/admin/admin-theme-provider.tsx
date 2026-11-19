@@ -12,9 +12,10 @@ export default function AdminThemeProvider({ children }: Readonly<{ children: Re
     const saved = window.localStorage.getItem("roam-admin-theme");
     const preferred = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
     const initial: Theme = saved === "light" || saved === "dark" ? saved : preferred;
-    setTheme(initial);
+    const frame = window.requestAnimationFrame(() => setTheme(initial));
     document.documentElement.dataset.adminTheme = initial;
     document.documentElement.style.colorScheme = initial;
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   function toggleTheme() {

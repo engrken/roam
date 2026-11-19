@@ -19,6 +19,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const name = typeof body.businessName === "string" ? body.businessName.trim() : "";
     const phone = typeof body.phone === "string" ? body.phone.trim() : "";
+    const requestedReferralCode = typeof body.referralCode === "string" ? body.referralCode.trim().toUpperCase() : "";
+    const manualReferrer = requestedReferralCode && !user.referredByTenantId
+      ? await prisma.tenant.findUnique({ where: { referralCode: requestedReferralCode }, select: { id: true, status: true, memberships: { where: { role: "OWNER" }, select: { userId: true }, take: 1 } } })
+      : null;
+    if (requestedReferralCode && !user.referredByTenantId && (!manualReferrer || ["SUSPENDED", "CANCELLED"].includes(manualReferrer.status) || manualReferrer.memberships[0]?.userId === user.id)) {
+      return NextResponse.json({ error: "That referral code is invalid or cannot be used by this account." }, { status: 400 });
+    }
     if (name.length < 2 || name.length > 100) {
       return NextResponse.json({ error: "Business name must be between 2 and 100 characters." }, { status: 400 });
     }
@@ -48,9 +55,10 @@ export async function POST(request: NextRequest) {
       await tx.membership.create({ data: { tenantId: tenant.id, userId: user.id, role: "OWNER" } });
       await tx.branch.create({ data: { tenantId: tenant.id, name: "Main Branch", code: "MAIN" } });
       const account = await tx.user.findUnique({ where: { id: user.id }, select: { createdAt: true, referredByTenantId: true } });
-      if (account?.referredByTenantId) {
+      const attributedReferrerId = account?.referredByTenantId || manualReferrer?.id || null;
+      if (attributedReferrerId) {
         const [referrer, existingReferral] = await Promise.all([
-          tx.tenant.findUnique({ where: { id: account.referredByTenantId }, select: { id: true, referralCode: true, status: true, memberships: { where: { role: "OWNER" }, select: { userId: true }, take: 1 } } }),
+          tx.tenant.findUnique({ where: { id: attributedReferrerId }, select: { id: true, referralCode: true, status: true, memberships: { where: { role: "OWNER" }, select: { userId: true }, take: 1 } } }),
           tx.referral.findUnique({ where: { referredOwnerUserId: user.id }, select: { id: true } }),
         ]);
         if (referrer && referrer.status !== "SUSPENDED" && referrer.status !== "CANCELLED"

@@ -188,6 +188,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       reference: result.booking.reference,
       accessToken: token,
       status: result.booking.status,
+      emailNotification,
     }, { status: 201 });
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {

@@ -1,19 +1,75 @@
- "use client";
+"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { LayoutDashboard, CarFront, LogOut, ShieldCheck, CalendarDays, MapPin, Users, BookOpen, FileText, UserCog, MessageCircle, Wallet, Menu, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  LayoutDashboard, CarFront, LogOut, ShieldCheck, CalendarDays, MapPin, Users,
+  BookOpen, FileText, UserCog, MessageCircle, Wallet, Menu, X, LockKeyhole,
+  ArrowUpRight,
+} from "lucide-react";
+
+type FeatureKey = "branches" | "reports" | "team";
+type FeatureInfo = { title: string; plan: string; description: string; benefits: string[] };
+
+const tierRank: Record<string, number> = {
+  FREE: 0, STARTER: 1, PRO: 2, BUSINESS: 3, ENTERPRISE: 4,
+};
+
+const lockedFeatures: Record<FeatureKey, FeatureInfo> = {
+  branches: {
+    title: "Multi-branch management",
+    plan: "Pro",
+    description: "Manage separate rental locations from one ROAM workspace. Keep branch addresses and pickup operations organized while tracking the vehicles and bookings assigned to each location.",
+    benefits: ["Set up and manage multiple pickup branches", "Organize vehicles and bookings by location", "Grow into additional service areas without creating separate workspaces"],
+  },
+  reports: {
+    title: "Operational reports",
+    plan: "Pro",
+    description: "Turn your rental activity into useful business insights. Review booking trends, completed booking value and operational performance over a selected period.",
+    benefits: ["Review booking and revenue summaries", "Filter reports by date and branch", "Export report data as CSV for further analysis"],
+  },
+  team: {
+    title: "Team & access",
+    plan: "Business",
+    description: "Bring your staff into ROAM and give each person the right level of workspace access, while keeping ownership and sensitive business controls protected.",
+    benefits: ["Invite staff to your rental workspace", "Assign roles and access permissions", "Manage your growing operation with a shared team"],
+  },
+};
 
 export function WorkspaceNav({ slug, name, role, active }: { slug: string; name: string; role: string; active: "overview" | "fleet" | "bookings" | "messages" | "finance" | "branches" | "customers" | "help" | "rental-terms" | "team" | "settings" | "reports" | "account" }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [tier, setTier] = useState("FREE");
+  const [selectedFeature, setSelectedFeature] = useState<FeatureKey | null>(null);
+
+  useEffect(() => {
+    let current = true;
+    fetch(`/api/workspaces/${encodeURIComponent(slug)}/navigation`, { cache: "no-store" })
+      .then(async response => {
+        if (!response.ok) throw new Error("Unable to load plan access");
+        return response.json();
+      })
+      .then(data => { if (current && typeof data.tier === "string") setTier(data.tier); })
+      .catch(() => { if (current) setTier("FREE"); });
+    return () => { current = false; };
+  }, [slug]);
+
+  const canUse = (feature: FeatureKey) => (tierRank[tier] ?? 0) >= tierRank[lockedFeatures[feature].plan.toUpperCase()];
   async function signOut() {
     setMenuOpen(false);
     await fetch("/api/auth/logout", { method: "POST" });
     router.replace("/login");
     router.refresh();
   }
+
+  const lockedItem = (feature: FeatureKey, label: string, icon: React.ReactNode) => {
+    const info = lockedFeatures[feature];
+    return canUse(feature)
+      ? <Link className={active === feature ? "active" : ""} href={`/workspace/${slug}/${feature}`}>{icon}{label}</Link>
+      : <button type="button" className="roam-nav-locked" aria-haspopup="dialog" onClick={() => setSelectedFeature(feature)}>{icon}<span>{label}</span><span className="roam-nav-lock-label">{info.plan}</span><LockKeyhole className="roam-nav-lock-icon" size={14}/></button>;
+  };
+
   return <aside className={"roam-sidebar" + (menuOpen ? " roam-sidebar-open" : "")}>
     <Link href="/" className="roam-brand" onClick={() => setMenuOpen(false)}><span className="roam-brand-mark">R</span><span>ROAM</span></Link>
     <button className="roam-mobile-menu-toggle" type="button" aria-label={menuOpen ? "Close workspace menu" : "Open workspace menu"} aria-expanded={menuOpen} aria-controls="roam-workspace-menu" onClick={() => setMenuOpen(open => !open)}><span>{menuOpen ? "Close menu" : "Menu"}</span>{menuOpen ? <X size={19}/> : <Menu size={19}/>}</button>
@@ -25,16 +81,32 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
       <Link className={active === "bookings" ? "active" : ""} href={`/workspace/${slug}/bookings`}><CalendarDays size={18}/> Bookings</Link>
       <Link className={active === "messages" ? "active" : ""} href={`/workspace/${slug}/messages`}><MessageCircle size={18}/> Customer messages</Link>
       <Link className={active === "finance" ? "active" : ""} href={`/workspace/${slug}/finance`}><Wallet size={18}/> Financials</Link>
-      <Link className={active === "branches" ? "active" : ""} href={"/workspace/" + slug + "/branches"}><MapPin size={18}/> Branches</Link>
-      <Link className={active === "customers" ? "active" : ""} href={"/workspace/" + slug + "/customers"}><Users size={18}/> Customers</Link>
+      {lockedItem("branches", "Branches", <MapPin size={18}/>)}
+      <Link className={active === "customers" ? "active" : ""} href={`/workspace/${slug}/customers`}><Users size={18}/> Customers</Link>
       <Link className={active === "rental-terms" ? "active" : ""} href={`/workspace/${slug}/rental-terms`}><FileText size={18}/> Rental terms</Link>
-      <Link className={active === "team" ? "active" : ""} href={`/workspace/${slug}/team`}><UserCog size={18}/> Team & access</Link>
+      {lockedItem("team", "Team & access", <UserCog size={18}/>)}
       <Link className={active === "settings" ? "active" : ""} href={`/workspace/${slug}/settings`}><UserCog size={18}/> Business settings</Link>
       {role === "OWNER" && <Link className={active === "account" ? "active" : ""} href={`/workspace/${slug}/account`}><ShieldCheck size={18}/> Account & subscription</Link>}
-      <Link className={active === "reports" ? "active" : ""} href={`/workspace/${slug}/reports`}><UserCog size={18}/> Reports</Link>
+      {lockedItem("reports", "Reports", <UserCog size={18}/>)}
       <Link className={active === "help" ? "active" : ""} href={`/workspace/${slug}/help`}><BookOpen size={18}/> How-to guides</Link>
       <Link href="/admin" className="roam-admin-link"><ShieldCheck size={18}/> Platform admin</Link>
     </nav>
     <div className="roam-sidebar-bottom"><span className="roam-role">{role}</span><button onClick={signOut}><LogOut size={16}/> Sign out</button></div>
+
+    {selectedFeature && <div className="roam-feature-lock-backdrop" onClick={() => setSelectedFeature(null)}>
+      <section className="roam-feature-lock-dialog" role="dialog" aria-modal="true" aria-labelledby="roam-feature-lock-title" onClick={event => event.stopPropagation()}>
+        <button className="roam-feature-lock-close" type="button" aria-label="Close feature information" onClick={() => setSelectedFeature(null)}><X size={18}/></button>
+        <span className="roam-feature-lock-kicker"><LockKeyhole size={14}/> AVAILABLE ON {lockedFeatures[selectedFeature].plan.toUpperCase()}</span>
+        <h2 id="roam-feature-lock-title">{lockedFeatures[selectedFeature].title}</h2>
+        <p>{lockedFeatures[selectedFeature].description}</p>
+        <ul>{lockedFeatures[selectedFeature].benefits.map(item => <li key={item}>{item}</li>)}</ul>
+        <div className="roam-feature-lock-footer">
+          <span>Included from the {lockedFeatures[selectedFeature].plan} plan upward</span>
+          {role === "OWNER"
+            ? <Link href={`/workspace/${slug}/account`} onClick={() => setSelectedFeature(null)}>View upgrade options <ArrowUpRight size={15}/></Link>
+            : <span className="roam-feature-lock-owner-note">Ask your workspace owner about upgrading</span>}
+        </div>
+      </section>
+    </div>}
   </aside>;
 }

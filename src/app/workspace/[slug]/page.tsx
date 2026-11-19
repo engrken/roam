@@ -7,7 +7,15 @@ import { WorkspaceNav } from "@/components/workspace-nav";
 
 type Overview = {
   workspace: { name: string; slug: string; role: string; currency: string; trial: null | { endsAt: string | null; graceEndsAt: string | null; readOnly: boolean } };
-  metrics: { totalVehicles:number; availableVehicles:number; rentedVehicles:number; reservedVehicles:number; maintenanceVehicles:number; activeBookings:number; pendingBookings:number; completedBookings:number; customers:number; branches:number; utilization:number; revenue30d:number; bookings7d:number };
+  metrics: { totalVehicles:number; availableVehicles:number; rentedVehicles:number; reservedVehicles:number; maintenanceVehicles:number; activeBookings:number; pendingBookings:number; completedBookings:number; customers:number; branches:number; utilization:number; completedValue30d:number; collected30d:number; outstandingBalance:number; bookings7d:number };
+  actionCenter: {
+    pendingCount:number;
+    pendingItems:{id:string;reference:string;customer:string;startAt:string;endAt:string;totalAmount?:number}[];
+    pickupsToday:{id:string;reference:string;customer:string;startAt:string;endAt:string}[];
+    returnsToday:{id:string;reference:string;customer:string;startAt:string;endAt:string}[];
+    overdueReturns:{id:string;reference:string;customer:string;startAt:string;endAt:string}[];
+    outstandingCount:number;
+  };
   bookingTrend: { date:string; label:string; bookings:number }[];
   upcoming: { id:string; reference:string; status:string; startAt:string; endAt:string; totalAmount:number; customer:string; vehicles:string[] }[];
 };
@@ -67,8 +75,37 @@ export default function WorkspaceOverviewPage() {
       <section className="roam-metric-grid">
         <article className="roam-metric-card"><div className="roam-metric-icon"><CarFront/></div><span>Total fleet</span><strong>{metrics.totalVehicles}</strong><small>{metrics.availableVehicles} available now</small></article>
         <article className="roam-metric-card"><div className="roam-metric-icon"><CalendarDays/></div><span>Active bookings</span><strong>{metrics.activeBookings}</strong><small>{metrics.pendingBookings} pending confirmation</small></article>
-        <article className="roam-metric-card"><div className="roam-metric-icon"><CircleDollarSign/></div><span>Revenue · last 30 days</span><strong>{money(metrics.revenue30d,workspace.currency)}</strong><small>Completed rentals</small></article>
+        <article className="roam-metric-card"><div className="roam-metric-icon"><CircleDollarSign/></div><span>Completed booking value · 30 days</span><strong>{money(metrics.completedValue30d,workspace.currency)}</strong><small>Completed rental value, not cash collected</small></article>
         <article className="roam-metric-card"><div className="roam-metric-icon"><Gauge/></div><span>Fleet utilization</span><strong>{metrics.utilization}%</strong><small>Rented or reserved vehicles</small></article>
+      </section>
+      <section className="roam-panel roam-action-center">
+        <div className="roam-panel-heading">
+          <div><span className="roam-eyebrow">DAILY OPERATIONS</span><h2>Action center</h2><p className="roam-guide-description">The bookings and follow-ups that need attention today.</p></div>
+          <button className="roam-link-btn" onClick={()=>router.push(`/workspace/${slug}/bookings`)}>Open bookings <ArrowUpRight size={14}/></button>
+        </div>
+        <div className="roam-action-grid">
+          <article className="roam-action-card">
+            <div><b>Pending requests</b><strong>{data.actionCenter.pendingCount}</strong></div>
+            {data.actionCenter.pendingItems.length ? data.actionCenter.pendingItems.slice(0,3).map(item=><button key={item.id} onClick={()=>router.push(`/workspace/${slug}/bookings`)}><span><b>{item.customer}</b><small>#{item.reference}</small></span><small>{new Date(item.startAt).toLocaleDateString("en-PH",{month:"short",day:"numeric"})}</small></button>) : <p>You're all caught up.</p>}
+          </article>
+          <article className="roam-action-card">
+            <div><b>Pickups today</b><strong>{data.actionCenter.pickupsToday.length}</strong></div>
+            {data.actionCenter.pickupsToday.length ? data.actionCenter.pickupsToday.slice(0,3).map(item=><button key={item.id} onClick={()=>router.push(`/workspace/${slug}/bookings`)}><span><b>{item.customer}</b><small>#{item.reference}</small></span><small>{new Date(item.startAt).toLocaleTimeString("en-PH",{hour:"numeric",minute:"2-digit"})}</small></button>) : <p>No scheduled pickups today.</p>}
+          </article>
+          <article className="roam-action-card">
+            <div><b>Returns today</b><strong>{data.actionCenter.returnsToday.length}</strong></div>
+            {data.actionCenter.returnsToday.length ? data.actionCenter.returnsToday.slice(0,3).map(item=><button key={item.id} onClick={()=>router.push(`/workspace/${slug}/bookings`)}><span><b>{item.customer}</b><small>#{item.reference}</small></span><small>{new Date(item.endAt).toLocaleTimeString("en-PH",{hour:"numeric",minute:"2-digit"})}</small></button>) : <p>No scheduled returns today.</p>}
+          </article>
+          <article className={"roam-action-card"+(data.actionCenter.overdueReturns.length?" roam-action-warning":"")}>
+            <div><b>Overdue returns</b><strong>{data.actionCenter.overdueReturns.length}</strong></div>
+            {data.actionCenter.overdueReturns.length ? data.actionCenter.overdueReturns.slice(0,3).map(item=><button key={item.id} onClick={()=>router.push(`/workspace/${slug}/bookings`)}><span><b>{item.customer}</b><small>#{item.reference}</small></span><small>Past due</small></button>) : <p>No overdue returns.</p>}
+          </article>
+        </div>
+        <div className="roam-action-finance">
+          <div><span>Recorded collections · last 30 days</span><b>{money(metrics.collected30d,workspace.currency)}</b><small>Payments less recorded refunds</small></div>
+          <div><span>Outstanding balances</span><b>{money(metrics.outstandingBalance,workspace.currency)}</b><small>{data.actionCenter.outstandingCount} bookings with a balance</small></div>
+          <button className="roam-secondary-btn" onClick={()=>router.push(`/workspace/${slug}/finance`)}>Review financials <ArrowUpRight size={15}/></button>
+        </div>
       </section>
       <section className="roam-dashboard-grid">
         <article className="roam-panel roam-chart-panel">

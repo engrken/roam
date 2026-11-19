@@ -11,12 +11,14 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
     include: {
       _count: { select: { memberships: true, vehicles: true, branches: true, bookings: true } },
+      memberships: { where: { role: "OWNER" }, take: 1, include: { user: { select: { name: true, email: true } } } },
       subscription: { select: { tier: true, status: true, currentPeriodEnd: true, plan: { select: { name: true } } } },
     },
   });
   return NextResponse.json({ tenants: tenants.map((tenant) => ({
     id: tenant.id, name: tenant.name, slug: tenant.slug, email: tenant.email, phone: tenant.phone,
     status: tenant.status, createdAt: tenant.createdAt, counts: tenant._count,
+    owner: tenant.memberships[0] ? { name: tenant.memberships[0].user.name, email: tenant.memberships[0].user.email } : null,
     subscription: tenant.subscription ? { tier: tenant.subscription.tier, status: tenant.subscription.status, plan: tenant.subscription.plan.name, currentPeriodEnd: tenant.subscription.currentPeriodEnd } : null,
   })) });
 }

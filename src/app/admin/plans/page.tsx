@@ -77,7 +77,7 @@ export default function PlatformPlansPage() {
       const response = await fetch("/api/admin/plans", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "assign-plan", tenantId: tenant.id, tier }) });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Unable to assign plan.");
-      setTenants(items => items.map(item => item.id === tenant.id ? { ...item, subscription: { tier: body.subscription.tier, status: body.subscription.status, currentPeriodEnd: body.subscription.currentPeriodEnd, trialEndsAt: item.subscription?.trialEndsAt || null } } : item));
+      setTenants(items => items.map(item => item.id === tenant.id ? { ...item, subscription: { tier: body.subscription.tier, status: body.subscription.status, currentPeriodEnd: body.subscription.currentPeriodEnd, trialEndsAt: item.subscription?.trialEndsAt || null, monthlyPrice: plans.find(plan => plan.tier === body.subscription.tier)?.monthlyPrice || 0 } } : item));
       setNotice("Plan assigned to " + tenant.name + ". Subscription status remains subject to manual billing review.");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to assign plan.");

@@ -8,7 +8,7 @@ import { upload } from "@vercel/blob/client";
 type Message = { id: string; sender: string; body: string; createdAt: string };
 type Document = { id: string; kind: string; fileName: string; reviewStatus: string; createdAt?: string };
 type Data = {
-  reference: string; status: string; startAt: string; endAt: string; totalAmount: number;
+  reference: string; status: string; startAt: string; endAt: string; totalAmount: number; rentalTermsSnapshot?: string | null; rentalTermsAcceptedAt?: string | null;
   business: { name: string; phone: string | null }; customer?: { name: string };
   messages: Message[]; documents: Document[];
 };

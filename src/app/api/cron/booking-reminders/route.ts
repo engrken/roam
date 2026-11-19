@@ -15,12 +15,11 @@ export async function GET(request: NextRequest) {
   const now = new Date();
   const windowStart = now;
   const windowEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-  const overdueStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
   const [pickups, returns, overdue] = await Promise.all([
     prisma.booking.findMany({
       where: { status: "CONFIRMED", startAt: { gte: windowStart, lt: windowEnd }, customer: { email: { not: null } } },
-      select: { id: true, reference: true, startAt: true, endAt: true, tenant: { select: { name: true } }, customer: { select: { email: true } } },
+      select: { id: true, reference: true, startAt: true, endAt: true, tenant: { select: { name: true, timezone: true } }, customer: { select: { email: true } } },
       take: 200,
     }),
     prisma.booking.findMany({
@@ -29,11 +28,18 @@ export async function GET(request: NextRequest) {
       take: 200,
     }),
     prisma.booking.findMany({
-      where: { status: "ACTIVE", endAt: { gt: overdueStart, lte: now }, customer: { email: { not: null } } },
+      where: { status: "ACTIVE", endAt: { lte: now }, customer: { email: { not: null } } },
+      orderBy: { endAt: "desc" },
       select: { id: true, reference: true, startAt: true, endAt: true, tenant: { select: { name: true } }, customer: { select: { email: true } } },
       take: 200,
     }),
   ]);
+
+  const localDateKey = (value: Date, timeZone: string) => {
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(value);
+    const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    return `${values.year}-${values.month}-${values.day}`;
+  };
 
   const candidates = [
     ...pickups.map((booking) => ({ ...booking, type: "PICKUP" as const, scheduledFor: booking.startAt })),
@@ -45,7 +51,9 @@ export async function GET(request: NextRequest) {
   let skipped = 0;
   let failed = 0;
   for (const booking of candidates) {
-    const dayKey = booking.scheduledFor.toISOString().slice(0, 10);
+    const timeZone = booking.tenant.timezone || "Asia/Manila";
+    // Pickup/return notices are keyed to the scheduled local date. Overdue reminders recur once per local calendar day.
+    const dayKey = localDateKey(booking.type === "OVERDUE" ? now : booking.scheduledFor, timeZone);
     const noticeKey = `${booking.type}:${booking.id}:${dayKey}`;
     await prisma.bookingAutomationNotice.createMany({
       data: [{ bookingId: booking.id, noticeKey, noticeType: booking.type, scheduledFor: booking.scheduledFor }],
@@ -76,6 +84,7 @@ export async function GET(request: NextRequest) {
         tenantName: booking.tenant.name,
         bookingReference: booking.reference,
         reminderType: booking.type,
+        timeZone,
         startAt: booking.startAt,
         endAt: booking.endAt,
       });

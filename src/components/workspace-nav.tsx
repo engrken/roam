@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard, CarFront, LogOut, ShieldCheck, CalendarDays, MapPin, Users,
   BookOpen, FileText, UserCog, MessageCircle, Wallet, Menu, X, LockKeyhole,
@@ -63,7 +63,7 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
     router.refresh();
   }
 
-  const lockedItem = (feature: FeatureKey, label: string, icon: React.ReactNode) => {
+  const lockedItem = (feature: FeatureKey, label: string, icon: ReactNode) => {
     const info = lockedFeatures[feature];
     return canUse(feature)
       ? <Link className={active === feature ? "active" : ""} href={`/workspace/${slug}/${feature}`}>{icon}{label}</Link>

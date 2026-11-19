@@ -62,6 +62,7 @@ export default function MessagesPage() {
     }
   }, [slug]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- Initial load synchronizes the server inbox asynchronously.
   useEffect(() => {
     let active = true;
     void load().then(bookings => {

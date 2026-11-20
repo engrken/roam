@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getTenantAccess, hasWorkspaceTier, workspaceWriteBlock, canManageTeam } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 import { sendTeamInvitation } from "@/lib/email";
+import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -100,6 +101,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       console.error("Team invitation email failed", error);
       return NextResponse.json({ error: "The invitation could not be emailed. Check the workspace email configuration and try again." }, { status: 503 });
     }
+    await prisma.$transaction(tx => recordWorkspaceAudit(tx, {
+      tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+      action: "team.invitation.created", targetType: "invitation", targetId: invitation.id,
+      details: { email, role },
+    }));
     return NextResponse.json({
       invitation: { id: invitation.id, email, role: invitation.role, expiresAt: invitation.expiresAt },
       invited: true,
@@ -108,8 +114,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   try {
-    const membership = await prisma.membership.create({
-      data: { tenantId: access.tenant.id, userId: user.id, role: role as "ADMIN" | "MANAGER" | "STAFF" },
+    const membership = await prisma.$transaction(async tx => {
+      const created = await tx.membership.create({
+        data: { tenantId: access.tenant.id, userId: user.id, role: role as "ADMIN" | "MANAGER" | "STAFF" },
+      });
+      await recordWorkspaceAudit(tx, {
+        tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+        action: "team.member.added", targetType: "membership", targetId: created.id,
+        details: { memberUserId: user.id, email: user.email, role: created.role },
+      });
+      return created;
     });
     return NextResponse.json({
       member: { id: membership.id, userId: user.id, email: user.email, name: user.name, role: membership.role, joinedAt: membership.createdAt },
@@ -146,7 +160,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: "You do not have permission to change this member's role." }, { status: 403 });
   }
 
-  const membership = await prisma.membership.update({ where: { id: membershipId }, data: { role: role as "ADMIN" | "MANAGER" | "STAFF" } });
+  const membership = await prisma.$transaction(async tx => {
+    const updated = await tx.membership.update({ where: { id: membershipId }, data: { role: role as "ADMIN" | "MANAGER" | "STAFF" } });
+    await recordWorkspaceAudit(tx, {
+      tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+      action: "team.member.role_changed", targetType: "membership", targetId: updated.id,
+      details: { memberUserId: target.userId, fromRole: target.role, toRole: updated.role },
+    });
+    return updated;
+  });
   return NextResponse.json({ member: { id: membership.id, role: membership.role } });
 }
 
@@ -163,7 +185,14 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   if (invitationId) {
     const invitation = await prisma.teamInvitation.findFirst({ where: { id: invitationId, tenantId: access.tenant.id, acceptedAt: null } });
     if (!invitation) return NextResponse.json({ error: "Pending invitation not found." }, { status: 404 });
-    await prisma.teamInvitation.delete({ where: { id: invitation.id } });
+    await prisma.$transaction(async tx => {
+      await tx.teamInvitation.delete({ where: { id: invitation.id } });
+      await recordWorkspaceAudit(tx, {
+        tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+        action: "team.invitation.revoked", targetType: "invitation", targetId: invitation.id,
+        details: { email: invitation.email, role: invitation.role },
+      });
+    });
     return NextResponse.json({ invitationRevoked: true });
   }
   const membershipId = request.nextUrl.searchParams.get("membershipId") || "";
@@ -174,6 +203,13 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     return NextResponse.json({ error: "You do not have permission to remove this member." }, { status: 403 });
   }
 
-  await prisma.membership.delete({ where: { id: membershipId } });
+  await prisma.$transaction(async tx => {
+    await tx.membership.delete({ where: { id: membershipId } });
+    await recordWorkspaceAudit(tx, {
+      tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+      action: "team.member.removed", targetType: "membership", targetId: membershipId,
+      details: { memberUserId: target.userId, role: target.role },
+    });
+  });
   return NextResponse.json({ removed: true });
 }

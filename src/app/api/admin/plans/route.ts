@@ -12,12 +12,12 @@ export async function GET() {
   if (!admin) return NextResponse.json({ error: "Platform administrator access required." }, { status: 403 });
   const [plans, tenants, subscriptionRequests] = await Promise.all([
     prisma.plan.findMany({ orderBy: { monthlyPrice: "asc" }, select: { id: true, tier: true, name: true, monthlyPrice: true, maxVehicles: true, maxBranches: true, maxStaff: true, active: true } }),
-    prisma.tenant.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, slug: true, subscription: { select: { tier: true, status: true, currentPeriodEnd: true, trialEndsAt: true, plan: { select: { monthlyPrice: true } } } } } }),
+    prisma.tenant.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, slug: true, subscription: { select: { tier: true, status: true, currentPeriodEnd: true, trialEndsAt: true, plan: { select: { monthlyPrice: true } } } }, subscriptionPayments: { orderBy: { createdAt: "desc" }, take: 1, select: { reference: true, amount: true, status: true, expiresAt: true, paidAt: true } } } }),
     prisma.subscriptionChangeRequest.findMany({ where: { status: "PENDING" }, orderBy: { createdAt: "asc" }, include: { tenant: { select: { name: true, slug: true } } } }),
   ]);
   return NextResponse.json({
     plans: plans.map(plan => ({ ...plan, monthlyPrice: Number(plan.monthlyPrice) })),
-    tenants: tenants.map(tenant => ({ ...tenant, subscription: tenant.subscription ? { tier: tenant.subscription.tier, status: tenant.subscription.status, currentPeriodEnd: tenant.subscription.currentPeriodEnd?.toISOString() || null, trialEndsAt: tenant.subscription.trialEndsAt?.toISOString() || null, monthlyPrice: Number(tenant.subscription.plan.monthlyPrice) } : null })),
+    tenants: tenants.map(tenant => ({ ...tenant, subscription: tenant.subscription ? { tier: tenant.subscription.tier, status: tenant.subscription.status, currentPeriodEnd: tenant.subscription.currentPeriodEnd?.toISOString() || null, trialEndsAt: tenant.subscription.trialEndsAt?.toISOString() || null, monthlyPrice: Number(tenant.subscription.plan.monthlyPrice) } : null, latestPayment: tenant.subscriptionPayments[0] ? { ...tenant.subscriptionPayments[0], amount: Number(tenant.subscriptionPayments[0].amount), expiresAt: tenant.subscriptionPayments[0].expiresAt?.toISOString() || null, paidAt: tenant.subscriptionPayments[0].paidAt?.toISOString() || null } : null })),
     subscriptionRequests: subscriptionRequests.map(item => ({ id: item.id, tenantId: item.tenantId, tenantName: item.tenant.name, tenantSlug: item.tenant.slug, currentTier: item.currentTier, requestedTier: item.requestedTier, status: item.status, createdAt: item.createdAt.toISOString() })),
   });
 }

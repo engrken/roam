@@ -535,7 +535,9 @@
   .roam-sidebar-collapsed .roam-side-nav .roam-nav-lock-icon{display:none}
   .roam-sidebar-collapsed .roam-side-nav .roam-admin-link{margin-top:9px;padding-top:13px}
   .roam-sidebar-collapsed .roam-sidebar-bottom{justify-items:center;padding:12px 0 3px}
-  .roam-sidebar-collapsed .roam-sidebar-bottom button{display:flex;justify-content:center;padding:8px 0;font-size:0}\n  .roam-sidebar-collapsed .roam-sidebar-bottom button svg{width:18px;height:18px;flex:0 0 18px}\n  .roam-sidebar-collapsed .roam-sidebar-bottom button span{display:none}
+  .roam-sidebar-collapsed .roam-sidebar-bottom button{display:flex;justify-content:center;padding:8px 0;font-size:0}
+  .roam-sidebar-collapsed .roam-sidebar-bottom button svg{width:18px;height:18px;flex:0 0 18px}
+  .roam-sidebar-collapsed .roam-sidebar-bottom button span{display:none}
   .roam-sidebar-collapsed~.roam-main{width:calc(100% - 76px);margin-left:76px}
 }
 @media(max-width:760px){.roam-desktop-sidebar-toggle{display:none}}

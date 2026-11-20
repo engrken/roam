@@ -4,6 +4,7 @@ import { head } from "@vercel/blob";
 import { getTenantAccess,canManageFleet,workspaceWriteBlock,isTenantTrialReadOnly } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 export const runtime="nodejs";
 export async function POST(request:NextRequest,{params}:{params:Promise<{slug:string}>}){
  const {slug}=await params;const access=await getTenantAccess(slug);
@@ -18,7 +19,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{slug:st
     const inspectionId=String(payload.inspectionId||"");
     const inspection=await prisma.vehicleInspection.findFirst({where:{id:inspectionId,tenantId:access.tenant.id},select:{id:true}});
     if(!inspection)throw new Error("Inspection record not found.");
-    const clientIp=request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()||request.headers.get("x-real-ip")||"unknown";
+    const clientIp=getClientIp(request.headers);
     const [userAllowed,ipAllowed]=await Promise.all([
      consumeRateLimit("inspection-photo-user",access.user.id,80,60*60*1000),
      consumeRateLimit("inspection-photo-ip",clientIp,120,60*60*1000),

@@ -35,6 +35,7 @@ export default function WorkspaceAuditPage() {
     }
   }, [slug]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- load fetches the selected audit history on entry.
   useEffect(() => { void load(); }, [load]);
 
   return <div className="roam-app-shell">

@@ -222,7 +222,7 @@ export default function Home() {
         <article><span className="plan-inclusion-icon"><ShieldCheck size={19}/></span><h4>Rental terms and inspections</h4><p>Rental terms acceptance plus handover and return inspections with condition notes and photos.</p><small>Included in all plans</small></article>
         <article><span className="plan-inclusion-icon"><Wrench size={19}/></span><h4>Maintenance and expense tracking</h4><p>Schedule vehicle maintenance, record service costs, and track day-to-day operating expenses.</p><small>Included in all plans</small></article>
         <article><span className="plan-inclusion-icon"><BarChart3 size={19}/></span><h4>Multi-branch management and reports</h4><p>Manage additional pickup locations, review operational and financial reports, and export report data as CSV.</p><small>Included from Pro</small></article>
-        <article><span className="plan-inclusion-icon"><UserCog size={19}/></span><h4>Team invitations and role-based access</h4><p>Invite staff, assign workspace roles, and manage access as your rental operation grows.</p><small>Included from Business</small></article>
+        <article><span className="plan-inclusion-icon"><Users size={19}/></span><h4>Team invitations and role-based access</h4><p>Invite staff, assign workspace roles, and manage access as your rental operation grows.</p><small>Included from Business</small></article>
       </div><p className="plan-limit-note">Plan allowances apply to active vehicles, branches, and workspace members. Enterprise capacity is agreed individually. ROAM records subscription billing but does not currently process payments or automatically renew subscriptions.</p></div>
     </div></section>
 

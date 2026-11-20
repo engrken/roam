@@ -5,6 +5,7 @@ import { rentalDateTimeToUtc } from "@/lib/datetime";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { sendBookingRequestReceived } from "@/lib/email";
 import { isTenantTrialReadOnly } from "@/lib/tenant-access";
+import { blockingMaintenanceStatuses } from "@/lib/maintenance-availability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         },
         maintenances: {
           none: {
-            status: { in: ["SCHEDULED", "IN_PROGRESS"] },
+            status: { in: [...blockingMaintenanceStatuses] },
             startAt: { lt: requestedEnd },
             endAt: { gt: requestedStart },
           },

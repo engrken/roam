@@ -89,6 +89,10 @@ export default function PlatformPlansPage() {
       setError("A QR payment is still pending for " + tenant.name + ". Wait for provider confirmation or let the QR expire before recording an offline payment.");
       return;
     }
+    if (tenant.latestPayment?.status === "PAID" && tenant.subscription?.currentPeriodEnd && new Date(tenant.subscription.currentPeriodEnd) > new Date()) {
+      setError(tenant.name + " already has a confirmed QR payment covering the current subscription period.");
+      return;
+    }
     const amount = Number(paymentAmounts[tenant.id]);
     if (!tenant.subscription || !Number.isFinite(amount) || amount <= 0) {
       setError("Assign a plan and enter the verified amount received before confirming payment.");

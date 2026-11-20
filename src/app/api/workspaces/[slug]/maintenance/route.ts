@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
+import { blockingMaintenanceStatuses } from "@/lib/maintenance-availability";
 
 export const runtime = "nodejs";
 
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       select: { id: true },
     });
     const maintenanceConflict = await tx.vehicleMaintenance.findFirst({
-      where: { tenantId: access.tenant.id, vehicleId, status: { in: ["SCHEDULED", "IN_PROGRESS"] }, startAt: { lt: endAt }, endAt: { gt: startAt } },
+      where: { tenantId: access.tenant.id, vehicleId, status: { in: [...blockingMaintenanceStatuses] }, startAt: { lt: endAt }, endAt: { gt: startAt } },
       select: { id: true },
     });
     if (bookingConflict) return { error: "This vehicle already has a confirmed or active booking during those dates." };

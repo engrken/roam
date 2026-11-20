@@ -45,6 +45,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
   const tenantId = access.tenant.id;
+  const canViewFinancials = access.role !== "STAFF";
   const tenantSettings = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { timezone: true } });
   const timeZone = tenantSettings?.timezone || "Asia/Manila";
   const { start: todayStart, end: tomorrowStart } = localDayBounds(now, timeZone);
@@ -120,7 +121,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   const actionItem = (booking: { id: string; reference: string; startAt: Date; endAt: Date; customer: { name: string }; totalAmount?: unknown }) => ({
     id: booking.id, reference: booking.reference, customer: booking.customer.name,
     startAt: booking.startAt.toISOString(), endAt: booking.endAt.toISOString(),
-    ...(booking.totalAmount !== undefined ? { totalAmount: Number(booking.totalAmount) } : {}),
+    ...(canViewFinancials && booking.totalAmount !== undefined ? { totalAmount: Number(booking.totalAmount) } : {}),
   });
 
   return NextResponse.json({
@@ -131,8 +132,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
       activeBookings: (bookingMap.active || 0) + (bookingMap.confirmed || 0),
       pendingBookings: bookingMap.pending || 0, completedBookings: bookingMap.completed || 0,
       customers: customerCount, branches: branchCount, utilization,
-      completedValue30d: Number(completedValue._sum.totalAmount || 0),
-      collected30d, outstandingBalance,
+      completedValue30d: canViewFinancials ? Number(completedValue._sum.totalAmount || 0) : null,
+      collected30d: canViewFinancials ? collected30d : null,
+      outstandingBalance: canViewFinancials ? outstandingBalance : null,
       bookings7d: recent.length,
     },
     actionCenter: {
@@ -152,7 +154,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     bookingTrend: days,
     upcoming: upcoming.map((booking) => ({
       id: booking.id, reference: booking.reference, status: booking.status,
-      startAt: booking.startAt, endAt: booking.endAt, totalAmount: Number(booking.totalAmount),
+      startAt: booking.startAt, endAt: booking.endAt,
+      ...(canViewFinancials ? { totalAmount: Number(booking.totalAmount) } : {}),
       customer: booking.customer.name,
       vehicles: booking.items.map((item) => `${item.vehicle.make} ${item.vehicle.model} · ${item.vehicle.plateNumber}`),
     })),

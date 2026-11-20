@@ -2,7 +2,6 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hasCurrentLegalAcceptance } from "@/lib/legal";
 import { NextResponse } from "next/server";
-import { canManageFleet, canManageTeam, canManageWorkspaceSettings, canManageBilling } from "@/lib/permissions";
 export { canManageFleet, canManageTeam, canManageWorkspaceSettings, canManageBilling } from "@/lib/permissions";
 
 export async function getTenantAccess(slug: string) {

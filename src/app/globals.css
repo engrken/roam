@@ -521,11 +521,11 @@
   .roam-sidebar-collapsed .roam-brand>span:last-child,
   .roam-sidebar-collapsed .roam-side-label,
   .roam-sidebar-collapsed .roam-workspace-name,
-  .roam-sidebar-collapsed .roam-sidebar>div[role="status"],
+  .roam-sidebar-collapsed>div[role="status"],
   .roam-sidebar-collapsed .roam-nav-label,
   .roam-sidebar-collapsed .roam-nav-lock-label,
   .roam-sidebar-collapsed .roam-sidebar-bottom .roam-role,
-  .roam-sidebar-collapsed .roam-sidebar-bottom button{display:none}
+  .roam-sidebar-collapsed .roam-sidebar-bottom button{display:flex;justify-content:center;padding:8px 0;font-size:0}\n  .roam-sidebar-collapsed .roam-sidebar-bottom button svg{width:18px;height:18px;flex:0 0 18px}\n  .roam-sidebar-collapsed .roam-sidebar-bottom button span{display:none}
   .roam-sidebar-collapsed .roam-desktop-sidebar-toggle{justify-content:center;padding:0}
   .roam-sidebar-collapsed .roam-desktop-sidebar-toggle span{display:none}
   .roam-sidebar-collapsed .roam-side-nav{gap:7px}

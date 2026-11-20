@@ -57,6 +57,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             },
           },
         },
+        maintenances: {
+          none: {
+            status: { in: ["SCHEDULED", "IN_PROGRESS"] },
+            startAt: { lt: requestedEnd },
+            endAt: { gt: requestedStart },
+          },
+        },
       } : {}),
     },
     orderBy: { createdAt: "desc" },
@@ -161,6 +168,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         select: { id: true },
       });
       if (conflict) return { conflict: "Those dates are no longer available. Please choose another period." as const };
+
+      const maintenanceConflict = await tx.vehicleMaintenance.findFirst({
+        where: { tenantId: tenant.id, vehicleId, status: { not: "CANCELLED" }, startAt: { lt: endAt }, endAt: { gt: startAt } },
+        select: { id: true },
+      });
+      if (maintenanceConflict) return { conflict: "This vehicle is scheduled for maintenance during those dates. Please choose another vehicle or period." as const };
 
       const existingCustomer = await tx.customer.findFirst({
         where: { tenantId: tenant.id, email },

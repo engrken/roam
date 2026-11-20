@@ -9,7 +9,7 @@ type Branch = { id: string; name: string; code: string | null };
 
 type Report = {
   range: { from: string; to: string };
-  summary: { bookings: number; completed: number; cancelled: number; pending: number; confirmed: number; active: number; rejected: number; completedRevenue: number; openBookingValue: number; fleetCount: number };
+  summary: { bookings: number; completed: number; cancelled: number; pending: number; confirmed: number; active: number; rejected: number; completedRevenue: number; openBookingValue: number; fleetCount: number; recordedPayments: number; recordedRefunds: number; operatingExpenses: number; serviceCosts: number; netRecordedCashFlow: number };
   statusCounts: Record<string, number>;
   daily: { date: string; bookings: number; completed: number; revenue: number }[];
   bookings: { reference: string; customer: string; status: string; startAt: string; endAt: string; totalAmount: number; branch: string }[];
@@ -72,7 +72,7 @@ export default function ReportsPage() {
   return <div className="roam-app-shell">
     <WorkspaceNav slug={slug} name="Operational reports" role="Workspace" active="reports"/>
     <main className="roam-main">
-      <header className="roam-topbar"><div><span className="roam-eyebrow">BUSINESS INSIGHTS</span><h1>Operational reports</h1><p>Review booking activity and completed booking value for a selected period.</p></div><div className="roam-topbar-actions"><button className="roam-secondary-btn" onClick={() => void load()}><RefreshCw size={15}/> Refresh</button></div></header>
+      <header className="roam-topbar"><div><span className="roam-eyebrow">BUSINESS INSIGHTS</span><h1>Operational reports</h1><p>Compare booking activity with manually recorded customer cash flow and operating costs.</p></div><div className="roam-topbar-actions"><button className="roam-secondary-btn" onClick={() => void load()}><RefreshCw size={15}/> Refresh</button></div></header>
       <section className="roam-panel">
         <div className="roam-panel-heading"><div><span className="roam-eyebrow">REPORT FILTERS</span><h2>Date range and location</h2></div><BarChart3 size={22}/></div>
         <div className="roam-form-grid"><label>Branch<select value={branchId} onChange={event => setBranchId(event.target.value)}><option value="">All branches</option>{branches.map(branch => <option key={branch.id} value={branch.id}>{branch.name}{branch.code ? " (" + branch.code + ")" : ""}</option>)}</select></label><label>From<input type="date" value={from} max={to} onChange={event => setFrom(event.target.value)}/></label><label>To<input type="date" value={to} min={from} onChange={event => setTo(event.target.value)}/></label><div className="roam-settings-actions"><button className="roam-primary-btn" onClick={() => void load()} disabled={loading}>Apply dates</button></div></div>
@@ -82,6 +82,7 @@ export default function ReportsPage() {
         <section className="roam-booking-stats">
           <article><span>Bookings</span><b>{s.bookings}</b></article><article><span>Completed</span><b>{s.completed}</b></article><article><span>Cancelled</span><b>{s.cancelled}</b></article><article><span>Fleet size</span><b>{s.fleetCount}</b></article>
           <article><span>Completed booking value</span><b>{money(s.completedRevenue, currency)}</b></article><article><span>Open booking value</span><b>{money(s.openBookingValue, currency)}</b></article><article><span>Pending</span><b>{s.pending}</b></article><article><span>Active / confirmed</span><b>{s.active + s.confirmed}</b></article>
+          <article><span>Recorded collections</span><b>{money(s.recordedPayments, currency)}</b></article><article><span>Recorded refunds</span><b>{money(s.recordedRefunds, currency)}</b></article><article><span>Operating expenses</span><b>{money(s.operatingExpenses, currency)}</b></article><article><span>Service costs</span><b>{money(s.serviceCosts, currency)}</b></article><article><span>Net recorded cash flow</span><b>{money(s.netRecordedCashFlow, currency)}</b></article>
         </section>
         <section className="roam-panel roam-table-panel">
           <div className="roam-panel-heading"><div><span className="roam-eyebrow">BOOKING ACTIVITY</span><h2>Daily summary</h2></div></div>
@@ -92,7 +93,7 @@ export default function ReportsPage() {
           {report.bookings.length ? <div className="roam-table-scroll"><table className="roam-table"><thead><tr><th>Reference</th><th>Customer</th><th>Branch</th><th>Status</th><th>Start</th><th>End</th><th>Amount</th></tr></thead><tbody>{report.bookings.map(item => <tr key={item.reference}><td>{item.reference}</td><td>{item.customer}</td><td>{item.branch}</td><td>{item.status}</td><td>{new Date(item.startAt).toLocaleDateString()}</td><td>{new Date(item.endAt).toLocaleDateString()}</td><td>{money(item.totalAmount,currency)}</td></tr>)}</tbody></table></div> : <div className="roam-empty"><BarChart3 size={28}/><b>No bookings in this period</b><span>Try a different date range.</span></div>}
         </section>
       </>}
-      <p className="roam-settings-footnote">Completed booking value is based on completed bookings whose start date falls within the selected period. This is an operational report, not an accounting statement or proof of payment collection.</p>
+      <p className="roam-settings-footnote">Completed booking value is booking value, not cash collected. Recorded collections and refunds come only from manually entered RentalPayment records. Net recorded cash flow subtracts manually entered operating expenses and service-record costs; avoid entering the same service invoice in both places. This is an operational summary, not an accounting statement or proof of bank reconciliation.</p>
     </main>
   </div>;
 }

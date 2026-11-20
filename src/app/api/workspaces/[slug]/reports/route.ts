@@ -35,19 +35,35 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!branch) return NextResponse.json({ error: "That branch is unavailable in this workspace." }, { status: 404 });
   }
   const branchFilter = requestedBranchId ? { branchId: requestedBranchId } : {};
-  const [bookings, fleetCount] = await Promise.all([
+  const [bookings, fleetCount, rentalTransactions, operatingExpenses, serviceRecords] = await Promise.all([
     prisma.booking.findMany({
       where: { tenantId, ...branchFilter, startAt: { gte: from, lt: endExclusive } },
       select: { id: true, reference: true, status: true, startAt: true, endAt: true, totalAmount: true, customer: { select: { name: true } }, branch: { select: { name: true } } },
       orderBy: { startAt: "asc" },
     }),
     prisma.vehicle.count({ where: { tenantId, ...branchFilter, status: { not: "INACTIVE" } } }),
+    prisma.rentalPayment.findMany({
+      where: { tenantId, receivedAt: { gte: from, lt: endExclusive }, ...(requestedBranchId ? { booking: { branchId: requestedBranchId } } : {}) },
+      select: { amount: true, kind: true },
+    }),
+    prisma.operatingExpense.findMany({
+      where: { tenantId, incurredAt: { gte: from, lt: endExclusive }, ...branchFilter },
+      select: { amount: true },
+    }),
+    prisma.vehicleServiceRecord.findMany({
+      where: { tenantId, performedAt: { gte: from, lt: endExclusive }, ...(requestedBranchId ? { vehicle: { branchId: requestedBranchId } } : {}) },
+      select: { cost: true },
+    }),
   ]);
   const byDay = new Map<string, { date: string; bookings: number; completed: number; revenue: number }>();
   for (let cursor = new Date(from); cursor < endExclusive; cursor = new Date(cursor.getTime() + 86400000)) {
     const key = cursor.toISOString().slice(0, 10);
     byDay.set(key, { date: key, bookings: 0, completed: 0, revenue: 0 });
   }
+  const recordedPayments = rentalTransactions.filter((item) => item.kind !== "REFUND").reduce((sum, item) => sum + Number(item.amount), 0);
+  const recordedRefunds = rentalTransactions.filter((item) => item.kind === "REFUND").reduce((sum, item) => sum + Number(item.amount), 0);
+  const expenseTotal = operatingExpenses.reduce((sum, item) => sum + Number(item.amount), 0);
+  const serviceCostTotal = serviceRecords.reduce((sum, item) => sum + Number(item.cost), 0);
   const statusCounts: Record<string, number> = {};
   let completedRevenue = 0;
   let pendingValue = 0;
@@ -78,6 +94,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       completedRevenue: Math.round(completedRevenue * 100) / 100,
       openBookingValue: Math.round(pendingValue * 100) / 100,
       fleetCount,
+      recordedPayments: Math.round(recordedPayments * 100) / 100,
+      recordedRefunds: Math.round(recordedRefunds * 100) / 100,
+      operatingExpenses: Math.round(expenseTotal * 100) / 100,
+      serviceCosts: Math.round(serviceCostTotal * 100) / 100,
+      netRecordedCashFlow: Math.round((recordedPayments - recordedRefunds - expenseTotal - serviceCostTotal) * 100) / 100,
     },
     statusCounts,
     daily: Array.from(byDay.values()),

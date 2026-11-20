@@ -93,6 +93,9 @@ model Tenant {
   referralReceived Referral? @relation("ReferralReferredTenant")
   referredUsers User[] @relation("UserReferredByTenant")
   rentalPayments RentalPayment[]
+  vehicleMaintenances VehicleMaintenance[]
+  vehicleServiceRecords VehicleServiceRecord[]
+  operatingExpenses OperatingExpense[]
   subscriptionChangeRequests SubscriptionChangeRequest[]
 }
 
@@ -168,6 +171,7 @@ model Branch {
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   vehicles  Vehicle[]
   bookings  Booking[]
+  operatingExpenses OperatingExpense[]
   @@unique([tenantId, code])
   @@index([tenantId])
 }
@@ -194,6 +198,9 @@ model Vehicle {
   branch          Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
   bookingItems    BookingItem[]
   inspections     VehicleInspection[]
+  maintenances    VehicleMaintenance[]
+  serviceRecords  VehicleServiceRecord[]
+  operatingExpenses OperatingExpense[]
   @@unique([tenantId, plateNumber])
   @@index([tenantId, status])
   @@index([tenantId, branchId])
@@ -475,4 +482,62 @@ model BookingAutomationNotice {
   updatedAt    DateTime @updatedAt
   booking      Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   @@index([status, scheduledFor])
+}
+
+
+model VehicleMaintenance {
+  id          String   @id @default(cuid())
+  tenantId    String
+  vehicleId   String
+  title       String
+  description String?  @db.Text
+  status      String   @default("SCHEDULED")
+  startAt     DateTime
+  endAt       DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  serviceRecords VehicleServiceRecord[]
+  @@index([tenantId, startAt, endAt])
+  @@index([vehicleId, startAt, endAt])
+}
+
+model VehicleServiceRecord {
+  id           String   @id @default(cuid())
+  tenantId     String
+  vehicleId    String
+  maintenanceId String?
+  serviceType  String
+  description  String?  @db.Text
+  odometerKm   Int?
+  cost         Decimal  @default(0) @db.Decimal(12, 2)
+  performedAt  DateTime @default(now())
+  createdAt    DateTime @default(now())
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle      Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  maintenance  VehicleMaintenance? @relation(fields: [maintenanceId], references: [id], onDelete: SetNull)
+  @@index([tenantId, performedAt])
+  @@index([vehicleId, performedAt])
+}
+
+model OperatingExpense {
+  id          String   @id @default(cuid())
+  tenantId    String
+  branchId    String?
+  vehicleId   String?
+  category    String
+  description String
+  amount      Decimal  @db.Decimal(12, 2)
+  currency    String   @default("PHP")
+  incurredAt  DateTime @default(now())
+  reference   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch      Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  vehicle     Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  @@index([tenantId, incurredAt])
+  @@index([tenantId, category, incurredAt])
+  @@index([vehicleId, incurredAt])
 }

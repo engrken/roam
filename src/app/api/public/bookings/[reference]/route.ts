@@ -2,6 +2,7 @@ import { NextRequest,NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 import { sendBookingMessageNotification } from "@/lib/email";
 import { isTenantTrialReadOnly } from "@/lib/tenant-access";
 export const runtime="nodejs";
@@ -21,7 +22,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{referen
  const booking=await prisma.booking.findFirst({where:{reference,publicTokenHash:hash(token)},select:{id:true,tenantId:true,tenant:{select:{name:true,email:true,slug:true,status:true}}}});
  if(!booking)return NextResponse.json({error:"Booking not found."},{status:404});
  if(!["ACTIVE","TRIAL"].includes(booking.tenant.status))return NextResponse.json({error:"This rental business is not currently accepting messages."},{status:423});
- const clientIp=request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()||request.headers.get("x-real-ip")||"unknown";
+ const clientIp=getClientIp(request.headers);
  const [bookingAllowed,ipAllowed]=await Promise.all([
   consumeRateLimit("customer-booking-message",booking.id,10,60*60*1000),
   consumeRateLimit("customer-booking-message-ip",clientIp,40,60*60*1000),

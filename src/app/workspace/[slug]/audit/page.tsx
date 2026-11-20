@@ -36,7 +36,7 @@ export default function WorkspaceAuditPage() {
   }, [slug]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- load fetches the selected audit history on entry.
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void Promise.resolve().then(() => load()); }, [load]);
 
   return <div className="roam-app-shell">
     <WorkspaceNav slug={slug} name="Audit history" role="Workspace" active="audit"/>

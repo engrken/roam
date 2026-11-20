@@ -60,7 +60,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   try {
     const branch = await prisma.$transaction(async tx => {
-      await tx.$queryRawUnsafe("SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1))) AS advisory_lock", "branch-limit:" + access.tenant.id);
+      await tx.$queryRawUnsafe("SELECT pg_advisory_xact_lock(hashtext($1)) IS NULL AS locked", "branch-limit:" + access.tenant.id);
       const subscription = await tx.subscription.findUnique({ where: { tenantId: access.tenant.id }, select: { plan: { select: { maxBranches: true } } } });
       const limit = subscription?.plan.maxBranches ?? null;
       const activeCount = await tx.branch.count({ where: { tenantId: access.tenant.id, isActive: true } });
@@ -124,7 +124,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   try {
     const branch = await prisma.$transaction(async tx => {
       if (data.isActive === true && !existing.isActive) {
-        await tx.$queryRawUnsafe("SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1))) AS advisory_lock", "branch-limit:" + access.tenant.id);
+        await tx.$queryRawUnsafe("SELECT pg_advisory_xact_lock(hashtext($1)) IS NULL AS locked", "branch-limit:" + access.tenant.id);
         const subscription = await tx.subscription.findUnique({ where: { tenantId: access.tenant.id }, select: { plan: { select: { maxBranches: true } } } });
         const limit = subscription?.plan.maxBranches ?? null;
         const activeCount = await tx.branch.count({ where: { tenantId: access.tenant.id, isActive: true } });

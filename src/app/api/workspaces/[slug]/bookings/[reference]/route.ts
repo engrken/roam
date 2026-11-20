@@ -85,7 +85,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (body?.action === "shareLink") {
     const token = randomBytes(32).toString("hex");
-    await prisma.booking.update({ where: { id: booking.id }, data: { publicTokenHash: hashToken(token) } });
+    await prisma.$transaction(async tx => {
+      await tx.booking.update({ where: { id: booking.id }, data: { publicTokenHash: hashToken(token) } });
+      await recordWorkspaceAudit(tx, {
+        tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+        action: "booking.access_link_rotated", targetType: "booking", targetId: booking.id,
+        details: { reference },
+      });
+    });
     const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\/$/, "");
     return NextResponse.json({ url: baseUrl + "/booking/" + encodeURIComponent(reference) + "?token=" + token });
   }
@@ -226,11 +233,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   if (typeof body?.documentId === "string" && ["APPROVED", "REJECTED"].includes(body.reviewStatus)) {
-    const result = await prisma.bookingDocument.updateMany({
-      where: { id: body.documentId, bookingId: booking.id },
-      data: { reviewStatus: body.reviewStatus, reviewedAt: new Date() },
+    const result = await prisma.$transaction(async tx => {
+      const updated = await tx.bookingDocument.updateMany({
+        where: { id: body.documentId, bookingId: booking.id },
+        data: { reviewStatus: body.reviewStatus, reviewedAt: new Date() },
+      });
+      if (!updated.count) return false;
+      await recordWorkspaceAudit(tx, {
+        tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+        action: "booking.document_reviewed", targetType: "bookingDocument", targetId: body.documentId,
+        details: { reference, reviewStatus: body.reviewStatus },
+      });
+      return true;
     });
-    if (!result.count) return NextResponse.json({ error: "Document not found." }, { status: 404 });
+    if (!result) return NextResponse.json({ error: "Document not found." }, { status: 404 });
     return NextResponse.json({ reviewed: true });
   }
 

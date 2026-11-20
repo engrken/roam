@@ -1,9 +1,10 @@
 import { NextRequest,NextResponse } from "next/server";
 import { handleUpload } from "@vercel/blob/client";
 import { head } from "@vercel/blob";
-import { getTenantAccess,canManageFleet,workspaceWriteBlock } from "@/lib/tenant-access";
+import { getTenantAccess,canManageFleet,workspaceWriteBlock,isTenantTrialReadOnly } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 export const runtime="nodejs";
 export async function POST(request:NextRequest,{params}:{params:Promise<{slug:string}>}){
  const {slug}=await params;const access=await getTenantAccess(slug);
@@ -18,7 +19,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{slug:st
     const inspectionId=String(payload.inspectionId||"");
     const inspection=await prisma.vehicleInspection.findFirst({where:{id:inspectionId,tenantId:access.tenant.id},select:{id:true}});
     if(!inspection)throw new Error("Inspection record not found.");
-    const clientIp=request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()||request.headers.get("x-real-ip")||"unknown";
+    const clientIp=getClientIp(request.headers);
     const [userAllowed,ipAllowed]=await Promise.all([
      consumeRateLimit("inspection-photo-user",access.user.id,80,60*60*1000),
      consumeRateLimit("inspection-photo-ip",clientIp,120,60*60*1000),
@@ -29,6 +30,9 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{slug:st
    onUploadCompleted:async({blob,tokenPayload})=>{
     const payload=JSON.parse(tokenPayload||"{}");const inspectionId=String(payload.inspectionId||"");
     if(!inspectionId)throw new Error("Missing inspection metadata.");
+    const inspection=await prisma.vehicleInspection.findFirst({where:{id:inspectionId,tenantId:access.tenant.id},select:{id:true}});
+    const tenant=await prisma.tenant.findUnique({where:{id:access.tenant.id},select:{status:true}});
+    if(!inspection||!tenant||!["ACTIVE","TRIAL"].includes(tenant.status)||await isTenantTrialReadOnly(access.tenant.id))throw new Error("Inspection photo uploads are unavailable for this workspace.");
     const metadata=await head(blob.pathname);
     await prisma.vehicleInspectionPhoto.create({data:{inspectionId,pathname:blob.pathname,fileName:blob.pathname.split("/").pop()||"inspection-photo",contentType:metadata.contentType||blob.contentType||"image/jpeg",size:metadata.size}});
    }

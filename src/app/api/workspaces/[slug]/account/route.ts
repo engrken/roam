@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTenantAccess, canManageBilling } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
+import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 
 export const runtime = "nodejs";
 
@@ -87,9 +88,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (currentTier === tier) return NextResponse.json({ error: "Your workspace is already on this tier." }, { status: 400 });
   if (pending) return NextResponse.json({ error: "You already have a pending subscription change request." }, { status: 409 });
 
-  const change = await prisma.subscriptionChangeRequest.create({
-    data: { tenantId: access.tenant.id, requestedTier: tier as "STARTER" | "PRO" | "BUSINESS" | "ENTERPRISE", currentTier, requestedById: access.user.id },
-    select: { id: true, currentTier: true, requestedTier: true, status: true, createdAt: true },
+  const change = await prisma.$transaction(async tx => {
+    const created = await tx.subscriptionChangeRequest.create({
+      data: { tenantId: access.tenant.id, requestedTier: tier as "STARTER" | "PRO" | "BUSINESS" | "ENTERPRISE", currentTier, requestedById: access.user.id },
+      select: { id: true, currentTier: true, requestedTier: true, status: true, createdAt: true },
+    });
+    await recordWorkspaceAudit(tx, {
+      tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+      action: "subscription.change_requested", targetType: "subscriptionChangeRequest", targetId: created.id,
+      details: { fromTier: currentTier, requestedTier: tier },
+    });
+    return created;
   });
   return NextResponse.json({ request: { ...change, createdAt: change.createdAt.toISOString() }, message: "Your request has been submitted for review. Your current plan remains active until it is approved." }, { status: 201 });
 }

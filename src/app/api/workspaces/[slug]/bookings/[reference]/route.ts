@@ -4,6 +4,7 @@ import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tena
 import { prisma } from "@/lib/prisma";
 import { sendBookingMessageNotification, sendBookingStatusNotification } from "@/lib/email";
 import { recordWorkspaceAudit } from "@/lib/workspace-audit";
+import { consumeRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -84,6 +85,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!booking) return NextResponse.json({ error: "Booking not found." }, { status: 404 });
 
   if (body?.action === "shareLink") {
+    const allowed = await consumeRateLimit("workspace-booking-share-link", booking.id, 10, 60 * 60 * 1000);
+    if (!allowed) return NextResponse.json({ error: "Too many booking link changes. Please try again later." }, { status: 429 });
     const token = randomBytes(32).toString("hex");
     await prisma.$transaction(async tx => {
       await tx.booking.update({ where: { id: booking.id }, data: { publicTokenHash: hashToken(token) } });
@@ -102,6 +105,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!message || message.length > 2000) {
       return NextResponse.json({ error: "Message must be 1–2,000 characters." }, { status: 400 });
     }
+    const [bookingAllowed, actorAllowed] = await Promise.all([
+      consumeRateLimit("workspace-booking-message", booking.id, 20, 60 * 60 * 1000),
+      consumeRateLimit("workspace-booking-message-actor", access.user.id, 60, 60 * 60 * 1000),
+    ]);
+    if (!bookingAllowed || !actorAllowed) return NextResponse.json({ error: "Too many booking messages. Please try again later." }, { status: 429 });
     await prisma.bookingMessage.create({
       data: { bookingId: booking.id, sender: "OWNER", body: message },
     });

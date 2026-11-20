@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTenantAccess, canManageFleet, hasWorkspaceTier, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
+import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,9 +58,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!parsed) return NextResponse.json({ error: "Enter a valid branch name, code, and address." }, { status: 400 });
 
   try {
-    const branch = await prisma.branch.create({
-      data: { tenantId: access.tenant.id, ...parsed },
-      select: { id: true, name: true, code: true, address: true, isActive: true, createdAt: true },
+    const branch = await prisma.$transaction(async tx => {
+      const created = await tx.branch.create({
+        data: { tenantId: access.tenant.id, ...parsed },
+        select: { id: true, name: true, code: true, address: true, isActive: true, createdAt: true },
+      });
+      await recordWorkspaceAudit(tx, {
+        tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+        action: "branch.created", targetType: "branch", targetId: created.id,
+        details: { name: created.name, code: created.code },
+      });
+      return created;
     });
     return NextResponse.json({ branch }, { status: 201 });
   } catch (error) {
@@ -106,10 +115,18 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 
   try {
-    const branch = await prisma.branch.update({
-      where: { id },
-      data,
-      select: { id: true, name: true, code: true, address: true, isActive: true, createdAt: true },
+    const branch = await prisma.$transaction(async tx => {
+      const updated = await tx.branch.update({
+        where: { id },
+        data,
+        select: { id: true, name: true, code: true, address: true, isActive: true, createdAt: true },
+      });
+      await recordWorkspaceAudit(tx, {
+        tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+        action: "branch.updated", targetType: "branch", targetId: updated.id,
+        details: { changedFields: Object.keys(data).join(",") },
+      });
+      return updated;
     });
     return NextResponse.json({ branch });
   } catch (error) {
@@ -145,6 +162,12 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     }, { status: 409 });
   }
 
-  await prisma.branch.update({ where: { id }, data: { isActive: false } });
+  await prisma.$transaction(async tx => {
+    await tx.branch.update({ where: { id }, data: { isActive: false } });
+    await recordWorkspaceAudit(tx, {
+      tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+      action: "branch.deactivated", targetType: "branch", targetId: id,
+    });
+  });
   return NextResponse.json({ deactivated: true });
 }

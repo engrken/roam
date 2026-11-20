@@ -677,3 +677,11 @@
     margin-left:76px;
   }
 }
+
+.roam-account-payment-qr{display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;margin-top:1.25rem;padding:1rem;border:1px solid var(--roam-border,#dbe3ec);border-radius:1rem}
+.roam-account-payment-qr img{display:block;width:220px;max-width:100%;height:auto;background:#fff;padding:.5rem;border-radius:.75rem}
+.roam-account-payment-qr p{margin:.45rem 0;color:var(--roam-muted,#64748b);font-size:.875rem;line-height:1.55}
+.roam-account-payment-qr code{overflow-wrap:anywhere;font-size:.8rem}
+.roam-account-payment-status{display:flex;align-items:center;gap:.5rem;margin-top:.75rem;color:var(--roam-muted,#64748b);font-size:.85rem}
+.roam-account-payment-status button{display:inline-flex;align-items:center;gap:.3rem;color:var(--roam-accent,#0891b2);font-weight:600}
+@media(max-width:640px){.roam-account-payment-qr{align-items:flex-start}.roam-account-payment-qr img{width:100%;max-width:240px;margin-inline:auto}}

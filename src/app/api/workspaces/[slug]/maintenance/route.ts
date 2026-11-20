@@ -41,7 +41,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const result = await prisma.$transaction(async (tx) => {
     // Share the public booking lock so a maintenance block and a new booking cannot race each other.
     await tx.$queryRawUnsafe(
-      "SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))) AS advisory_lock",
+      "SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2)) IS NULL AS locked",
       access.tenant.id,
       vehicleId,
     );

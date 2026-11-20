@@ -93,7 +93,7 @@ export async function PATCH(request: NextRequest) {
         const item = await tx.subscriptionPaymentSubmission.findUnique({ where: { id: submissionId } });
         if (!item || item.status !== "PENDING") throw new Error("PAYMENT_NOT_PENDING");
         if (item.provisionalUntil <= now) throw new Error("PAYMENT_EXPIRED");
-        await tx.$queryRawUnsafe("SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1))) AS advisory_lock", "subscription-payment:" + item.tenantId);
+        await tx.$queryRawUnsafe("SELECT pg_advisory_xact_lock(hashtext($1)) IS NULL AS locked", "subscription-payment:" + item.tenantId);
         const submission = await tx.subscriptionPaymentSubmission.findUnique({ where: { id: submissionId } });
         if (!submission || submission.status !== "PENDING") throw new Error("PAYMENT_NOT_PENDING");
         if (submission.provisionalUntil <= now) throw new Error("PAYMENT_EXPIRED");

@@ -45,7 +45,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!method) return NextResponse.json({ error: "That payment method is no longer available." }, { status: 404 });
   try {
     const result = await prisma.$transaction(async tx => {
-      await tx.$queryRawUnsafe("SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1))) AS advisory_lock", "subscription-payment:" + access.tenant.id);
+      await tx.$queryRawUnsafe("SELECT pg_advisory_xact_lock(hashtext($1)) IS NULL AS locked", "subscription-payment:" + access.tenant.id);
       const [tenant, subscription, pending] = await Promise.all([
         tx.tenant.findUnique({ where: { id: access.tenant.id }, select: { status: true } }),
         tx.subscription.findUnique({ where: { tenantId: access.tenant.id }, include: { plan: { select: { monthlyPrice: true } } } }),

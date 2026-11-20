@@ -11,7 +11,7 @@ export function addCalendarMonths(value: Date, months: number) {
 }
 
 export async function grantReferralMonth(tx: Prisma.TransactionClient, tenantId: string) {
-  await tx.$queryRawUnsafe("SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1))) AS advisory_lock", "subscription-payment:" + tenantId);
+  await tx.$queryRawUnsafe("SELECT pg_advisory_xact_lock(hashtext($1)) IS NULL AS locked", "subscription-payment:" + tenantId);
   const subscription = await tx.subscription.findUnique({
     where: { tenantId },
     select: { status: true, currentPeriodEnd: true, referralCreditMonths: true },

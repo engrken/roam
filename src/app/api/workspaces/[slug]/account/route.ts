@@ -11,7 +11,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   if (!access) return NextResponse.json({ error: "Workspace access denied." }, { status: 403 });
   if (!canManageBilling(access.role)) return NextResponse.json({ error: "Only the workspace owner can view account and billing details." }, { status: 403 });
 
-  const [tenant, plans, billingRecords, requests] = await Promise.all([
+  const [tenant, plans, billingRecords, requests, subscriptionPayments] = await Promise.all([
     prisma.tenant.findUnique({
       where: { id: access.tenant.id },
       select: {
@@ -24,6 +24,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     prisma.plan.findMany({ where: { active: true }, orderBy: { monthlyPrice: "asc" }, select: { tier: true, name: true, monthlyPrice: true, maxVehicles: true, maxBranches: true, maxStaff: true } }),
     prisma.billingRecord.findMany({ where: { tenantId: access.tenant.id }, orderBy: { issuedAt: "desc" }, take: 50 }),
     prisma.subscriptionChangeRequest.findMany({ where: { tenantId: access.tenant.id }, orderBy: { createdAt: "desc" }, take: 10 }),
+    prisma.subscriptionPayment.findMany({ where: { tenantId: access.tenant.id }, orderBy: { createdAt: "desc" }, take: 5, select: { id: true, reference: true, amount: true, currency: true, status: true, qrCodeData: true, expiresAt: true, paidAt: true, createdAt: true } }),
   ]);
   if (!tenant) return NextResponse.json({ error: "Workspace not found." }, { status: 404 });
   return NextResponse.json({
@@ -53,6 +54,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     } : null,
     plans: plans.map(plan => ({ ...plan, monthlyPrice: Number(plan.monthlyPrice) })),
     billingRecords: billingRecords.map(record => ({ ...record, amount: Number(record.amount), issuedAt: record.issuedAt.toISOString(), dueAt: record.dueAt?.toISOString() || null, paidAt: record.paidAt?.toISOString() || null, createdAt: record.createdAt.toISOString() })),
+    subscriptionPayments: subscriptionPayments.map(payment => ({ ...payment, amount: Number(payment.amount), expiresAt: payment.expiresAt?.toISOString() || null, paidAt: payment.paidAt?.toISOString() || null, createdAt: payment.createdAt.toISOString() })),
     requests: requests.map(request => ({ ...request, createdAt: request.createdAt.toISOString(), reviewedAt: request.reviewedAt?.toISOString() || null })),
   });
 }

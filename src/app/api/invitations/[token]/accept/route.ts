@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { hasCurrentLegalAcceptance } from "@/lib/legal";
 import { prisma } from "@/lib/prisma";
+import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,6 +51,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (claimed.count !== 1) return { error: "This invitation has already been used." };
       await tx.membership.create({
         data: { tenantId: invitation.tenantId, userId: user.id, role: invitation.role },
+      });
+      await recordWorkspaceAudit(tx, {
+        tenantId: invitation.tenantId, actorUserId: user.id, actorEmail: user.email,
+        action: "team.invitation.accepted", targetType: "invitation", targetId: invitation.id,
+        details: { role: invitation.role, invitedByUserId: invitation.invitedByUserId },
       });
       return { slug: invitation.tenant.slug, name: invitation.tenant.name };
     });

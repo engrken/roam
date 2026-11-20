@@ -8,7 +8,7 @@ export const revalidate = 0;
 export async function GET() {
   try {
     const plans = await prisma.plan.findMany({
-      where: { active: true },
+      where: { active: true, tier: { not: "FREE" } },
       orderBy: { monthlyPrice: "asc" },
       select: {
         id: true,

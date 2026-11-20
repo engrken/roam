@@ -71,7 +71,7 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
     const info = lockedFeatures[feature];
     return canUse(feature)
       ? <Link className={active === feature ? "active" : ""} href={`/workspace/${slug}/${feature}`}>{icon}{label}</Link>
-      : <button type="button" className="roam-nav-locked" aria-haspopup="dialog" onClick={() => setSelectedFeature(feature)}>{icon}<span>{label}</span><span className="roam-nav-lock-label">{info.plan}</span><LockKeyhole className="roam-nav-lock-icon" size={14}/></button>;
+      : <button type="button" title={`${label} · ${info.plan}`} aria-label={`${label} · ${info.plan} plan`} className="roam-nav-locked" aria-haspopup="dialog" onClick={() => setSelectedFeature(feature)}>{icon}<span className="roam-nav-label">{label}</span><span className="roam-nav-lock-label">{info.plan}</span><LockKeyhole className="roam-nav-lock-icon" size={14}/></button>;
   };
 
   return <aside className={"roam-sidebar" + (menuOpen ? " roam-sidebar-open" : "") + (desktopCollapsed ? " roam-sidebar-collapsed" : "")}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, RefreshCw, Wallet, XCircle } from "lucide-react";
 
@@ -45,7 +45,7 @@ export default function AdminRefundsPage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- load admin refund data on entry.
   useEffect(() => { void load(); }, [load]);
 
-  async function createRefund(event: React.FormEvent<HTMLFormElement>) {
+  async function createRefund(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!paymentId) { setError("Choose a subscription payment."); return; }
     setBusy("create"); setError(""); setNotice("");

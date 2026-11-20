@@ -171,7 +171,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (conflict) return { conflict: "Those dates are no longer available. Please choose another period." as const };
 
       const maintenanceConflict = await tx.vehicleMaintenance.findFirst({
-        where: { tenantId: tenant.id, vehicleId, status: { in: ["SCHEDULED", "IN_PROGRESS"] }, startAt: { lt: endAt }, endAt: { gt: startAt } },
+        where: { tenantId: tenant.id, vehicleId, status: { in: [...blockingMaintenanceStatuses] }, startAt: { lt: endAt }, endAt: { gt: startAt } },
         select: { id: true },
       });
       if (maintenanceConflict) return { conflict: "This vehicle is scheduled for maintenance during those dates. Please choose another vehicle or period." as const };

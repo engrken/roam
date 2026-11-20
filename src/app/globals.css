@@ -541,3 +541,74 @@
   .roam-sidebar-collapsed~.roam-main{width:calc(100% - 76px);margin-left:76px}
 }
 @media(max-width:760px){.roam-desktop-sidebar-toggle{display:none}}
+
+
+/* Follow-up: harden the collapsed rail and keep workspace content inside narrow viewports. */
+@media (min-width:761px){
+  .roam-sidebar-collapsed .roam-side-nav{
+    min-width:0;
+    padding-left:0;
+    padding-right:0;
+    overflow-x:hidden;
+    scrollbar-width:none;
+  }
+  .roam-sidebar-collapsed .roam-side-nav::-webkit-scrollbar{display:none;width:0}
+  .roam-sidebar-collapsed .roam-side-nav a,
+  .roam-sidebar-collapsed .roam-side-nav button{
+    width:100%;
+    min-width:0;
+    overflow:hidden;
+    justify-content:center;
+    gap:0;
+    padding-left:0;
+    padding-right:0;
+    white-space:nowrap;
+  }
+  .roam-sidebar-collapsed .roam-side-nav a > :not(svg),
+  .roam-sidebar-collapsed .roam-side-nav button > :not(svg),
+  .roam-sidebar-collapsed .roam-sidebar-bottom button > :not(svg){
+    display:none !important;
+  }
+  .roam-sidebar-collapsed .roam-side-nav a > svg,
+  .roam-sidebar-collapsed .roam-side-nav button > svg{
+    display:block;
+    flex:0 0 19px;
+    margin:0;
+  }
+  .roam-sidebar-collapsed .roam-side-nav .roam-admin-link{
+    padding-top:13px;
+  }
+}
+.roam-app-shell{min-width:0;width:100%;overflow-x:clip}
+.roam-main{min-width:0;box-sizing:border-box}
+.roam-main > *{min-width:0;max-width:100%}
+.roam-topbar > div:first-child{min-width:0;max-width:100%}
+.roam-topbar h1{overflow-wrap:anywhere}
+.roam-panel,.roam-metric-card,.roam-action-card{min-width:0}
+.roam-guide-step{min-width:0}
+.roam-guide-step > span:nth-child(2){min-width:0;overflow-wrap:anywhere}
+.roam-share-link-row{min-width:0;max-width:100%}
+.roam-share-link-row > span{min-width:0;overflow-wrap:anywhere}
+@media (min-width:761px) and (max-width:1100px){
+  .roam-main{padding:28px 24px 24px}
+  .roam-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .roam-dashboard-grid{grid-template-columns:minmax(0,1fr)}
+  .roam-topbar{align-items:flex-start;flex-direction:column;gap:14px}
+  .roam-topbar-actions{width:100%}
+}
+@media (max-width:760px){
+  .roam-app-shell{display:block;min-width:0;overflow-x:clip}
+  .roam-main{width:100%;max-width:none;min-width:0;margin:0;padding:23px 16px}
+  .roam-topbar{align-items:flex-start;flex-direction:column;gap:14px}
+  .roam-topbar > div:first-child{width:100%}
+  .roam-topbar h1{font-size:clamp(25px,7vw,34px);letter-spacing:-1px}
+  .roam-topbar-actions{width:100%;align-items:stretch}
+  .roam-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .roam-dashboard-grid{grid-template-columns:minmax(0,1fr)}
+  .roam-panel-heading{align-items:flex-start;flex-wrap:wrap}
+  .roam-guide-steps{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:420px){
+  .roam-metric-grid{grid-template-columns:minmax(0,1fr)}
+  .roam-main{padding-left:13px;padding-right:13px}
+}

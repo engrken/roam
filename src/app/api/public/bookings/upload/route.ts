@@ -15,8 +15,9 @@ export async function POST(request:NextRequest){
     const payload=clientPayload?JSON.parse(clientPayload):{};
     const reference=String(payload.reference||"");const token=String(payload.token||"");const kind=String(payload.kind||"");
     if(!["DRIVERS_LICENSE_FRONT","DRIVERS_LICENSE_BACK","IDENTITY_DOCUMENT","OTHER_REQUIREMENT","MESSAGE_ATTACHMENT","PAYMENT_EVIDENCE"].includes(kind)||token.length<20)throw new Error("Invalid document upload request.");
-    const booking=await prisma.booking.findFirst({where:{reference,publicTokenHash:hash(token)},select:{id:true,tenantId:true}});
+    const booking=await prisma.booking.findFirst({where:{reference,publicTokenHash:hash(token)},select:{id:true,tenantId:true,tenant:{select:{status:true}}}});
     if(!booking)throw new Error("Booking access link is invalid.");
+    if(!["ACTIVE","TRIAL"].includes(booking.tenant.status))throw new Error("This rental business is not currently accepting document uploads.");
     const clientIp=request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()||request.headers.get("x-real-ip")||"unknown";
     const [bookingAllowed,ipAllowed]=await Promise.all([
      consumeRateLimit("customer-booking-upload",booking.id,12,60*60*1000),

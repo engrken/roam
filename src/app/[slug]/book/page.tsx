@@ -90,33 +90,40 @@ export default function PublicBookPage() {
   }, [slug]);
 
   useEffect(() => {
-    setDraftLoaded(false);
-    try {
-      const saved = window.localStorage.getItem("roam:booking-draft:" + slug);
-      if (saved) {
-        const draft = JSON.parse(saved) as { startAt?: unknown; endAt?: unknown; branchId?: unknown };
-        if (typeof draft.startAt === "string" && typeof draft.endAt === "string") {
-          setStartAt(draft.startAt);
-          setEndAt(draft.endAt);
-          setBranchId(typeof draft.branchId === "string" ? draft.branchId : "");
-          setDraftRestored(true);
+    let active = true;
+    Promise.resolve().then(() => {
+      try {
+        const saved = window.localStorage.getItem("roam:booking-draft:" + slug);
+        if (saved) {
+          const draft = JSON.parse(saved) as { startAt?: unknown; endAt?: unknown; branchId?: unknown };
+          if (typeof draft.startAt === "string" && typeof draft.endAt === "string" && active) {
+            setStartAt(draft.startAt);
+            setEndAt(draft.endAt);
+            setBranchId(typeof draft.branchId === "string" ? draft.branchId : "");
+            setDraftRestored(true);
+          }
         }
+      } catch {
+        try { window.localStorage.removeItem("roam:booking-draft:" + slug); } catch { /* Storage may be disabled. */ }
+      } finally {
+        if (active) setDraftLoaded(true);
       }
-    } catch {
-      window.localStorage.removeItem("roam:booking-draft:" + slug);
-    } finally {
-      setDraftLoaded(true);
-    }
+    });
+    return () => { active = false; };
   }, [slug]);
 
   useEffect(() => {
     if (!draftLoaded) return;
-    const key = "roam:booking-draft:" + slug;
-    if (!startAt && !endAt && !branchId) {
-      window.localStorage.removeItem(key);
-      return;
+    try {
+      const key = "roam:booking-draft:" + slug;
+      if (!startAt && !endAt && !branchId) {
+        window.localStorage.removeItem(key);
+        return;
+      }
+      window.localStorage.setItem(key, JSON.stringify({ startAt, endAt, branchId, savedAt: new Date().toISOString() }));
+    } catch {
+      // Booking can continue normally when browser storage is unavailable.
     }
-    window.localStorage.setItem(key, JSON.stringify({ startAt, endAt, branchId, savedAt: new Date().toISOString() }));
   }, [draftLoaded, slug, startAt, endAt, branchId]);
 
   const chosen = vehicles.find(vehicle => vehicle.id === vehicleId);

@@ -26,7 +26,7 @@ const money = (amount: number, currency = "PHP") => new Intl.NumberFormat("en-PH
 const date = (value: string | null) => value ? new Date(value).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }) : "—";
 const titleCase = (value: string) => value.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, letter => letter.toUpperCase());
 const capacity = (value: number | null, tier?: string) => tier === "ENTERPRISE" ? "Custom" : value == null ? "Unlimited" : String(value);
-const planPrice = (tier: string, amount: number) => tier === "ENTERPRISE" ? "Custom pricing" : money(amount) + " / month";
+const planPrice = (tier: string, amount: number) => tier === "ENTERPRISE" ? "Custom pricing" : money(amount);
 const statusClass = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
 export default function AccountPage() {

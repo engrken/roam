@@ -29,4 +29,61 @@ export async function notifySubscriptionPayment(input: {
 export async function expireTenantPendingSubscriptionPayment(tenantId: string, now = new Date()) {
   const item = await prisma.subscriptionPaymentSubmission.findFirst({
     where: { tenantId, status: "PENDING", provisionalUntil: { lte: now } },
-    select: { id: true, tenantId: true, reference: true, amount: true, pre¶»§q«^
+    select: { id: true, tenantId: true, reference: true, amount: true, previousTenantStatus: true, previousSubscriptionStatus: true, previousCurrentPeriodStart: true, previousCurrentPeriodEnd: true, previousTrialEndsAt: true, previousTrialGraceEndsAt: true },
+  });
+  if (!item) return false;
+  const claimed = await prisma.$transaction(async tx => {
+    const update = await tx.subscriptionPaymentSubmission.updateMany({
+      where: { id: item.id, status: "PENDING", provisionalUntil: { lte: now } },
+      data: { status: "EXPIRED", reviewedAt: now, rejectionReason: "The 3-day provisional access period expired before payment confirmation." },
+    });
+    if (!update.count) return false;
+    await tx.subscription.updateMany({
+      where: { tenantId: item.tenantId, status: "payment_pending" },
+      data: {
+        status: item.previousSubscriptionStatus, currentPeriodStart: item.previousCurrentPeriodStart,
+        currentPeriodEnd: item.previousCurrentPeriodEnd, trialEndsAt: item.previousTrialEndsAt,
+        trialGraceEndsAt: item.previousTrialGraceEndsAt,
+      },
+    });
+    await tx.tenant.update({ where: { id: item.tenantId }, data: { status: item.previousTenantStatus } });
+    return true;
+  });
+  if (claimed) await notifySubscriptionPayment({ tenantId: item.tenantId, status: "EXPIRED", reference: item.reference, amount: Number(item.amount) });
+  return claimed;
+}
+
+export async function expirePendingSubscriptionPayments(now = new Date()) {
+  const expired = await prisma.subscriptionPaymentSubmission.findMany({
+    where: { status: "PENDING", provisionalUntil: { lte: now } },
+    select: { id: true, tenantId: true, reference: true, amount: true, previousTenantStatus: true, previousSubscriptionStatus: true, previousCurrentPeriodStart: true, previousCurrentPeriodEnd: true, previousTrialEndsAt: true, previousTrialGraceEndsAt: true },
+    take: 100,
+  });
+  let count = 0;
+  for (const item of expired) {
+    const claimed = await prisma.$transaction(async tx => {
+      const update = await tx.subscriptionPaymentSubmission.updateMany({
+        where: { id: item.id, status: "PENDING", provisionalUntil: { lte: now } },
+        data: { status: "EXPIRED", reviewedAt: now, rejectionReason: "The 3-day provisional access period expired before payment confirmation." },
+      });
+      if (!update.count) return false;
+      await tx.subscription.updateMany({
+        where: { tenantId: item.tenantId, status: "payment_pending" },
+        data: {
+          status: item.previousSubscriptionStatus,
+          currentPeriodStart: item.previousCurrentPeriodStart,
+          currentPeriodEnd: item.previousCurrentPeriodEnd,
+          trialEndsAt: item.previousTrialEndsAt,
+          trialGraceEndsAt: item.previousTrialGraceEndsAt,
+        },
+      });
+      await tx.tenant.update({ where: { id: item.tenantId }, data: { status: item.previousTenantStatus } });
+      return true;
+    });
+    if (claimed) {
+      count++;
+      await notifySubscriptionPayment({ tenantId: item.tenantId, status: "EXPIRED", reference: item.reference, amount: Number(item.amount) });
+    }
+  }
+  return count;
+}

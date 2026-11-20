@@ -40,4 +40,8 @@ CREATE TABLE "SubscriptionPaymentSubmission" (
   "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "SubscriptionPaymentSubmission_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE IN¶»§q«^
+CREATE UNIQUE INDEX "SubscriptionPaymentSubmission_methodId_reference_key" ON "SubscriptionPaymentSubmission"("methodId", "reference");
+CREATE INDEX "SubscriptionPaymentSubmission_status_provisionalUntil_idx" ON "SubscriptionPaymentSubmission"("status", "provisionalUntil");
+CREATE INDEX "SubscriptionPaymentSubmission_tenantId_createdAt_idx" ON "SubscriptionPaymentSubmission"("tenantId", "createdAt");
+ALTER TABLE "SubscriptionPaymentSubmission" ADD CONSTRAINT "SubscriptionPaymentSubmission_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "SubscriptionPaymentSubmission" ADD CONSTRAINT "SubscriptionPaymentSubmission_methodId_fkey" FOREIGN KEY ("methodId") REFERENCES "SubscriptionPaymentMethod"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

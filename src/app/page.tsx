@@ -45,7 +45,25 @@ function formatPlanLimit(value: number | null, singular: string) {
 }
 
 function describePlanCapacity(plan: PublicPlan) {
+  if (plan.tier === "ENTERPRISE") return "Custom fleet, branch, and team allowances based on your operation.";
   return `Includes ${formatPlanLimit(plan.maxVehicles, "vehicle")}, ${formatPlanLimit(plan.maxBranches, "branch")}, and ${formatPlanLimit(plan.maxStaff, "staff account")}.`;
+}
+
+function planBenefits(tier: string) {
+  const core = [
+    "Fleet records and online booking workflow",
+    "Customer records, private booking links, and messaging",
+    "Vehicle handover and return inspections",
+    "Maintenance and operating expense tracking",
+  ];
+  if (["PRO", "BUSINESS", "ENTERPRISE"].includes(tier)) {
+    core.push("Multi-branch management", "Operational reports and CSV export");
+  }
+  if (["BUSINESS", "ENTERPRISE"].includes(tier)) {
+    core.push("Team invitations and role-based access");
+  }
+  if (tier === "ENTERPRISE") core.push("Custom capacity and plan arrangements by request");
+  return core;
 }
 
 const steps = [
@@ -91,7 +109,7 @@ export default function Home() {
     setDark(next);
     localStorage.setItem("roam-theme", next ? "dark" : "light");
   }
-  const configuredPlanSummary = plans.map(plan => `${plan.name}: ${formatPlanPrice(plan.monthlyPrice)}/month (${describePlanCapacity(plan)})`).join("; ");
+  const configuredPlanSummary = plans.map(plan => `${plan.name}: ${plan.tier === "ENTERPRISE" ? "custom pricing" : formatPlanPrice(plan.monthlyPrice) + "/month"} (${describePlanCapacity(plan)})`).join("; ");
   const configuredCapacitySummary = plans.map(plan => `${plan.name} — ${describePlanCapacity(plan)}`).join(" ");
   const faqs = [
     ["What types of vehicles can ROAM manage?", "ROAM is being designed for private vehicle rental operators managing motorcycles, scooters, cars, SUVs, MPVs, vans, pickups, buses, trucks, and other rentable vehicle types."],
@@ -179,27 +197,33 @@ export default function Home() {
           const isEnterprise = plan.tier === "ENTERPRISE";
           return <article className={`plan-card ${featured ? "plan-featured" : ""}`} key={plan.id}>
             <span className="plan-label">{plan.tier} · {plan.name.toUpperCase()}</span>
-            <h3>{formatPlanPrice(plan.monthlyPrice)} <small>/ month</small></h3>
-            <p>{describePlanCapacity(plan)} Choose the capacity that matches your rental operation.</p>
+            <h3>{isEnterprise ? "Custom pricing" : <>{formatPlanPrice(plan.monthlyPrice)} <small>/ month</small></>}</h3>
+            <p>{describePlanCapacity(plan)} {isEnterprise ? "Talk with ROAM about the right setup for your operation." : "Choose the capacity that matches your rental operation."}</p>
             <ul>
-              <li><Check/> {formatPlanLimit(plan.maxVehicles, "vehicle")}</li>
-              <li><Check/> {formatPlanLimit(plan.maxBranches, "branch")}</li>
-              <li><Check/> {formatPlanLimit(plan.maxStaff, "staff account")}</li>
-              <li><Check/> All core ROAM features</li>
+              {plan.tier !== "ENTERPRISE" ? <>
+                <li><Check/> {formatPlanLimit(plan.maxVehicles, "vehicle")}</li>
+                <li><Check/> {formatPlanLimit(plan.maxBranches, "branch")}</li>
+                <li><Check/> {formatPlanLimit(plan.maxStaff, "staff account")}</li>
+              </> : <>
+                <li><Check/> Custom vehicle allowance</li>
+                <li><Check/> Custom branch allowance</li>
+                <li><Check/> Custom staff allowance</li>
+              </>}
+              {planBenefits(plan.tier).map(benefit => <li key={benefit}><Check/> {benefit}</li>)}
             </ul>
-            <div className="plan-benefit">{describePlanCapacity(plan)} Higher limits give your operation more room to grow without changing the shared core feature set.</div>
-            {isEnterprise ? <a className="btn plan-choose" href="#contact">Contact us <ArrowRight size={14}/></a> : <Link className="btn plan-choose" href="/register">Start free trial <ArrowRight size={14}/></Link>}
+            <div className="plan-benefit">{plan.tier === "STARTER" ? "A low-cost starting point for independent rental operators." : plan.tier === "PRO" ? "For growing operators who need more vehicles, additional branches, and performance reporting." : plan.tier === "BUSINESS" ? "For established rental teams that need shared access, roles, and room to scale." : "Enterprise arrangements are scoped and quoted individually."}</div>
+            {isEnterprise ? <Link className="btn plan-choose" href="/register">Create account to request <ArrowRight size={14}/></Link> : <Link className="btn plan-choose" href="/register">Start free trial <ArrowRight size={14}/></Link>}
           </article>;
         }) : <p className="plan-loading" role="status">Plan details are temporarily unavailable. Please check back shortly.</p>}
       </div>
-      <div className="plan-inclusions"><div className="plan-inclusions-heading"><div className="eyebrow">INCLUDED IN EVERY PLAN</div><h3>The tools to manage the full rental journey.</h3><p>Higher tiers increase your operating limits—not access to a different set of core tools.</p></div><div className="plan-inclusions-grid">
-        <article><span className="plan-inclusion-icon"><CarFront size={19}/></span><h4>Fleet and branch management</h4><p>Vehicle profiles, rental rates and deposits, availability and maintenance statuses, plus pickup branch records within your plan limits.</p></article>
-        <article><span className="plan-inclusion-icon"><CalendarDays size={19}/></span><h4>Online booking workflow</h4><p>A public booking page, incoming booking requests, availability review, and tools to confirm or reject requests.</p></article>
-        <article><span className="plan-inclusion-icon"><Users size={19}/></span><h4>Customer portal and communication</h4><p>Customer records, private booking links, status updates, document uploads and review, and customer messaging.</p></article>
-        <article><span className="plan-inclusion-icon"><ShieldCheck size={19}/></span><h4>Rental terms and inspections</h4><p>Customer acceptance of your rental terms, plus vehicle handover and return inspections with condition notes and photos.</p></article>
-        <article><span className="plan-inclusion-icon"><BarChart3 size={19}/></span><h4>Dashboard and reports</h4><p>Operational overview, booking activity, revenue summaries, date and branch filters, and CSV report export.</p></article>
-        <article><span className="plan-inclusion-icon"><Users size={19}/></span><h4>Team access and account tools</h4><p>Workspace roles, staff invitations, subscription overview, billing records, and plan-change requests.</p></article>
-      </div><p className="plan-limit-note">Vehicle, branch, and staff allowances are controlled by the active plan configuration. All active plans include the core features listed above; higher tiers provide greater operating capacity. Payment processing and automatic subscription renewals are not included.</p></div>
+      <div className="plan-inclusions"><div className="plan-inclusions-heading"><div className="eyebrow">FEATURES BY PLAN</div><h3>Start with the essentials. Unlock more as you grow.</h3><p>Each tier is designed for a different stage of rental operations, with clear capacity limits and feature access.</p></div><div className="plan-inclusions-grid">
+        <article><span className="plan-inclusion-icon"><CarFront size={19}/></span><h4>Fleet and booking essentials</h4><p>Vehicle profiles, rates, availability, online booking requests, and booking management.</p><small>Included in all plans</small></article>
+        <article><span className="plan-inclusion-icon"><Users size={19}/></span><h4>Customer portal and messaging</h4><p>Customer records, private booking links, document uploads, status updates, and customer conversations.</p><small>Included in all plans</small></article>
+        <article><span className="plan-inclusion-icon"><ShieldCheck size={19}/></span><h4>Rental terms and inspections</h4><p>Rental terms acceptance plus handover and return inspections with condition notes and photos.</p><small>Included in all plans</small></article>
+        <article><span className="plan-inclusion-icon"><Wrench size={19}/></span><h4>Maintenance and expense tracking</h4><p>Schedule vehicle maintenance, record service costs, and track day-to-day operating expenses.</p><small>Included in all plans</small></article>
+        <article><span className="plan-inclusion-icon"><BarChart3 size={19}/></span><h4>Multi-branch management and reports</h4><p>Manage additional pickup locations, review operational and financial reports, and export report data as CSV.</p><small>Included from Pro</small></article>
+        <article><span className="plan-inclusion-icon"><Users size={19}/></span><h4>Team invitations and role-based access</h4><p>Invite staff, assign workspace roles, and manage access as your rental operation grows.</p><small>Included from Business</small></article>
+      </div><p className="plan-limit-note">Plan allowances apply to active vehicles, branches, and workspace members. Enterprise capacity is agreed individually. ROAM records subscription billing but does not currently process payments or automatically renew subscriptions.</p></div>
     </div></section>
 
     <section className="section faq-section" id="faq"><div className="container faq-grid"><div><div className="eyebrow">GOOD TO KNOW</div><h2>Questions before you get moving?</h2><p>Here are a few things to know about the ROAM platform as it takes shape.</p></div><div className="faq-list">{faqs.map(([q,a],i)=><div className={`faq-item ${faqOpen===i?"faq-active":""}`} key={q}><button onClick={()=>setFaqOpen(faqOpen===i?-1:i)} aria-expanded={faqOpen===i}><span>{q}</span><ChevronDown size={18}/></button>{faqOpen===i&&<p>{a}</p>}</div>)}</div></div></section>

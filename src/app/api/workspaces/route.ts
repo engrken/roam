@@ -34,14 +34,14 @@ export async function POST(request: NextRequest) {
 
     const workspace = await prisma.$transaction(async (tx) => {
       const plans = [
-        { tier: "STARTER" as const, name: "Starter", monthlyPrice: 99, maxVehicles: 3, maxBranches: 1, maxStaff: 2 },
-        { tier: "PRO" as const, name: "Pro", monthlyPrice: 499, maxVehicles: null, maxBranches: null, maxStaff: null },
-        { tier: "BUSINESS" as const, name: "Business", monthlyPrice: 999, maxVehicles: null, maxBranches: null, maxStaff: null },
+        { tier: "STARTER" as const, name: "Starter", monthlyPrice: 99, maxVehicles: 2, maxBranches: 1, maxStaff: 1 },
+        { tier: "PRO" as const, name: "Pro", monthlyPrice: 499, maxVehicles: 5, maxBranches: 2, maxStaff: 1 },
+        { tier: "BUSINESS" as const, name: "Business", monthlyPrice: 999, maxVehicles: 15, maxBranches: 3, maxStaff: 8 },
         { tier: "ENTERPRISE" as const, name: "Enterprise", monthlyPrice: 0, maxVehicles: null, maxBranches: null, maxStaff: null },
       ];
       const seededPlans = await Promise.all(plans.map((plan) => tx.plan.upsert({
         where: { tier: plan.tier },
-        update: { name: plan.name, monthlyPrice: plan.monthlyPrice, maxVehicles: plan.maxVehicles, maxBranches: plan.maxBranches, maxStaff: plan.maxStaff, active: true },
+        update: {}, // Preserve platform-admin pricing, capacity, and activation settings for existing plans.
         create: plan,
       })));
       const starterPlan = seededPlans.find((plan) => plan.tier === "STARTER");

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTenantAccess, workspaceWriteBlock, canManageWorkspaceSettings } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
+import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 
 export const runtime = "nodejs";
 
@@ -32,6 +33,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try { new Intl.DateTimeFormat("en", { timeZone: timezone }); }
   catch { return NextResponse.json({ error: "Choose a valid IANA time zone." }, { status: 400 }); }
   if (timezone.length > 80) return NextResponse.json({ error: "Time zone is too long." }, { status: 400 });
-  const tenant = await prisma.tenant.update({ where: { id: access.tenant.id }, data: { name, email, phone: phone || null, timezone, currency }, select: { name: true, email: true, phone: true, timezone: true, currency: true } });
+  const tenant = await prisma.$transaction(async tx => {
+    const before = await tx.tenant.findUnique({ where: { id: access.tenant.id }, select: { name: true, email: true, phone: true, timezone: true, currency: true } });
+    const updated = await tx.tenant.update({ where: { id: access.tenant.id }, data: { name, email, phone: phone || null, timezone, currency }, select: { name: true, email: true, phone: true, timezone: true, currency: true } });
+    await recordWorkspaceAudit(tx, {
+      tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+      action: "settings.updated", targetType: "workspace", targetId: access.tenant.id,
+      details: {
+        changedFields: ["name", "email", "phone", "timezone", "currency"].filter(key => before && before[key as keyof typeof before] !== updated[key as keyof typeof updated]).join(","),
+      },
+    });
+    return updated;
+  });
   return NextResponse.json({ tenant });
 }

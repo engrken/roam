@@ -45,6 +45,7 @@ function formatPlanLimit(value: number | null, singular: string) {
 }
 
 function describePlanCapacity(plan: PublicPlan) {
+  if (plan.tier === "FREE") return "A no-cost way to manage a small rental operation.";
   if (plan.tier === "ENTERPRISE") return "Custom fleet, branch, and team allowances based on your operation.";
   return `Includes ${formatPlanLimit(plan.maxVehicles, "vehicle")}, ${formatPlanLimit(plan.maxBranches, "branch")}, and ${formatPlanLimit(plan.maxStaff, "staff account")}.`;
 }
@@ -53,9 +54,8 @@ function planBenefits(tier: string) {
   const core = [
     "Fleet records and online booking workflow",
     "Customer records, private booking links, and messaging",
-    "Vehicle handover and return inspections",
-    "Maintenance and operating expense tracking",
   ];
+  if (tier !== "FREE") core.push("Vehicle handover and return inspections", "Maintenance and operating expense tracking");
   if (["PRO", "BUSINESS", "ENTERPRISE"].includes(tier)) {
     core.push("Multi-branch management", "Operational reports and CSV export");
   }
@@ -195,15 +195,16 @@ export default function Home() {
         {plansLoading ? <p className="plan-loading" role="status">Loading current plans…</p> : plans.length ? plans.map(plan => {
           const featured = plan.tier === "PRO";
           const isEnterprise = plan.tier === "ENTERPRISE";
+          const isFree = plan.tier === "FREE";
           return <article className={`plan-card ${featured ? "plan-featured" : ""}`} key={plan.id}>
             <span className="plan-label">{plan.tier} · {plan.name.toUpperCase()}</span>
-            <h3>{isEnterprise ? "Custom pricing" : <>{formatPlanPrice(plan.monthlyPrice)} <small>/ month</small></>}</h3>
+            <h3>{isEnterprise ? "Custom pricing" : isFree ? "Complimentary" : <>{formatPlanPrice(plan.monthlyPrice)} <small>/ month</small></>}</h3>
             <p>{describePlanCapacity(plan)} {isEnterprise ? "Talk with ROAM about the right setup for your operation." : "Choose the capacity that matches your rental operation."}</p>
             <ul>
               {plan.tier !== "ENTERPRISE" ? <>
                 <li><Check/> {formatPlanLimit(plan.maxVehicles, "vehicle")}</li>
                 <li><Check/> {formatPlanLimit(plan.maxBranches, "branch")}</li>
-                <li><Check/> {formatPlanLimit(plan.maxStaff, "staff account")}</li>
+                <li><Check/> {formatPlanLimit(plan.maxStaff, "workspace member")}</li>
               </> : <>
                 <li><Check/> Custom vehicle allowance</li>
                 <li><Check/> Custom branch allowance</li>
@@ -211,8 +212,8 @@ export default function Home() {
               </>}
               {planBenefits(plan.tier).map(benefit => <li key={benefit}><Check/> {benefit}</li>)}
             </ul>
-            <div className="plan-benefit">{plan.tier === "STARTER" ? "A low-cost starting point for independent rental operators." : plan.tier === "PRO" ? "For growing operators who need more vehicles, additional branches, and performance reporting." : plan.tier === "BUSINESS" ? "For established rental teams that need shared access, roles, and room to scale." : "Enterprise arrangements are scoped and quoted individually."}</div>
-            {isEnterprise ? <Link className="btn plan-choose" href="/register">Create account to request <ArrowRight size={14}/></Link> : <Link className="btn plan-choose" href="/register">Start free trial <ArrowRight size={14}/></Link>}
+            <div className="plan-benefit">{plan.tier === "FREE" ? "Try ROAM with a small fleet before upgrading." : plan.tier === "STARTER" ? "A low-cost starting point for independent rental operators." : plan.tier === "PRO" ? "For growing operators who need more vehicles, additional branches, and performance reporting." : plan.tier === "BUSINESS" ? "For established rental teams that need shared access, roles, and room to scale." : "Enterprise arrangements are scoped and quoted individually."}</div>
+            {isEnterprise ? <Link className="btn plan-choose" href="/register">Create account to request <ArrowRight size={14}/></Link> : <Link className="btn plan-choose" href="/register">{isFree ? "Start complimentary" : "Start free trial"} <ArrowRight size={14}/></Link>}
           </article>;
         }) : <p className="plan-loading" role="status">Plan details are temporarily unavailable. Please check back shortly.</p>}
       </div>

@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import {
   ArrowRight, ArrowUpRight, BadgeCheck, Building2, CalendarDays, Check,
   ChevronRight, CircleHelp, Clock3, CreditCard, LockKeyhole, Mail,
-  ReceiptText, ShieldCheck, Sparkles, UserRound,
+  ReceiptText, ShieldCheck, Sparkles, UserRound, QrCode, RefreshCw,
 } from "lucide-react";
 import { WorkspaceNav } from "@/components/workspace-nav";
 
@@ -19,6 +19,7 @@ type AccountData = {
   subscription: null | { tier: string; status: string; currentPeriodStart: string | null; currentPeriodEnd: string | null; trialEndsAt: string | null; referralCreditMonths: number; plan: { name: string; monthlyPrice: number; maxVehicles: number | null; maxBranches: number | null; maxStaff: number | null } };
   plans: { tier: string; name: string; monthlyPrice: number; maxVehicles: number | null; maxBranches: number | null; maxStaff: number | null }[];
   billingRecords: { id: string; description: string; reference: string | null; amount: number; currency: string; status: string; issuedAt: string; dueAt: string | null; paidAt: string | null }[];
+  subscriptionPayments: { id: string; reference: string; amount: number; currency: string; status: string; qrCodeData: string | null; expiresAt: string | null; paidAt: string | null; createdAt: string }[];
   requests: { id: string; currentTier: string; requestedTier: string; status: string; createdAt: string }[];
 };
 
@@ -44,6 +45,11 @@ export default function AccountPage() {
   const [emailStep, setEmailStep] = useState(false);
   const [emailBusy, setEmailBusy] = useState(false);
   const [referralCopied, setReferralCopied] = useState(false);
+  const [paymentBusy, setPaymentBusy] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
+  const [paymentQrData, setPaymentQrData] = useState("");
+  const [paymentReference, setPaymentReference] = useState("");
+  const [paymentStatus, setPaymentStatus] = useState("");
 
   async function load() {
     const response = await fetch("/api/workspaces/" + encodeURIComponent(slug) + "/account", { cache: "no-store" });
@@ -51,6 +57,10 @@ export default function AccountPage() {
     if (!response.ok) throw new Error(body.error || "Unable to load account information.");
     setData(body);
     setOwnerName(body.user?.name || "");
+    const latestPayment = body.subscriptionPayments?.[0];
+    setPaymentQrData(latestPayment?.status === "PENDING" && latestPayment.expiresAt && new Date(latestPayment.expiresAt) > new Date() ? latestPayment.qrCodeData || "" : "");
+    setPaymentReference(latestPayment?.reference || "");
+    setPaymentStatus(latestPayment?.status || "");
   }
 
   useEffect(() => {
@@ -59,12 +69,66 @@ export default function AccountPage() {
       .then(async response => {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "Unable to load account information.");
-        if (active) { setData(body); setOwnerName(body.user?.name || ""); }
+        if (active) {
+          setData(body); setOwnerName(body.user?.name || "");
+          const latestPayment = body.subscriptionPayments?.[0];
+          setPaymentQrData(latestPayment?.status === "PENDING" && latestPayment.expiresAt && new Date(latestPayment.expiresAt) > new Date() ? latestPayment.qrCodeData || "" : "");
+          setPaymentReference(latestPayment?.reference || "");
+          setPaymentStatus(latestPayment?.status || "");
+        }
       })
       .catch(reason => { if (active) setError(reason instanceof Error ? reason.message : "Unable to load account information."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [slug]);
+
+
+  async function createSubscriptionQr() {
+    setPaymentBusy(true); setPaymentError(""); setNotice("");
+    setPaymentQrData("");
+    try {
+      const endpoint = "/api/workspaces/" + encodeURIComponent(slug) + "/subscription-payments";
+      const createdResponse = await fetch(endpoint, { method: "POST" });
+      const created = await createdResponse.json();
+      if (!createdResponse.ok) throw new Error(created.error || "Unable to create a QR payment request.");
+
+      const authorization = "Basic " + btoa(created.publicKey + ":");
+      const methodResponse = await fetch("https://api.paymongo.com/v1/payment_methods", {
+        method: "POST",
+        headers: { Authorization: authorization, "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ data: { attributes: { type: "qrph" } } }),
+      });
+      const method = await methodResponse.json();
+      if (!methodResponse.ok || !method.data?.id) throw new Error(method.errors?.[0]?.detail || "Unable to prepare QR Ph payment.");
+
+      const attachResponse = await fetch("https://api.paymongo.com/v1/payment_intents/" + encodeURIComponent(created.paymentIntentId) + "/attach", {
+        method: "POST",
+        headers: { Authorization: authorization, "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ data: { attributes: { payment_method: method.data.id, client_key: created.clientKey } } }),
+      });
+      const attached = await attachResponse.json();
+      if (!attachResponse.ok) throw new Error(attached.errors?.[0]?.detail || "Unable to generate your QR code.");
+      const image = attached.data?.attributes?.next_action?.code?.image_url;
+      if (typeof image !== "string" || !image) throw new Error("The payment provider did not return a QR code. Please try again.");
+      const qrCodeData = image.startsWith("data:image/") ? image : "data:image/png;base64," + image;
+
+      const savedResponse = await fetch(endpoint, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentId: created.payment.id, qrCodeData }),
+      });
+      const saved = await savedResponse.json();
+      if (!savedResponse.ok) throw new Error(saved.error || "Unable to save the payment QR code.");
+      setPaymentQrData(qrCodeData);
+      setPaymentReference(created.payment.reference);
+      setPaymentStatus("PENDING");
+      setNotice("Your QR Ph payment request is ready. Scan it with GCash, Maya, or a participating bank app.");
+    } catch (reason) {
+      setPaymentError(reason instanceof Error ? reason.message : "Unable to create a QR payment request.");
+    } finally {
+      setPaymentBusy(false);
+    }
+  }
 
   async function copyReferralLink() {
     if (!data?.tenant.referralCode) return;
@@ -196,6 +260,21 @@ export default function AccountPage() {
           {data.requests.length > 0 && <div className="roam-account-history"><h3>Plan change requests</h3><div className="roam-table-wrap"><table><thead><tr><th>Requested</th><th>From</th><th>To</th><th>Status</th></tr></thead><tbody>{data.requests.map(item => <tr key={item.id}><td>{date(item.createdAt)}</td><td>{item.currentTier}</td><td>{item.requestedTier}</td><td><span className={"roam-account-table-status " + statusClass(item.status)}>{titleCase(item.status)}</span></td></tr>)}</tbody></table></div></div>}
           <p className="roam-account-disclaimer"><ShieldCheck size={15}/> Plan changes are reviewed by ROAM. This page does not collect payments or automatically renew subscriptions.</p>
         </section>
+
+
+        {subscription && !["FREE", "ENTERPRISE"].includes(subscription.tier) && subscription.plan.monthlyPrice > 0 && <section className="roam-panel roam-account-section" id="subscription-payment">
+          <div className="roam-account-section-heading"><div><span className="roam-eyebrow">SECURE ONLINE PAYMENT</span><h2>Pay your subscription</h2><p>Use one QR Ph code with GCash, Maya, or a participating Philippine bank app.</p></div><span className="roam-account-heading-icon"><QrCode size={20}/></span></div>
+          {paymentError && <div className="client-alert roam-account-alert" role="alert">{paymentError}</div>}
+          {paymentStatus === "PAID" ? <p className="client-success-inline" role="status"><Check size={16}/> Your latest QR payment has been received.</p> : <>
+            <p>Amount due: <strong>{money(subscription.plan.monthlyPrice)}</strong> for the {subscription.plan.name} plan.</p>
+            <button className="roam-primary-button" type="button" disabled={paymentBusy} onClick={() => void createSubscriptionQr()}>{paymentBusy ? "Preparing secure QR…" : paymentQrData ? "Generate a new QR code" : "Generate QR Ph payment"} <QrCode size={16}/></button>
+            {paymentQrData && <div className="roam-account-payment-qr">
+              <img src={paymentQrData} alt="QR Ph subscription payment code" />
+              <div><strong>Scan to pay {money(subscription.plan.monthlyPrice)}</strong><p>Reference: <code>{paymentReference}</code></p><p>QR code is single-use and expires after 30 minutes. Your subscription activates automatically after the payment provider confirms receipt.</p></div>
+            </div>}
+            {paymentStatus === "PENDING" && <p className="roam-account-payment-status">Payment awaiting confirmation. <button type="button" onClick={() => void load()}><RefreshCw size={13}/> Refresh status</button></p>}
+          </>}
+        </section>}
 
         <section className="roam-panel roam-account-section" id="owner-profile">
           <div className="roam-account-section-heading"><div><span className="roam-eyebrow">PERSONAL DETAILS</span><h2>Owner profile</h2><p>Manage the name and sign-in email associated with your owner account.</p></div><span className="roam-account-heading-icon"><UserRound size={20}/></span></div>

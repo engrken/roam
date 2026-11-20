@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "node:crypto";
 import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
-import { sendBookingMessageNotification, sendBookingStatusNotification } from "@/lib/email";
+import { sendBookingMessageNotification, sendBookingStatusNotification, sendBookingReminder } from "@/lib/email";
 import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { isWithinPickupReminderWindow } from "@/lib/booking-reminder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const body = await request.json().catch(() => null);
   const booking = await prisma.booking.findFirst({
     where: { tenantId: access.tenant.id, reference },
-    select: { id: true, customer: { select: { name: true, email: true } } },
+    select: { id: true, startAt: true, endAt: true, customer: { select: { name: true, email: true } } },
   });
   if (!booking) return NextResponse.json({ error: "Booking not found." }, { status: 404 });
 
@@ -235,6 +236,43 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       } catch (error) {
         notification = "failed";
         console.error("Booking status email notification failed", error);
+      }
+      // A daily cron can run before a booking is confirmed. If confirmation happens
+      // inside the next 24 hours, send the pickup reminder now instead of waiting
+      // for a cron run that may occur after pickup.
+      const now = new Date();
+      if (result.nextStatus === "CONFIRMED" && isWithinPickupReminderWindow(result.startAt, now)) {
+        const timeZone = access.tenant.timezone || "Asia/Manila";
+        const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(result.startAt);
+        const dateParts = Object.fromEntries(parts.map(part => [part.type, part.value]));
+        const dayKey = `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+        const noticeKey = `PICKUP:${booking.id}:${dayKey}`;
+        await prisma.bookingAutomationNotice.createMany({
+          data: [{ bookingId: booking.id, noticeKey, noticeType: "PICKUP", scheduledFor: result.startAt }],
+          skipDuplicates: true,
+        });
+        const claim = await prisma.bookingAutomationNotice.updateMany({
+          where: { noticeKey, status: { in: ["PENDING", "FAILED"] } },
+          data: { status: "PROCESSING", lastError: null },
+        });
+        if (claim.count) {
+          try {
+            await sendBookingReminder({
+              recipient: booking.customer.email,
+              tenantName: access.tenant.name,
+              bookingReference: reference,
+              reminderType: "PICKUP",
+              timeZone,
+              startAt: result.startAt,
+              endAt: result.endAt,
+            });
+            await prisma.bookingAutomationNotice.update({ where: { noticeKey }, data: { status: "SENT", sentAt: new Date() } });
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "Email delivery failed.";
+            await prisma.bookingAutomationNotice.update({ where: { noticeKey }, data: { status: "FAILED", lastError: message.slice(0, 1000) } });
+            console.error("Immediate pickup reminder failed", { reference, error });
+          }
+        }
       }
     }
     return NextResponse.json({ updated: true, notification });

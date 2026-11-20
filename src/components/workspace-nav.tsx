@@ -103,7 +103,7 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
       <Link title="How-to guides" className={active === "help" ? "active" : ""} href={`/workspace/${slug}/help`}><BookOpen size={18}/><span className="roam-nav-label">How-to guides</span></Link>
       <Link href="/admin" title="Platform admin" className="roam-admin-link"><ShieldCheck size={18}/><span className="roam-nav-label">Platform admin</span></Link>
     </nav>
-    <div className="roam-sidebar-bottom"><span className="roam-role">{effectiveRole}</span><button onClick={signOut}><LogOut size={16}/> Sign out</button></div>
+    <div className="roam-sidebar-bottom"><span className="roam-role">{effectiveRole}</span><button onClick={signOut}><LogOut size={16}/><span>Sign out</span></button></div>
 
     {selectedFeature && <div className="roam-feature-lock-backdrop" onClick={() => setSelectedFeature(null)}>
       <section className="roam-feature-lock-dialog" role="dialog" aria-modal="true" aria-labelledby="roam-feature-lock-title" onClick={event => event.stopPropagation()}>

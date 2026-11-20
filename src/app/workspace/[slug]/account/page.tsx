@@ -281,7 +281,7 @@ export default function AccountPage() {
               <div><strong>Scan to pay {money(subscription.plan.monthlyPrice)}</strong><p>Reference: <code>{paymentReference}</code></p><p>QR code is single-use and expires after 30 minutes. Your subscription activates automatically after the payment provider confirms receipt.</p></div>
             </div>}
             {paymentStatus === "PENDING" && <p className="roam-account-payment-status">Payment awaiting confirmation. <button type="button" onClick={() => void load()}><RefreshCw size={13}/> Refresh status</button></p>}
-          </>}
+          </>
         </section>}
 
         <section className="roam-panel roam-account-section" id="owner-profile">

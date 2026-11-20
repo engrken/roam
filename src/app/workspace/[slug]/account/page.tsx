@@ -156,7 +156,7 @@ export default function AccountPage() {
           <div className="roam-account-plan-summary">
             <span>YOUR CURRENT PLAN</span>
             <strong>{subscription?.plan.name || "No plan assigned"}</strong>
-            <div className="roam-account-plan-price">{subscription ? <>{money(subscription.plan.monthlyPrice)}<small>/ month</small></> : "Contact ROAM support"}</div>
+            <div className="roam-account-plan-price">{subscription ? subscription.tier === "FREE" ? "Complimentary" : subscription.tier === "ENTERPRISE" ? "Custom pricing" : <>{money(subscription.plan.monthlyPrice)}<small>/ month</> : "Contact ROAM support"}</div>
             <span className={"roam-account-status " + statusClass(subscription?.status || data.tenant.status)}><i/> {titleCase(subscription?.status || data.tenant.status)}</span>
             {periodEnd && <small className="roam-account-renewal">{subscription?.trialEndsAt && !subscription.currentPeriodEnd ? "Trial ends" : "Current period ends"} · {date(periodEnd)}</small>}
           </div>

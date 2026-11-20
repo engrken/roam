@@ -4,6 +4,7 @@ import { getTenantAccess, hasWorkspaceTier, workspaceWriteBlock, canManageTeam }
 import { prisma } from "@/lib/prisma";
 import { sendTeamInvitation } from "@/lib/email";
 import { recordWorkspaceAudit } from "@/lib/workspace-audit";
+import { consumeRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,6 +68,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || !allowedRoles(access.role).includes(role)) {
     return NextResponse.json({ error: "Enter a valid email address and a role you are allowed to assign." }, { status: 400 });
   }
+  const [actorAllowed, workspaceAllowed] = await Promise.all([
+    consumeRateLimit("team-invite-actor", access.user.id, 10, 60 * 60 * 1000),
+    consumeRateLimit("team-invite-workspace", access.tenant.id, 30, 60 * 60 * 1000),
+  ]);
+  if (!actorAllowed || !workspaceAllowed) return NextResponse.json({ error: "Too many team invitations or member additions. Please try again later." }, { status: 429 });
 
   const [user, subscription, memberCount, pendingCount, pendingInvite] = await Promise.all([
     prisma.user.findUnique({ where: { email }, select: { id: true, email: true, name: true } }),

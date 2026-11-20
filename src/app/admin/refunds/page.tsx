@@ -12,7 +12,7 @@ type Payment = {
 type Refund = {
   id: string; tenantName: string; tenantSlug: string; billingRecordId: string; paymentReference: string | null;
   paymentDescription: string; paymentAmount: number; amount: number; currency: string; method: string;
-  reference: string | null; reason: string; status: string; completedAt: string | null; createdAt: string;
+  reference: string | null; reason: string; reasonCategory: string | null; status: string; completedAt: string | null; createdAt: string;
 };
 
 const money = (amount: number, currency = "PHP") => new Intl.NumberFormat("en-PH", { style: "currency", currency }).format(amount);
@@ -25,6 +25,7 @@ export default function AdminRefundsPage() {
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("GCASH");
   const [reason, setReason] = useState("");
+  const [reasonCategory, setReasonCategory] = useState("DUPLICATE_PAYMENT");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -52,12 +53,12 @@ export default function AdminRefundsPage() {
     try {
       const response = await fetch("/api/admin/subscription-refunds", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ billingRecordId: paymentId, amount: Number(amount), method, reason }),
+        body: JSON.stringify({ billingRecordId: paymentId, amount: Number(amount), method, reason, reasonCategory }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Unable to create refund record.");
       setNotice(body.message || "Refund record created.");
-      setPaymentId(""); setAmount(""); setReason("");
+      setPaymentId(""); setAmount(""); setReason(""); setReasonCategory("DUPLICATE_PAYMENT");
       await load();
     } catch (issue) {
       setError(issue instanceof Error ? issue.message : "Unable to create refund record.");
@@ -91,7 +92,7 @@ export default function AdminRefundsPage() {
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-6">
       <div><div className="flex flex-wrap gap-4"><Link href="/admin" className="inline-flex items-center gap-2 text-sm text-cyan-300"><ArrowLeft size={15}/> Platform console</Link><Link href="/admin/payments" className="text-sm text-cyan-300">Payment settings</Link><Link href="/admin/plans" className="text-sm text-cyan-300">Plans & subscriptions</Link></div>
         <p className="mt-4 text-xs font-bold tracking-[.2em] text-cyan-400">PLATFORM BILLING</p><h1 className="mt-2 text-3xl font-bold">Subscription refunds</h1>
-        <p className="mt-2 max-w-3xl text-sm text-slate-400">Record manual subscription refunds after sending funds outside ROAM. ROAM tracks the amount, reason, payout method and external transaction reference; it does not transfer money.</p>
+        <p className="mt-2 max-w-3xl text-sm text-slate-400">ROAM subscriptions are not cancellable. Refunds are exceptional and limited to duplicate payments or verified billing errors. ROAM records manual payouts but does not transfer money.</p>
       </div>
       <button onClick={() => void load()} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2.5 text-sm font-semibold hover:bg-white/5 disabled:opacity-50"><RefreshCw size={15}/> Refresh</button>
     </header>
@@ -128,7 +129,7 @@ export default function AdminRefundsPage() {
       <aside className="rounded-2xl border border-white/10 bg-slate-900 p-5">
         <h2 className="font-semibold">Refund controls</h2>
         <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-300">
-          <li>• Only paid subscription billing records can be refunded here.</li>
+          <li>• Subscriptions cannot be cancelled through this workflow; refunds are exceptions only for duplicate payments or verified billing errors.</li>\n          <li>• Platform admin approval and a written explanation are required.</li>
           <li>• Pending and completed refunds reserve part of the original payment, preventing over-refunds.</li>
           <li>• Cancelled entries release the reserved balance.</li>
           <li>• Completing a refund requires the external GCash, Maya, bank or cash transaction reference.</li>
@@ -140,14 +141,14 @@ export default function AdminRefundsPage() {
     <section className="mt-8 overflow-hidden rounded-2xl border border-white/10 bg-slate-900">
       <div className="border-b border-white/10 px-5 py-4"><h2 className="font-semibold">Pending refunds <span className="ml-2 rounded-full bg-amber-400/10 px-2 py-1 text-xs text-amber-200">{pending.length}</span></h2><p className="mt-1 text-xs text-slate-500">Send the refund externally before marking it completed.</p></div>
       {loading ? <p className="p-6 text-sm text-slate-500">Loading refunds…</p> : pending.length === 0 ? <p className="p-6 text-sm text-slate-500">No pending refund entries.</p> : <div className="divide-y divide-white/5">{pending.map(item => <article key={item.id} className="grid gap-4 p-5 md:grid-cols-[minmax(0,1fr)_auto]">
-        <div><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{item.tenantName}</h3><span className="rounded-full bg-amber-400/10 px-2 py-1 text-[10px] font-bold text-amber-200">PENDING</span></div><p className="mt-1 text-sm font-semibold text-cyan-200">{money(item.amount,item.currency)} · {item.method.replace("_"," ")}</p><p className="mt-1 text-xs text-slate-400">{item.paymentDescription} · payment ref {item.paymentReference || "—"}</p><p className="mt-2 text-sm text-slate-300">{item.reason}</p><p className="mt-1 text-[11px] text-slate-500">Created {date(item.createdAt)}</p></div>
+        <div><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{item.tenantName}</h3><span className="rounded-full bg-amber-400/10 px-2 py-1 text-[10px] font-bold text-amber-200">PENDING</span></div><p className="mt-1 text-sm font-semibold text-cyan-200">{money(item.amount,item.currency)} · {item.method.replace("_"," ")}</p><p className="mt-1 text-xs text-slate-400">{item.paymentDescription} · payment ref {item.paymentReference || "—"}</p><p className="mt-2 text-xs font-semibold text-amber-200">{item.reasonCategory === "DUPLICATE_PAYMENT" ? "Duplicate payment" : item.reasonCategory === "BILLING_ERROR" ? "Billing error" : "Legacy / unspecified exception"}</p><p className="mt-1 text-sm text-slate-300">{item.reason}</p><p className="mt-1 text-[11px] text-slate-500">Created {date(item.createdAt)}</p></div>
         <div className="flex flex-wrap items-center gap-2"><button disabled={!!busy} onClick={() => void updateRefund(item,"complete")} className="inline-flex items-center gap-2 rounded-lg bg-emerald-400/15 px-3 py-2 text-xs font-semibold text-emerald-200 disabled:opacity-50"><CheckCircle2 size={14}/> Mark completed</button><button disabled={!!busy} onClick={() => void updateRefund(item,"cancel")} className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-slate-300 disabled:opacity-50"><XCircle size={14}/> Cancel</button></div>
       </article>)}</div>}
     </section>
 
     <section className="mt-8 overflow-hidden rounded-2xl border border-white/10 bg-slate-900">
       <div className="border-b border-white/10 px-5 py-4"><h2 className="font-semibold">Refund history</h2><p className="mt-1 text-xs text-slate-500">Completed and cancelled refund entries · latest 200.</p></div>
-      {history.length === 0 ? <p className="p-6 text-sm text-slate-500">No refund history yet.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-slate-950/60 text-[10px] uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-3">Workspace</th><th className="px-5 py-3">Amount</th><th className="px-5 py-3">Method / reference</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Date</th></tr></thead><tbody>{history.map(item => <tr key={item.id} className="border-t border-white/5"><td className="px-5 py-4"><p className="font-medium">{item.tenantName}</p><p className="mt-1 text-xs text-slate-500">{item.reason}</p></td><td className="px-5 py-4 font-semibold">{money(item.amount,item.currency)}</td><td className="px-5 py-4 text-xs text-slate-300">{item.method.replace("_"," ")}<p className="mt-1 text-slate-500">{item.reference || "—"}</p></td><td className="px-5 py-4"><span className={"rounded-full px-2 py-1 text-[10px] font-bold " + (item.status === "COMPLETED" ? "bg-emerald-400/10 text-emerald-200" : "bg-slate-700 text-slate-300")}>{item.status}</span></td><td className="px-5 py-4 text-xs text-slate-400">{date(item.completedAt || item.createdAt)}</td></tr>)}</tbody></table></div>}
+      {history.length === 0 ? <p className="p-6 text-sm text-slate-500">No refund history yet.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-slate-950/60 text-[10px] uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-3">Workspace</th><th className="px-5 py-3">Amount</th><th className="px-5 py-3">Method / reference</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Date</th></tr></thead><tbody>{history.map(item => <tr key={item.id} className="border-t border-white/5"><td className="px-5 py-4"><p className="font-medium">{item.tenantName}</p><p className="mt-1 text-xs text-slate-400">{item.reasonCategory === "DUPLICATE_PAYMENT" ? "Duplicate payment" : item.reasonCategory === "BILLING_ERROR" ? "Billing error" : "Legacy / unspecified exception"} · {item.reason}</p></td><td className="px-5 py-4 font-semibold">{money(item.amount,item.currency)}</td><td className="px-5 py-4 text-xs text-slate-300">{item.method.replace("_"," ")}<p className="mt-1 text-slate-500">{item.reference || "—"}</p></td><td className="px-5 py-4"><span className={"rounded-full px-2 py-1 text-[10px] font-bold " + (item.status === "COMPLETED" ? "bg-emerald-400/10 text-emerald-200" : "bg-slate-700 text-slate-300")}>{item.status}</span></td><td className="px-5 py-4 text-xs text-slate-400">{date(item.completedAt || item.createdAt)}</td></tr>)}</tbody></table></div>}
     </section>
     <p className="mt-5 text-[11px] leading-5 text-slate-500">This is an administrative accounting record only. ROAM does not initiate, transmit, or verify the external transfer of refund funds.</p>
   </div></main>;

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTenantAccess, canManageFleet, hasWorkspaceTier, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
+import { isPlanLimitReached } from "@/lib/plan-limits";
 
 async function getBranchLimit(tenantId: string) {
   const subscription = await prisma.subscription.findUnique({ where: { tenantId }, select: { plan: { select: { maxBranches: true } } } });
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       await tx.$queryRawUnsafe("SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1))) AS advisory_lock", "branch-limit:" + access.tenant.id);
       const limit = await getBranchLimit(access.tenant.id);
       const activeCount = await tx.branch.count({ where: { tenantId: access.tenant.id, isActive: true } });
-      if (limit !== null && activeCount >= limit) return null;
+      if (isPlanLimitReached(limit, activeCount)) return null;
       return tx.branch.create({
         data: { tenantId: access.tenant.id, ...parsed },
         select: { id: true, name: true, code: true, address: true, isActive: true, createdAt: true },

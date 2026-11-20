@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 function parseDate(value: string | null, fallback: string) {
   const candidate = value || fallback;
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(candidate)) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(candidate)) return null;
   const date = new Date(candidate + "T00:00:00.000Z");
   return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== candidate ? null : candidate;
 }

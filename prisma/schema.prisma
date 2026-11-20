@@ -448,6 +448,7 @@ model SubscriptionRefund {
   method         String
   reference      String?
   reason         String   @db.Text
+  reasonCategory String?
   status         String   @default("PENDING")
   recordedById   String
   completedById  String?

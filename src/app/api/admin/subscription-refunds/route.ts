@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 export const runtime = "nodejs";
 
 const refundMethods = ["GCASH", "MAYA", "BANK_TRANSFER", "CASH", "OTHER"] as const;
+const exceptionalRefundCategories = ["DUPLICATE_PAYMENT", "BILLING_ERROR"] as const;
 
 export async function GET() {
   const admin = await getPlatformAdmin();
@@ -37,7 +38,7 @@ export async function GET() {
       billingRecordId: refund.billingRecordId, paymentReference: refund.billingRecord.reference,
       paymentDescription: refund.billingRecord.description, paymentAmount: Number(refund.billingRecord.amount),
       amount: Number(refund.amount), currency: refund.currency, method: refund.method, reference: refund.reference,
-      reason: refund.reason, status: refund.status, recordedById: refund.recordedById,
+      reason: refund.reason, reasonCategory: refund.reasonCategory, status: refund.status, recordedById: refund.recordedById,
       completedById: refund.completedById, completedAt: refund.completedAt?.toISOString() || null,
       createdAt: refund.createdAt.toISOString(),
     })),
@@ -52,8 +53,9 @@ export async function POST(request: NextRequest) {
   const amount = Number(body?.amount);
   const method = typeof body?.method === "string" ? body.method : "";
   const reason = typeof body?.reason === "string" ? body.reason.trim().slice(0, 1000) : "";
-  if (!billingRecordId || !Number.isFinite(amount) || amount <= 0 || amount > 100000000 || !refundMethods.includes(method as typeof refundMethods[number]) || reason.length < 3) {
-    return NextResponse.json({ error: "Choose a paid subscription payment, a valid refund amount and method, and provide a reason." }, { status: 400 });
+  const reasonCategory = typeof body?.reasonCategory === "string" ? body.reasonCategory : "";
+  if (!billingRecordId || !Number.isFinite(amount) || amount <= 0 || amount > 100000000 || !refundMethods.includes(method as typeof refundMethods[number]) || !exceptionalRefundCategories.includes(reasonCategory as typeof exceptionalRefundCategories[number]) || reason.length < 3) {
+    return NextResponse.json({ error: "Refunds are limited to duplicate payments or verified billing errors. Choose a valid payment, amount, method, category, and explanation." }, { status: 400 });
   }
 
   try {
@@ -70,12 +72,12 @@ export async function POST(request: NextRequest) {
       const remaining = Number(payment.amount) - Number(reserved._sum.amount || 0);
       if (amount > remaining + 0.000001) throw new Error("REFUND_EXCEEDS_BALANCE");
       const created = await tx.subscriptionRefund.create({
-        data: { tenantId: payment.tenantId, billingRecordId, amount, currency: payment.currency, method, reason, recordedById: admin.id, status: "PENDING" },
+        data: { tenantId: payment.tenantId, billingRecordId, amount, currency: payment.currency, method, reason, reasonCategory, recordedById: admin.id, status: "PENDING" },
       });
       await tx.platformAuditLog.create({ data: {
         actorUserId: admin.id, actorEmail: admin.email, action: "subscription.refund.recorded",
         entityType: "subscriptionRefund", entityId: created.id,
-        details: { tenantId: payment.tenantId, billingRecordId, amount, currency: payment.currency, method, status: "PENDING" },
+        details: { tenantId: payment.tenantId, billingRecordId, amount, currency: payment.currency, method, reasonCategory, status: "PENDING" },
       } });
       return created;
     });

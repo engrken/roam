@@ -146,10 +146,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
       returnsToday: returnItems.map(actionItem),
       overdueCount,
       overdueReturns: overdueItems.map(actionItem),
-      outstandingCount: openBookings.filter((booking) => {
+      outstandingCount: canViewFinancials ? openBookings.filter((booking) => {
         const netPaid = booking.payments.reduce((paid, payment) => paid + (payment.kind === "REFUND" ? -Number(payment.amount) : Number(payment.amount)), 0);
         return Number(booking.totalAmount) - netPaid > 0.005;
-      }).length,
+      }).length : null,
     },
     bookingTrend: days,
     upcoming: upcoming.map((booking) => ({

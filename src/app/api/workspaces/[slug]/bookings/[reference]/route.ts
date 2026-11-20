@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 import { sendBookingMessageNotification, sendBookingStatusNotification } from "@/lib/email";
+import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -170,6 +171,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
 
       await tx.booking.update({ where: { id: current.id }, data: { status: nextStatus as never } });
+      await recordWorkspaceAudit(tx, {
+        tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+        action: "booking.status_changed", targetType: "booking", targetId: current.id,
+        details: { reference, fromStatus: current.status, toStatus: nextStatus },
+      });
       for (const vehicleId of current.items.map((item) => item.vehicleId)) {
         if (nextStatus === "CONFIRMED") {
           await tx.vehicle.updateMany({ where: { id: vehicleId, tenantId: access.tenant.id, status: { in: ["AVAILABLE", "RESERVED"] } }, data: { status: "RESERVED" } });

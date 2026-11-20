@@ -3,6 +3,8 @@ import { createHash, randomBytes } from "node:crypto";
 import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 import { sendBookingMessageNotification, sendBookingStatusNotification } from "@/lib/email";
+import { recordWorkspaceAudit } from "@/lib/workspace-audit";
+import { consumeRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -83,8 +85,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!booking) return NextResponse.json({ error: "Booking not found." }, { status: 404 });
 
   if (body?.action === "shareLink") {
+    const allowed = await consumeRateLimit("workspace-booking-share-link", booking.id, 10, 60 * 60 * 1000);
+    if (!allowed) return NextResponse.json({ error: "Too many booking link changes. Please try again later." }, { status: 429 });
     const token = randomBytes(32).toString("hex");
-    await prisma.booking.update({ where: { id: booking.id }, data: { publicTokenHash: hashToken(token) } });
+    await prisma.$transaction(async tx => {
+      await tx.booking.update({ where: { id: booking.id }, data: { publicTokenHash: hashToken(token) } });
+      await recordWorkspaceAudit(tx, {
+        tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+        action: "booking.access_link_rotated", targetType: "booking", targetId: booking.id,
+        details: { reference },
+      });
+    });
     const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\/$/, "");
     return NextResponse.json({ url: baseUrl + "/booking/" + encodeURIComponent(reference) + "?token=" + token });
   }
@@ -94,6 +105,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!message || message.length > 2000) {
       return NextResponse.json({ error: "Message must be 1–2,000 characters." }, { status: 400 });
     }
+    const [bookingAllowed, actorAllowed] = await Promise.all([
+      consumeRateLimit("workspace-booking-message", booking.id, 20, 60 * 60 * 1000),
+      consumeRateLimit("workspace-booking-message-actor", access.user.id, 60, 60 * 60 * 1000),
+    ]);
+    if (!bookingAllowed || !actorAllowed) return NextResponse.json({ error: "Too many booking messages. Please try again later." }, { status: 429 });
     await prisma.bookingMessage.create({
       data: { bookingId: booking.id, sender: "OWNER", body: message },
     });
@@ -170,6 +186,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
 
       await tx.booking.update({ where: { id: current.id }, data: { status: nextStatus as never } });
+      await recordWorkspaceAudit(tx, {
+        tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+        action: "booking.status_changed", targetType: "booking", targetId: current.id,
+        details: { reference, fromStatus: current.status, toStatus: nextStatus },
+      });
       for (const vehicleId of current.items.map((item) => item.vehicleId)) {
         if (nextStatus === "CONFIRMED") {
           await tx.vehicle.updateMany({ where: { id: vehicleId, tenantId: access.tenant.id, status: { in: ["AVAILABLE", "RESERVED"] } }, data: { status: "RESERVED" } });
@@ -220,11 +241,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   if (typeof body?.documentId === "string" && ["APPROVED", "REJECTED"].includes(body.reviewStatus)) {
-    const result = await prisma.bookingDocument.updateMany({
-      where: { id: body.documentId, bookingId: booking.id },
-      data: { reviewStatus: body.reviewStatus, reviewedAt: new Date() },
+    const result = await prisma.$transaction(async tx => {
+      const updated = await tx.bookingDocument.updateMany({
+        where: { id: body.documentId, bookingId: booking.id },
+        data: { reviewStatus: body.reviewStatus, reviewedAt: new Date() },
+      });
+      if (!updated.count) return false;
+      await recordWorkspaceAudit(tx, {
+        tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+        action: "booking.document_reviewed", targetType: "bookingDocument", targetId: body.documentId,
+        details: { reference, reviewStatus: body.reviewStatus },
+      });
+      return true;
     });
-    if (!result.count) return NextResponse.json({ error: "Document not found." }, { status: 404 });
+    if (!result) return NextResponse.json({ error: "Document not found." }, { status: 404 });
     return NextResponse.json({ reviewed: true });
   }
 

@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { rentalDateTimeToUtc } from "@/lib/datetime";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 import { sendBookingRequestReceived } from "@/lib/email";
 import { isTenantTrialReadOnly } from "@/lib/tenant-access";
 import { blockingMaintenanceStatuses } from "@/lib/maintenance-availability";
@@ -128,9 +129,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }, { status: 400 });
   }
 
-  const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || request.headers.get("x-real-ip")
-    || "unknown";
+  const clientIp = getClientIp(request.headers);
   const [ipAllowed, emailAllowed] = await Promise.all([
     consumeRateLimit("public-booking-ip", clientIp, 20, 60 * 60 * 1000),
     consumeRateLimit("public-booking-email", email, 5, 60 * 60 * 1000),

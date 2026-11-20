@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 import { sendBookingMessageNotification, sendBookingStatusNotification, sendBookingReminder } from "@/lib/email";
+import { isWithinPickupReminderWindow } from "@/lib/booking-reminder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -220,7 +221,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       // for a cron run that may occur after pickup.
       const now = new Date();
       const reminderWindowEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      if (result.nextStatus === "CONFIRMED" && result.startAt > now && result.startAt < reminderWindowEnd) {
+      if (result.nextStatus === "CONFIRMED" && isWithinPickupReminderWindow(result.startAt, now)) {
         const timeZone = access.tenant.timezone || "Asia/Manila";
         const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(result.startAt);
         const dateParts = Object.fromEntries(parts.map(part => [part.type, part.value]));

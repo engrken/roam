@@ -139,25 +139,25 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     },
     actionCenter: {
       pendingCount: bookingMap.pending || 0,
-      pendingItems: pendingItems.map(actionItem),
+      pendingItems: canViewFinancials ? pendingItems.map(actionItem) : [],
       pickupCount,
-      pickupsToday: pickupItems.map(actionItem),
+      pickupsToday: canViewFinancials ? pickupItems.map(actionItem) : [],
       returnCount,
-      returnsToday: returnItems.map(actionItem),
+      returnsToday: canViewFinancials ? returnItems.map(actionItem) : [],
       overdueCount,
-      overdueReturns: overdueItems.map(actionItem),
+      overdueReturns: canViewFinancials ? overdueItems.map(actionItem) : [],
       outstandingCount: canViewFinancials ? openBookings.filter((booking) => {
         const netPaid = booking.payments.reduce((paid, payment) => paid + (payment.kind === "REFUND" ? -Number(payment.amount) : Number(payment.amount)), 0);
         return Number(booking.totalAmount) - netPaid > 0.005;
       }).length : null,
     },
     bookingTrend: days,
-    upcoming: upcoming.map((booking) => ({
+    upcoming: canViewFinancials ? upcoming.map((booking) => ({
       id: booking.id, reference: booking.reference, status: booking.status,
       startAt: booking.startAt, endAt: booking.endAt,
       ...(canViewFinancials ? { totalAmount: Number(booking.totalAmount) } : {}),
       customer: booking.customer.name,
       vehicles: booking.items.map((item) => `${item.vehicle.make} ${item.vehicle.model} · ${item.vehicle.plateNumber}`),
-    })),
+    })) : [],
   });
 }

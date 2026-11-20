@@ -178,7 +178,7 @@ export default function AccountPage() {
                 <div className="roam-account-plan-card-title"><h3>{plan.name}</h3><span>{plan.tier}</span></div>
                 <div className="roam-account-plan-card-price">{planPrice(plan.tier, plan.monthlyPrice)}{plan.tier !== "ENTERPRISE" && <small>/ month</small>}</div>
                 <p className="roam-account-plan-caption">{isCurrent ? "Your workspace is currently on this plan." : "Available for your workspace."}</p>
-                <div className="roam-account-capacities"><div><span>Vehicles</span><strong>{capacity(plan.maxVehicles, plan.tier)}</strong></div><div><span>Branches</span><strong>{capacity(plan.maxBranches, plan.tier)}</strong></div><div><span>Staff</span><strong>{capacity(plan.maxStaff, plan.tier)}</strong></div></div>
+                <div className="roam-account-capacities"><div><span>Vehicles</span><strong>{capacity(plan.maxVehicles, plan.tier)}</strong></div><div><span>Branches</span><strong>{capacity(plan.maxBranches, plan.tier)}</strong></div><div><span>Team seats</span><strong>{capacity(plan.maxStaff, plan.tier)}</strong></div></div><small>Team seat limits include the workspace owner.</small>
                 {isCurrent && <div className="roam-account-current-foot"><Check size={14}/> Active for this workspace</div>}
               </article>;
             })}

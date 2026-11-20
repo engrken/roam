@@ -505,3 +505,38 @@
 .roam-action-finance>.roam-secondary-btn{margin-left:auto}
 @media(max-width:1050px){.roam-action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.roam-action-grid{grid-template-columns:1fr}.roam-action-finance{align-items:stretch;gap:14px}.roam-action-finance>div{min-width:calc(50% - 8px)}.roam-action-finance>.roam-secondary-btn{margin-left:0;width:100%;justify-content:center}}
+
+
+/* Desktop workspace sidebar: collapsible rail and independently scrollable navigation */
+@media (min-width:761px){
+  .roam-sidebar{height:100dvh;overflow:hidden}
+  .roam-side-nav{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;align-content:start;padding:2px 3px 10px;scrollbar-width:thin;scrollbar-color:#496052 transparent}
+  .roam-side-nav::-webkit-scrollbar{width:6px}
+  .roam-side-nav::-webkit-scrollbar-thumb{background:#496052;border-radius:8px}
+  .roam-desktop-sidebar-toggle{display:flex;align-items:center;justify-content:flex-start;gap:9px;min-height:36px;margin:0 5px 13px;padding:0 9px;border:1px solid #34495a;border-radius:9px;background:#203449;color:#dce9e2;font:600 11px 'DM Sans',sans-serif;cursor:pointer}
+  .roam-desktop-sidebar-toggle:hover{background:#29465a;color:#fff}
+  .roam-desktop-sidebar-toggle:focus-visible{outline:2px solid #d3f58b;outline-offset:2px}
+  .roam-sidebar-collapsed{width:76px;padding:20px 10px}
+  .roam-sidebar-collapsed .roam-brand{justify-content:center;padding:3px 0 24px}
+  .roam-sidebar-collapsed .roam-brand>span:last-child,
+  .roam-sidebar-collapsed .roam-side-label,
+  .roam-sidebar-collapsed .roam-workspace-name,
+  .roam-sidebar-collapsed .roam-sidebar>div[role="status"],
+  .roam-sidebar-collapsed .roam-nav-label,
+  .roam-sidebar-collapsed .roam-nav-lock-label,
+  .roam-sidebar-collapsed .roam-sidebar-bottom .roam-role,
+  .roam-sidebar-collapsed .roam-sidebar-bottom button{display:none}
+  .roam-sidebar-collapsed .roam-desktop-sidebar-toggle{justify-content:center;padding:0}
+  .roam-sidebar-collapsed .roam-desktop-sidebar-toggle span{display:none}
+  .roam-sidebar-collapsed .roam-side-nav{gap:7px}
+  .roam-sidebar-collapsed .roam-side-nav a,
+  .roam-sidebar-collapsed .roam-side-nav .roam-nav-locked{justify-content:center;min-height:43px;padding:10px 5px;gap:0}
+  .roam-sidebar-collapsed .roam-side-nav a svg,
+  .roam-sidebar-collapsed .roam-side-nav .roam-nav-locked>svg:first-child{width:19px;height:19px;flex:0 0 19px}
+  .roam-sidebar-collapsed .roam-side-nav .roam-nav-lock-icon{display:none}
+  .roam-sidebar-collapsed .roam-side-nav .roam-admin-link{margin-top:9px;padding-top:13px}
+  .roam-sidebar-collapsed .roam-sidebar-bottom{justify-items:center;padding:12px 0 3px}
+  .roam-sidebar-collapsed .roam-sidebar-bottom button{display:none}
+  .roam-sidebar-collapsed~.roam-main{width:calc(100% - 76px);margin-left:76px}
+}
+@media(max-width:760px){.roam-desktop-sidebar-toggle{display:none}}

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard, CarFront, LogOut, ShieldCheck, CalendarDays, MapPin, Users,
-  BookOpen, FileText, UserCog, MessageCircle, Wallet, Menu, X, LockKeyhole, Wrench,
+  BookOpen, FileText, UserCog, MessageCircle, Wallet, Menu, X, LockKeyhole, Wrench, ClipboardList,
   ArrowUpRight, ChevronLeft, ChevronRight,
 } from "lucide-react";
 
@@ -37,7 +37,7 @@ const lockedFeatures: Record<FeatureKey, FeatureInfo> = {
   },
 };
 
-export function WorkspaceNav({ slug, name, role, active }: { slug: string; name: string; role: string; active: "overview" | "fleet" | "maintenance" | "calendar" | "bookings" | "messages" | "finance" | "branches" | "customers" | "help" | "rental-terms" | "team" | "settings" | "reports" | "account" }) {
+export function WorkspaceNav({ slug, name, role, active }: { slug: string; name: string; role: string; active: "overview" | "fleet" | "maintenance" | "calendar" | "bookings" | "messages" | "finance" | "branches" | "customers" | "help" | "rental-terms" | "team" | "settings" | "reports" | "account" | "audit" }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
@@ -97,6 +97,7 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
       <Link title="Customers" className={active === "customers" ? "active" : ""} href={`/workspace/${slug}/customers`}><Users size={18}/><span className="roam-nav-label">Customers</span></Link>
       <Link title="Rental terms" className={active === "rental-terms" ? "active" : ""} href={`/workspace/${slug}/rental-terms`}><FileText size={18}/><span className="roam-nav-label">Rental terms</span></Link>
       {lockedItem("team", "Team & access", <UserCog size={18}/>)}
+      {(effectiveRole === "OWNER" || effectiveRole === "ADMIN") && <Link title="Audit history" className={active === "audit" ? "active" : ""} href={`/workspace/${slug}/audit`}><ClipboardList size={18}/><span className="roam-nav-label">Audit history</span></Link>}
       <Link title="Business settings" className={active === "settings" ? "active" : ""} href={`/workspace/${slug}/settings`}><UserCog size={18}/><span className="roam-nav-label">Business settings</span></Link>
       {effectiveRole === "OWNER" && <Link title="Account & subscription" className={active === "account" ? "active" : ""} href={`/workspace/${slug}/account`}><ShieldCheck size={18}/><span className="roam-nav-label">Account & subscription</span></Link>}
       {lockedItem("reports", "Reports", <UserCog size={18}/>)}

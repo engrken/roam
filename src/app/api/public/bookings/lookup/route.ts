@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 import { sendBookingAccessLink } from "@/lib/email";
 
 export const runtime = "nodejs";
@@ -20,8 +21,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Enter a valid booking reference and email address." }, { status: 400 });
   }
 
-  const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || request.headers.get("x-real-ip") || "unknown";
+  const clientIp = getClientIp(request.headers);
   const [ipAllowed, referenceAllowed] = await Promise.all([
     consumeRateLimit("booking-link-lookup-ip", clientIp, 8, 60 * 60 * 1000),
     consumeRateLimit("booking-link-lookup-reference", reference, 5, 60 * 60 * 1000),

@@ -3,11 +3,6 @@ import { getTenantAccess, canManageFleet, hasWorkspaceTier, workspaceWriteBlock 
 import { prisma } from "@/lib/prisma";
 import { isPlanLimitReached } from "@/lib/plan-limits";
 
-async function getBranchLimit(tenantId: string) {
-  const subscription = await prisma.subscription.findUnique({ where: { tenantId }, select: { plan: { select: { maxBranches: true } } } });
-  return subscription?.plan.maxBranches ?? null;
-}
-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -65,7 +60,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const branch = await prisma.$transaction(async tx => {
       await tx.$queryRawUnsafe("SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1))) AS advisory_lock", "branch-limit:" + access.tenant.id);
-      const limit = await getBranchLimit(access.tenant.id);
+      const subscription = await tx.subscription.findUnique({ where: { tenantId: access.tenant.id }, select: { plan: { select: { maxBranches: true } } } });
+      const limit = subscription?.plan.maxBranches ?? null;
       const activeCount = await tx.branch.count({ where: { tenantId: access.tenant.id, isActive: true } });
       if (isPlanLimitReached(limit, activeCount)) return null;
       return tx.branch.create({
@@ -122,9 +118,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const branch = await prisma.$transaction(async tx => {
       if (data.isActive === true && !existing.isActive) {
         await tx.$queryRawUnsafe("SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1))) AS advisory_lock", "branch-limit:" + access.tenant.id);
-        const limit = await getBranchLimit(access.tenant.id);
+        const subscription = await tx.subscription.findUnique({ where: { tenantId: access.tenant.id }, select: { plan: { select: { maxBranches: true } } } });
+        const limit = subscription?.plan.maxBranches ?? null;
         const activeCount = await tx.branch.count({ where: { tenantId: access.tenant.id, isActive: true } });
-        if (limit !== null && activeCount >= limit) return null;
+        if (isPlanLimitReached(limit, activeCount)) return null;
       }
       return tx.branch.update({ where: { id }, data, select: { id: true, name: true, code: true, address: true, isActive: true, createdAt: true } });
     });

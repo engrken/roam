@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendTrialLifecycleEmail } from "@/lib/email";
+import { sendTrialLifecycleEmail, sendSubscriptionRenewalNotice } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -76,5 +76,46 @@ export async function GET(request: NextRequest) {
       }
     }
   }
-  return NextResponse.json({ ok: true, scanned: subscriptions.length, sent, skipped, failed, expiredReferrals: expiredReferrals.count, checkedAt: now.toISOString() });
+  const renewalCutoff = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const paidSubscriptions = await prisma.subscription.findMany({
+    where: {
+      tier: { not: "FREE" }, status: "active", currentPeriodEnd: { not: null },
+      OR: [
+        { renewalReminderSentAt: null, currentPeriodEnd: { gt: now, lte: renewalCutoff } },
+        { renewalOverdueNoticeSentAt: null, currentPeriodEnd: { lte: now } },
+      ],
+    },
+    select: {
+      tenantId: true, currentPeriodEnd: true, renewalReminderSentAt: true, renewalOverdueNoticeSentAt: true,
+      tenant: { select: { name: true, slug: true, memberships: { where: { role: "OWNER" }, select: { user: { select: { email: true } } }, take: 1 }, subscriptionPaymentSubmissions: { where: { status: "PENDING", provisionalUntil: { gt: now } }, select: { id: true }, take: 1 } } },
+    },
+    take: 200,
+  });
+  for (const subscription of paidSubscriptions) {
+    const ownerEmail = subscription.tenant.memberships[0]?.user.email;
+    if (!ownerEmail || !subscription.currentPeriodEnd || subscription.tenant.subscriptionPaymentSubmissions.length) { skipped++; continue; }
+    const accountUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\/+$/, "")
+      + "/workspace/" + encodeURIComponent(subscription.tenant.slug) + "/payments";
+    const stages = [
+      { stage: "REMINDER" as const, field: "renewalReminderSentAt" as const, due: !subscription.renewalReminderSentAt && subscription.currentPeriodEnd > now && subscription.currentPeriodEnd <= renewalCutoff },
+      { stage: "OVERDUE" as const, field: "renewalOverdueNoticeSentAt" as const, due: !subscription.renewalOverdueNoticeSentAt && subscription.currentPeriodEnd <= now },
+    ];
+    for (const item of stages) {
+      if (!item.due) continue;
+      const claim = await prisma.subscription.updateMany({
+        where: { tenantId: subscription.tenantId, status: "active", currentPeriodEnd: subscription.currentPeriodEnd, [item.field]: null },
+        data: { [item.field]: now },
+      });
+      if (!claim.count) { skipped++; continue; }
+      try {
+        await sendSubscriptionRenewalNotice({ recipient: ownerEmail, tenantName: subscription.tenant.name, stage: item.stage, periodEndsAt: subscription.currentPeriodEnd, accountUrl });
+        sent++;
+      } catch (error) {
+        await prisma.subscription.updateMany({ where: { tenantId: subscription.tenantId, [item.field]: now }, data: { [item.field]: null } });
+        console.error("Subscription renewal email failed", { tenantId: subscription.tenantId, stage: item.stage, error });
+        failed++;
+      }
+    }
+  }
+  return NextResponse.json({ ok: true, scanned: subscriptions.length, paidSubscriptionsScanned: paidSubscriptions.length, sent, skipped, failed, expiredReferrals: expiredReferrals.count, checkedAt: now.toISOString() });
 }

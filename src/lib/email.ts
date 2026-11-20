@@ -348,3 +348,33 @@ export async function sendSubscriptionPaymentEmail(input: {
     html: '<div style="background:#f3f6fb;padding:32px 16px;font-family:Arial,sans-serif;color:#172033;line-height:1.6"><div style="max-width:560px;margin:auto;background:#fff;border-radius:14px;padding:28px"><div style="font-size:22px;font-weight:800;letter-spacing:2px">ROAM</div><h2>' + safe(details.heading) + '</h2><p>Hello ' + safe(input.businessName) + ',</p><p>' + safe(details.message) + '</p><p><strong>Payment reference:</strong> ' + safe(input.reference) + '<br/><strong>Amount submitted:</strong> PHP ' + input.amount.toFixed(2) + (deadline ? '<br/><strong>Provisional access until:</strong> ' + safe(deadline) : '') + '</p><p style="margin:24px 0"><a href="' + safe(input.accountUrl) + '" style="display:inline-block;background:#087e9b;color:#fff;text-decoration:none;padding:13px 20px;border-radius:8px;font-weight:700">View payment status</a></p><p style="font-size:13px;color:#66758a">ROAM does not mark a payment as received until an administrator approves it.</p></div></div>',
   });
 }
+
+
+export async function sendSubscriptionRenewalNotice(input: {
+  recipient: string;
+  tenantName: string;
+  stage: "REMINDER" | "OVERDUE";
+  periodEndsAt: Date;
+  accountUrl: string;
+}) {
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  if (!from) throw new Error("Email sender is not configured.");
+  const safe = (value: string) => value.replace(/[&<>"']/g, character => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[character] || character);
+  const date = input.periodEndsAt.toLocaleDateString("en-PH", { timeZone: "Asia/Manila", dateStyle: "long" });
+  const content = input.stage === "REMINDER" ? {
+    subject: "Your ROAM subscription renewal is coming up",
+    heading: "Your subscription period is ending soon",
+    message: "Your current ROAM subscription period ends on " + date + ". Submit your renewal payment through the workspace Payments page so the ROAM team can review and confirm it.",
+  } : {
+    subject: "Your ROAM subscription period has ended",
+    heading: "Subscription renewal needs attention",
+    message: "Your current ROAM subscription period ended on " + date + ". Please submit your renewal payment through the workspace Payments page and wait for administrator confirmation. If you have already submitted payment, no further action is needed while it is under review.",
+  };
+  const text = "Hello " + input.tenantName + ",\n\n" + content.message + "\n\nSubmit or review payment: " + input.accountUrl + "\n\nROAM does not automatically charge a payment method; all renewal payments are manually verified by an administrator.";
+  await getTransport().sendMail({
+    from, to: input.recipient, subject: content.subject, text,
+    html: '<div style="background:#f3f6fb;padding:32px 16px;font-family:Arial,sans-serif;color:#172033;line-height:1.6"><div style="max-width:560px;margin:auto;background:#fff;border-radius:14px;padding:28px"><div style="font-size:22px;font-weight:800;letter-spacing:2px">ROAM</div><h2>' + safe(content.heading) + '</h2><p>Hello ' + safe(input.tenantName) + ',</p><p>' + safe(content.message) + '</p><p style="margin:24px 0"><a href="' + safe(input.accountUrl) + '" style="display:inline-block;background:#087e9b;color:#fff;text-decoration:none;padding:13px 20px;border-radius:8px;font-weight:700">Open workspace payments</a></p><p style="font-size:13px;color:#66758a">ROAM does not automatically charge a payment method. All renewal payments are manually verified by an administrator.</p></div></div>',
+  });
+}

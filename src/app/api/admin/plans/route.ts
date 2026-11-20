@@ -40,7 +40,7 @@ export async function PATCH(request: NextRequest) {
       if (limit !== null && (!Number.isInteger(limit) || limit < 1 || limit > 100000)) return NextResponse.json({ error: "Plan limits must be positive whole numbers or unlimited." }, { status: 400 });
     }
     const plan = await prisma.plan.update({
-      where: { tier: tier as "STARTER" | "PRO" | "BUSINESS" | "ENTERPRISE" },
+      where: { tier: tier as "FREE" | "STARTER" | "PRO" | "BUSINESS" | "ENTERPRISE" },
       data: { name, monthlyPrice, maxVehicles, maxBranches, maxStaff, active: body.active !== false },
       select: { id: true, tier: true, name: true, monthlyPrice: true, maxVehicles: true, maxBranches: true, maxStaff: true, active: true },
     }).catch(() => null);
@@ -63,9 +63,12 @@ export async function PATCH(request: NextRequest) {
       if (!plan) return NextResponse.json({ error: "The requested plan is no longer available." }, { status: 409 });
       await prisma.subscription.upsert({
         where: { tenantId: change.tenantId },
-        create: { tenantId: change.tenantId, planId: plan.id, tier: plan.tier, status: "manual_review", currentPeriodStart: new Date() },
-        update: { planId: plan.id, tier: plan.tier, status: "manual_review", currentPeriodStart: new Date() },
+        create: { tenantId: change.tenantId, planId: plan.id, tier: plan.tier, status: plan.tier === "FREE" ? "complimentary" : "manual_review", currentPeriodStart: new Date() },
+        update: { planId: plan.id, tier: plan.tier, status: plan.tier === "FREE" ? "complimentary" : "manual_review", currentPeriodStart: new Date(), currentPeriodEnd: plan.tier === "FREE" ? null : undefined, trialEndsAt: plan.tier === "FREE" ? null : undefined, trialGraceEndsAt: plan.tier === "FREE" ? null : undefined },
       });
+    }
+    if (decision === "APPROVED" && change.requestedTier === "FREE") {
+      await prisma.tenant.update({ where: { id: change.tenantId }, data: { status: "ACTIVE" } });
     }
     const reviewed = await prisma.subscriptionChangeRequest.update({
       where: { id: change.id },

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
+import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const total = Number(booking.totalAmount);
       if (kind === "PAYMENT" && amount > total - netPaid + 0.005) throw new Error("PAYMENT_EXCEEDS_BALANCE");
       if (kind === "REFUND" && amount > netPaid + 0.005) throw new Error("REFUND_EXCEEDS_COLLECTED");
-      return tx.rentalPayment.create({
+      const created = await tx.rentalPayment.create({
         data: {
           tenantId: access.tenant.id, bookingId: booking.id, amount, kind, method,
           currency: access.tenant.currency || "PHP",
@@ -98,6 +99,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           notes: typeof body.notes === "string" ? body.notes.trim().slice(0, 1000) || null : null,
         },
       });
+      await recordWorkspaceAudit(tx, {
+        tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+        action: kind === "REFUND" ? "payment.refund_recorded" : "payment.recorded",
+        targetType: "rentalPayment", targetId: created.id,
+        details: { bookingReference, amount, kind, method, currency: access.tenant.currency || "PHP" },
+      });
+      return created;
     });
     return NextResponse.json({ saved: true, payment: { id: payment.id, amount: Number(payment.amount), kind: payment.kind } }, { status: 201 });
   } catch (error) {

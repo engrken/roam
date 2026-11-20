@@ -35,6 +35,16 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: "The configured subscription amount cannot be processed online." }, { status: 400 });
   }
 
+  const now = new Date();
+  const existingPayment = await prisma.subscriptionPayment.findFirst({
+    where: { tenantId: access.tenant.id, status: "PENDING", expiresAt: { gt: now }, qrCodeData: { not: null } },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, reference: true, amount: true, currency: true, status: true, qrCodeData: true, expiresAt: true },
+  });
+  if (existingPayment) {
+    return NextResponse.json({ payment: { ...existingPayment, amount: Number(existingPayment.amount), expiresAt: existingPayment.expiresAt?.toISOString() || null }, existing: true });
+  }
+
   const reference = "ROAM-SUB-" + randomBytes(8).toString("hex").toUpperCase();
   let intent: { data?: { id?: string; attributes?: { client_key?: string; status?: string } }; errors?: { detail?: string }[] };
   try {

@@ -27,7 +27,7 @@ const money = (amount: number, currency = "PHP") => new Intl.NumberFormat("en-PH
 const date = (value: string | null) => value ? new Date(value).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }) : "—";
 const titleCase = (value: string) => value.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, letter => letter.toUpperCase());
 const capacity = (value: number | null, tier?: string) => tier === "ENTERPRISE" ? "Custom" : value == null ? "Unlimited" : String(value);
-const planPrice = (tier: string, amount: number) => tier === "ENTERPRISE" ? "Custom pricing" : tier === "FREE" ? "Complimentary" : money(amount);
+const planPrice = (tier: string, amount: number) => tier === "ENTERPRISE" ? "Custom pricing" : tier === "FREE" ? "Retired plan" : money(amount);
 const statusClass = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
 export default function AccountPage() {
@@ -157,7 +157,7 @@ export default function AccountPage() {
           <div className="roam-account-plan-summary">
             <span>YOUR CURRENT PLAN</span>
             <strong>{subscription?.plan.name || "No plan assigned"}</strong>
-            <div className="roam-account-plan-price">{subscription ? subscription.tier === "FREE" ? "Complimentary" : subscription.tier === "ENTERPRISE" ? "Custom pricing" : <>{money(subscription.plan.monthlyPrice)}<small>/ month</small></> : "Contact ROAM support"}</div>
+            <div className="roam-account-plan-price">{subscription ? subscription.tier === "FREE" ? "Retired plan" : subscription.tier === "ENTERPRISE" ? "Custom pricing" : <>{money(subscription.plan.monthlyPrice)}<small>/ month</small></> : "Contact ROAM support"}</div>
             <span className={"roam-account-status " + statusClass(subscription?.status || data.tenant.status)}><i/> {titleCase(subscription?.status || data.tenant.status)}</span>
             {periodEnd && <small className="roam-account-renewal">{subscription?.trialEndsAt && !subscription.currentPeriodEnd ? "Trial ends" : "Current period ends"} · {date(periodEnd)}</small>}
           </div>
@@ -189,7 +189,7 @@ export default function AccountPage() {
             <div className="roam-account-request-controls">
               <label className="roam-account-visually-hidden" htmlFor="account-tier">Requested plan</label>
               <select id="account-tier" value={selectedTier} onChange={event => setSelectedTier(event.target.value)} disabled={!!pendingRequest || saving}>
-                <option value="">Select a plan</option>{data.plans.filter(plan => plan.tier !== tier).map(plan => <option key={plan.tier} value={plan.tier}>{plan.name} · {plan.tier === "ENTERPRISE" ? "Custom pricing" : plan.tier === "FREE" ? "Complimentary" : money(plan.monthlyPrice) + "/mo"}</option>)}
+                <option value="">Select a plan</option>{data.plans.filter(plan => plan.tier !== tier).map(plan => <option key={plan.tier} value={plan.tier}>{plan.name} · {plan.tier === "ENTERPRISE" ? "Custom pricing" : money(plan.monthlyPrice) + "/mo"}</option>)}
               </select>
               <button className="roam-primary-button" type="button" disabled={!selectedTier || saving || !!pendingRequest} onClick={requestChange}>{saving ? "Submitting…" : "Request plan change"} <ArrowRight size={16}/></button>
             </div>

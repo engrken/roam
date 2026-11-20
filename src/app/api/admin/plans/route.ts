@@ -138,7 +138,7 @@ export async function PATCH(request: NextRequest) {
           where: { tenantId },
           data: {
             status: "active", currentPeriodStart: periodStart, currentPeriodEnd: periodEnd,
-            referralCreditMonths: 0,
+            referralCreditMonths: 0, renewalReminderSentAt: null, renewalOverdueNoticeSentAt: null,
           },
           select: { tier: true, status: true, currentPeriodStart: true, currentPeriodEnd: true },
         });

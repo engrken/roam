@@ -73,6 +73,8 @@ export default function PublicBookPage() {
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [error, setError] = useState("");
   const [booking, setBooking] = useState<BookingResult | null>(null);
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -86,6 +88,36 @@ export default function PublicBookPage() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [slug]);
+
+  useEffect(() => {
+    setDraftLoaded(false);
+    try {
+      const saved = window.localStorage.getItem("roam:booking-draft:" + slug);
+      if (saved) {
+        const draft = JSON.parse(saved) as { startAt?: unknown; endAt?: unknown; branchId?: unknown };
+        if (typeof draft.startAt === "string" && typeof draft.endAt === "string") {
+          setStartAt(draft.startAt);
+          setEndAt(draft.endAt);
+          setBranchId(typeof draft.branchId === "string" ? draft.branchId : "");
+          setDraftRestored(true);
+        }
+      }
+    } catch {
+      window.localStorage.removeItem("roam:booking-draft:" + slug);
+    } finally {
+      setDraftLoaded(true);
+    }
+  }, [slug]);
+
+  useEffect(() => {
+    if (!draftLoaded) return;
+    const key = "roam:booking-draft:" + slug;
+    if (!startAt && !endAt && !branchId) {
+      window.localStorage.removeItem(key);
+      return;
+    }
+    window.localStorage.setItem(key, JSON.stringify({ startAt, endAt, branchId, savedAt: new Date().toISOString() }));
+  }, [draftLoaded, slug, startAt, endAt, branchId]);
 
   const chosen = vehicles.find(vehicle => vehicle.id === vehicleId);
   const estimate = useMemo(() => {
@@ -147,6 +179,8 @@ export default function PublicBookPage() {
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Unable to submit your request.");
+      window.localStorage.removeItem("roam:booking-draft:" + slug);
+      setDraftRestored(false);
       setBooking(body);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to submit your request.");
@@ -177,6 +211,7 @@ export default function PublicBookPage() {
           </div>
           {step === 1 && <form className="roam-booking-step-content" onSubmit={continueToVehicles}>
             <div className="roam-booking-step-heading"><span>STEP 1 OF 4</span><h2>Plan your rental</h2><p>Choose your pickup location and rental dates. We’ll check which vehicles are available for that exact period.</p></div>
+            {draftRestored && <div className="roam-booking-hint"><span>✓</span><p>Your pickup schedule was restored from this device. Contact details are never saved in this draft.</p><button type="button" onClick={() => { setStartAt(""); setEndAt(""); setBranchId(""); setDraftRestored(false); window.localStorage.removeItem("roam:booking-draft:" + slug); }}>Clear saved schedule</button></div>}
             {branches.length > 0 && <label>Pickup branch <select value={branchId} onChange={event => setBranchId(event.target.value)}><option value="">Any available branch</option>{branches.map(branch => <option key={branch.id} value={branch.id}>{branch.name}{branch.address ? " — " + branch.address : ""}</option>)}</select></label>}
             <div className="client-fields-two">
               <label>Pickup date & time<input required type="datetime-local" min={localDateTime(zone)} value={startAt} onChange={event => { setStartAt(event.target.value); if (endAt && event.target.value >= endAt) setEndAt(""); }}/></label>

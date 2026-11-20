@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
+import { blockingMaintenanceStatuses } from "@/lib/maintenance-availability";
 
 export const runtime = "nodejs";
 
@@ -8,6 +9,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace not found or access denied." }, { status: 404 });
+  if (!canManageFleet(access.role)) return NextResponse.json({ error: "You do not have permission to view maintenance records." }, { status: 403 });
   const records = await prisma.vehicleMaintenance.findMany({
     where: { tenantId: access.tenant.id },
     include: { vehicle: { select: { make: true, model: true, plateNumber: true } }, serviceRecords: true },
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       select: { id: true },
     });
     const maintenanceConflict = await tx.vehicleMaintenance.findFirst({
-      where: { tenantId: access.tenant.id, vehicleId, status: { in: ["SCHEDULED", "IN_PROGRESS"] }, startAt: { lt: endAt }, endAt: { gt: startAt } },
+      where: { tenantId: access.tenant.id, vehicleId, status: { in: [...blockingMaintenanceStatuses] }, startAt: { lt: endAt }, endAt: { gt: startAt } },
       select: { id: true },
     });
     if (bookingConflict) return { error: "This vehicle already has a confirmed or active booking during those dates." };

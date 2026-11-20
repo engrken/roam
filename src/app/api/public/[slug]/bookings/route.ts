@@ -5,6 +5,7 @@ import { rentalDateTimeToUtc } from "@/lib/datetime";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { sendBookingRequestReceived } from "@/lib/email";
 import { isTenantTrialReadOnly } from "@/lib/tenant-access";
+import { blockingMaintenanceStatuses } from "@/lib/maintenance-availability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         },
         maintenances: {
           none: {
-            status: { in: ["SCHEDULED", "IN_PROGRESS"] },
+            status: { in: [...blockingMaintenanceStatuses] },
             startAt: { lt: requestedEnd },
             endAt: { gt: requestedStart },
           },
@@ -170,7 +171,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (conflict) return { conflict: "Those dates are no longer available. Please choose another period." as const };
 
       const maintenanceConflict = await tx.vehicleMaintenance.findFirst({
-        where: { tenantId: tenant.id, vehicleId, status: { not: "CANCELLED" }, startAt: { lt: endAt }, endAt: { gt: startAt } },
+        where: { tenantId: tenant.id, vehicleId, status: { in: [...blockingMaintenanceStatuses] }, startAt: { lt: endAt }, endAt: { gt: startAt } },
         select: { id: true },
       });
       if (maintenanceConflict) return { conflict: "This vehicle is scheduled for maintenance during those dates. Please choose another vehicle or period." as const };

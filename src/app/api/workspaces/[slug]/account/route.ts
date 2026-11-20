@@ -24,7 +24,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     prisma.plan.findMany({ where: { active: true }, orderBy: { monthlyPrice: "asc" }, select: { tier: true, name: true, monthlyPrice: true, maxVehicles: true, maxBranches: true, maxStaff: true } }),
     prisma.billingRecord.findMany({ where: { tenantId: access.tenant.id }, orderBy: { issuedAt: "desc" }, take: 50 }),
     prisma.subscriptionChangeRequest.findMany({ where: { tenantId: access.tenant.id }, orderBy: { createdAt: "desc" }, take: 10 }),
-    prisma.subscriptionPayment.findMany({ where: { tenantId: access.tenant.id }, orderBy: { createdAt: "desc" }, take: 5, select: { id: true, reference: true, amount: true, currency: true, status: true, qrCodeData: true, expiresAt: true, paidAt: true, createdAt: true } }),
+    prisma.subscriptionPayment.findMany({ where: { tenantId: access.tenant.id }, orderBy: { createdAt: "desc" }, take: 1, select: { id: true, reference: true, amount: true, currency: true, status: true, qrCodeData: true, expiresAt: true, paidAt: true, createdAt: true } }),
   ]);
   if (!tenant) return NextResponse.json({ error: "Workspace not found." }, { status: 404 });
   return NextResponse.json({

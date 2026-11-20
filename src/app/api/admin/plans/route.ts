@@ -33,7 +33,7 @@ export async function PATCH(request: NextRequest) {
     const maxVehicles = body.maxVehicles === null || body.maxVehicles === "" ? null : Number(body.maxVehicles);
     const maxBranches = body.maxBranches === null || body.maxBranches === "" ? null : Number(body.maxBranches);
     const maxStaff = body.maxStaff === null || body.maxStaff === "" ? null : Number(body.maxStaff);
-    if (!["FREE", "STARTER", "PRO", "BUSINESS", "ENTERPRISE"].includes(tier) || !name || name.length > 60 || !Number.isFinite(monthlyPrice) || monthlyPrice < 0 || monthlyPrice > 100000000) {
+    if (!["FREE", "STARTER", "PRO", "BUSINESS", "ENTERPRISE"].includes(tier) || !name || name.length > 60 || !Number.isFinite(monthlyPrice) || monthlyPrice < 0 || monthlyPrice > 100000000 || (tier === "FREE" && monthlyPrice !== 0)) {
       return NextResponse.json({ error: "Enter a valid plan name, tier and monthly price." }, { status: 400 });
     }
     for (const limit of [maxVehicles, maxBranches, maxStaff]) {

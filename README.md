@@ -36,6 +36,16 @@ The `.env.example` file contains placeholders for Gmail SMTP. Before enabling ou
 
 SMTP delivery code, authentication emails, and transactional notification templates will be implemented and tested before being enabled in production.
 
+### PayMongo QR Ph subscription payments
+ROAM uses PayMongo dynamic QR Ph for subscription checkout. One QR Ph code can be scanned by supported GCash, Maya, and participating bank apps. Payment confirmation is handled by a signed webhook; do not activate subscriptions based on a browser redirect or customer screenshot.
+
+Configure these Vercel environment variables separately for Preview (test keys) and Production (live keys):
+- `PAYMONGO_SECRET_KEY` — server-side secret key.
+- `NEXT_PUBLIC_PAYMONGO_PUBLIC_KEY` — public key used by the browser to attach QR Ph.
+- `PAYMONGO_WEBHOOK_SECRET` — signing secret for the matching webhook endpoint.
+
+Register `https://roamph.vercel.app/api/webhooks/paymongo` in the PayMongo dashboard for `payment.paid` and `payment.failed`. Use the test webhook URL and secret for Preview. Never place secret keys in client code or commit them to Git.
+
 ### Product and security principles
 - Strict tenant data isolation on every tenant-owned record and query.
 - Server-side authorization; never trust tenant IDs supplied by the browser.

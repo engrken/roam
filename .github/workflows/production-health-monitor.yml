@@ -1,0 +1,45 @@
+name: ROAM Production Health Monitor
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: roam-production-health-monitor
+  cancel-in-progress: true
+
+jobs:
+  production-health:
+    name: Check production app and database
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check production health endpoint
+        env:
+          HEALTH_URL: https://roamph.vercel.app/api/health
+        run: |
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error --max-time 20 --retry 2 --retry-delay 5 "$HEALTH_URL")"
+          printf '%s' "$response" | node -e '
+            let raw = "";
+            process.stdin.setEncoding("utf8");
+            process.stdin.on("data", chunk => raw += chunk);
+            process.stdin.on("end", () => {
+              try {
+                const health = JSON.parse(raw);
+                if (health.status !== "ok" || health.database !== "ok") {
+                  console.error("Production health check failed: app or database is degraded.");
+                  process.exitCode = 1;
+                  return;
+                }
+                console.log("Production app and database are healthy.");
+              } catch {
+                console.error("Production health check failed: invalid health response.");
+                process.exitCode = 1;
+              }
+            });
+          '

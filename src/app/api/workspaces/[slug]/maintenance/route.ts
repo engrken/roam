@@ -35,17 +35,31 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
   const vehicle = await prisma.vehicle.findFirst({ where: { id: vehicleId, tenantId: access.tenant.id }, select: { id: true } });
   if (!vehicle) return NextResponse.json({ error: "Vehicle not found in this workspace." }, { status: 404 });
-  const [bookingConflict, maintenanceConflict] = await Promise.all([
-    prisma.bookingItem.findFirst({ where: { vehicleId, booking: { tenantId: access.tenant.id, status: { in: ["CONFIRMED", "ACTIVE"] }, startAt: { lt: endAt }, endAt: { gt: startAt } } }, select: { id: true } }),
-    prisma.vehicleMaintenance.findFirst({ where: { tenantId: access.tenant.id, vehicleId, status: { in: ["SCHEDULED", "IN_PROGRESS"] }, startAt: { lt: endAt }, endAt: { gt: startAt } }, select: { id: true } }),
-  ]);
-  if (bookingConflict) return NextResponse.json({ error: "This vehicle already has a confirmed or active booking during those dates." }, { status: 409 });
-  if (maintenanceConflict) return NextResponse.json({ error: "This vehicle already has a maintenance period during those dates." }, { status: 409 });
-  const record = await prisma.vehicleMaintenance.create({ data: {
-    tenantId: access.tenant.id, vehicleId, title, startAt, endAt,
-    description: typeof body.description === "string" ? body.description.trim().slice(0, 2000) : null,
-  } });
-  return NextResponse.json({ maintenance: record }, { status: 201 });
+  const result = await prisma.$transaction(async (tx) => {
+    // Share the public booking lock so a maintenance block and a new booking cannot race each other.
+    await tx.$queryRawUnsafe(
+      "SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))) AS advisory_lock",
+      access.tenant.id,
+      vehicleId,
+    );
+    const bookingConflict = await tx.bookingItem.findFirst({
+      where: { vehicleId, booking: { tenantId: access.tenant.id, status: { in: ["CONFIRMED", "ACTIVE"] }, startAt: { lt: endAt }, endAt: { gt: startAt } } },
+      select: { id: true },
+    });
+    const maintenanceConflict = await tx.vehicleMaintenance.findFirst({
+      where: { tenantId: access.tenant.id, vehicleId, status: { in: ["SCHEDULED", "IN_PROGRESS"] }, startAt: { lt: endAt }, endAt: { gt: startAt } },
+      select: { id: true },
+    });
+    if (bookingConflict) return { error: "This vehicle already has a confirmed or active booking during those dates." };
+    if (maintenanceConflict) return { error: "This vehicle already has a maintenance period during those dates." };
+    const maintenance = await tx.vehicleMaintenance.create({ data: {
+      tenantId: access.tenant.id, vehicleId, title, startAt, endAt,
+      description: typeof body.description === "string" ? body.description.trim().slice(0, 2000) : null,
+    } });
+    return { maintenance };
+  });
+  if ("error" in result) return NextResponse.json({ error: result.error }, { status: 409 });
+  return NextResponse.json({ maintenance: result.maintenance }, { status: 201 });
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {

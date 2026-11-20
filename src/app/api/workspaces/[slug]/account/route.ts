@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTenantAccess } from "@/lib/tenant-access";
+import { getTenantAccess, canManageBilling } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -8,7 +8,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace access denied." }, { status: 403 });
-  if (access.role !== "OWNER") return NextResponse.json({ error: "Only the workspace owner can view account and billing details." }, { status: 403 });
+  if (!canManageBilling(access.role)) return NextResponse.json({ error: "Only the workspace owner can view account and billing details." }, { status: 403 });
 
   const [tenant, plans, billingRecords, requests] = await Promise.all([
     prisma.tenant.findUnique({

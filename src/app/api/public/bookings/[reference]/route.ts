@@ -1,6 +1,7 @@
 import { NextRequest,NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
+import { consumeRateLimit } from "@/lib/rate-limit";
 import { sendBookingMessageNotification } from "@/lib/email";
 import { isTenantTrialReadOnly } from "@/lib/tenant-access";
 export const runtime="nodejs";
@@ -19,6 +20,12 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{referen
  if(token.length<20||message.length<1||message.length>2000)return NextResponse.json({error:"Enter a message (up to 2,000 characters) using your booking access link."},{status:400});
  const booking=await prisma.booking.findFirst({where:{reference,publicTokenHash:hash(token)},select:{id:true,tenantId:true,tenant:{select:{name:true,email:true,slug:true}}}});
  if(!booking)return NextResponse.json({error:"Booking not found."},{status:404});
+ const clientIp=request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()||request.headers.get("x-real-ip")||"unknown";
+ const [bookingAllowed,ipAllowed]=await Promise.all([
+  consumeRateLimit("customer-booking-message",booking.id,10,60*60*1000),
+  consumeRateLimit("customer-booking-message-ip",clientIp,40,60*60*1000),
+ ]);
+ if(!bookingAllowed||!ipAllowed)return NextResponse.json({error:"Too many messages. Please try again later."},{status:429});
  if(await isTenantTrialReadOnly(booking.tenantId))return NextResponse.json({error:"Messaging is temporarily unavailable because this rental workspace is in read-only mode."},{status:423});
  await prisma.bookingMessage.create({data:{bookingId:booking.id,sender:"CUSTOMER",body:message}});
  try {

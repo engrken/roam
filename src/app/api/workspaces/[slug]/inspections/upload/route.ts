@@ -3,6 +3,7 @@ import { handleUpload } from "@vercel/blob/client";
 import { head } from "@vercel/blob";
 import { getTenantAccess,canManageFleet,workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
+import { consumeRateLimit } from "@/lib/rate-limit";
 export const runtime="nodejs";
 export async function POST(request:NextRequest,{params}:{params:Promise<{slug:string}>}){
  const {slug}=await params;const access=await getTenantAccess(slug);
@@ -17,6 +18,12 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{slug:st
     const inspectionId=String(payload.inspectionId||"");
     const inspection=await prisma.vehicleInspection.findFirst({where:{id:inspectionId,tenantId:access.tenant.id},select:{id:true}});
     if(!inspection)throw new Error("Inspection record not found.");
+    const clientIp=request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()||request.headers.get("x-real-ip")||"unknown";
+    const [userAllowed,ipAllowed]=await Promise.all([
+     consumeRateLimit("inspection-photo-user",access.user.id,80,60*60*1000),
+     consumeRateLimit("inspection-photo-ip",clientIp,120,60*60*1000),
+    ]);
+    if(!userAllowed||!ipAllowed)throw new Error("Too many inspection photo uploads. Please try again later.");
     return {allowedContentTypes:["image/jpeg","image/png","image/webp"],maximumSizeInBytes:5*1024*1024,addRandomSuffix:true,tokenPayload:JSON.stringify({inspectionId})};
    },
    onUploadCompleted:async({blob,tokenPayload})=>{

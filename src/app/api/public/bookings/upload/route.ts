@@ -31,8 +31,8 @@ export async function POST(request:NextRequest){
     const payload=JSON.parse(tokenPayload||"{}");
     const bookingId=String(payload.bookingId||"");const kind=String(payload.kind||"");
     if(!bookingId||!kind)throw new Error("Missing booking upload metadata.");
-    const booking=await prisma.booking.findUnique({where:{id:bookingId},select:{tenantId:true}});
-    if(!booking||await isTenantTrialReadOnly(booking.tenantId))throw new Error("Document uploads are unavailable for this workspace.");
+    const booking=await prisma.booking.findUnique({where:{id:bookingId},select:{tenantId:true,tenant:{select:{status:true}}}});
+    if(!booking||!["ACTIVE","TRIAL"].includes(booking.tenant.status)||await isTenantTrialReadOnly(booking.tenantId))throw new Error("Document uploads are unavailable for this workspace.");
     const metadata = await head(blob.pathname);
     await prisma.bookingDocument.create({data:{bookingId,kind,pathname:blob.pathname,fileName:blob.pathname.split("/").pop()||"document",contentType:metadata.contentType||blob.contentType||"application/octet-stream",size:metadata.size}});
    }

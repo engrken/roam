@@ -1,15 +1,11 @@
 import { createHash, randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { getTenantAccess, hasWorkspaceTier, workspaceWriteBlock } from "@/lib/tenant-access";
+import { getTenantAccess, hasWorkspaceTier, workspaceWriteBlock, canManageTeam } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 import { sendTeamInvitation } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function canManageTeam(role: string) {
-  return role === "OWNER" || role === "ADMIN";
-}
 
 function allowedRoles(actorRole: string) {
   return actorRole === "OWNER" ? ["ADMIN", "MANAGER", "STAFF"] : ["MANAGER", "STAFF"];

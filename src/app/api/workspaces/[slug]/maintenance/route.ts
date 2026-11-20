@@ -8,6 +8,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const { slug } = await params;
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace not found or access denied." }, { status: 404 });
+  if (!canManageFleet(access.role)) return NextResponse.json({ error: "You do not have permission to view maintenance records." }, { status: 403 });
   const records = await prisma.vehicleMaintenance.findMany({
     where: { tenantId: access.tenant.id },
     include: { vehicle: { select: { make: true, model: true, plateNumber: true } }, serviceRecords: true },

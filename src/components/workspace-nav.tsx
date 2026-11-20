@@ -88,19 +88,21 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
     <nav className="roam-side-nav" id="roam-workspace-menu" aria-label="Workspace navigation" onClick={() => setMenuOpen(false)}>
       <Link title="Overview" className={active === "overview" ? "active" : ""} href={`/workspace/${slug}`}><LayoutDashboard size={18}/><span className="roam-nav-label">Overview</span></Link>
       <Link title="Fleet management" className={active === "fleet" ? "active" : ""} href={`/workspace/${slug}/fleet`}><CarFront size={18}/><span className="roam-nav-label">Fleet management</span></Link>
-      <Link title="Maintenance & expenses" className={active === "maintenance" ? "active" : ""} href={`/workspace/${slug}/maintenance`}><Wrench size={18}/><span className="roam-nav-label">Maintenance & expenses</span></Link>
-      <Link title="Fleet calendar" className={active === "calendar" ? "active" : ""} href={`/workspace/${slug}/calendar`}><CalendarDays size={18}/><span className="roam-nav-label">Fleet calendar</span></Link>
-      <Link title="Bookings" className={active === "bookings" ? "active" : ""} href={`/workspace/${slug}/bookings`}><CalendarDays size={18}/><span className="roam-nav-label">Bookings</span></Link>
-      <Link title="Customer messages" className={active === "messages" ? "active" : ""} href={`/workspace/${slug}/messages`}><MessageCircle size={18}/><span className="roam-nav-label">Customer messages</span></Link>
-      <Link title="Financials" className={active === "finance" ? "active" : ""} href={`/workspace/${slug}/finance`}><Wallet size={18}/><span className="roam-nav-label">Financials</span></Link>
+      {effectiveRole !== "STAFF" && <>
+        <Link title="Maintenance & expenses" className={active === "maintenance" ? "active" : ""} href={`/workspace/${slug}/maintenance`}><Wrench size={18}/><span className="roam-nav-label">Maintenance & expenses</span></Link>
+        <Link title="Fleet calendar" className={active === "calendar" ? "active" : ""} href={`/workspace/${slug}/calendar`}><CalendarDays size={18}/><span className="roam-nav-label">Fleet calendar</span></Link>
+        <Link title="Bookings" className={active === "bookings" ? "active" : ""} href={`/workspace/${slug}/bookings`}><CalendarDays size={18}/><span className="roam-nav-label">Bookings</span></Link>
+        <Link title="Customer messages" className={active === "messages" ? "active" : ""} href={`/workspace/${slug}/messages`}><MessageCircle size={18}/><span className="roam-nav-label">Customer messages</span></Link>
+        <Link title="Financials" className={active === "finance" ? "active" : ""} href={`/workspace/${slug}/finance`}><Wallet size={18}/><span className="roam-nav-label">Financials</span></Link>
+      </>}
       {lockedItem("branches", "Branches", <MapPin size={18}/>)}
-      <Link title="Customers" className={active === "customers" ? "active" : ""} href={`/workspace/${slug}/customers`}><Users size={18}/><span className="roam-nav-label">Customers</span></Link>
+{effectiveRole !== "STAFF" && <Link title="Customers" className={active === "customers" ? "active" : ""} href={`/workspace/${slug}/customers`}><Users size={18}/><span className="roam-nav-label">Customers</span></Link>}
       <Link title="Rental terms" className={active === "rental-terms" ? "active" : ""} href={`/workspace/${slug}/rental-terms`}><FileText size={18}/><span className="roam-nav-label">Rental terms</span></Link>
       {lockedItem("team", "Team & access", <UserCog size={18}/>)}
       {(effectiveRole === "OWNER" || effectiveRole === "ADMIN") && <Link title="Audit history" className={active === "audit" ? "active" : ""} href={`/workspace/${slug}/audit`}><ClipboardList size={18}/><span className="roam-nav-label">Audit history</span></Link>}
       <Link title="Business settings" className={active === "settings" ? "active" : ""} href={`/workspace/${slug}/settings`}><UserCog size={18}/><span className="roam-nav-label">Business settings</span></Link>
       {effectiveRole === "OWNER" && <Link title="Account & subscription" className={active === "account" ? "active" : ""} href={`/workspace/${slug}/account`}><ShieldCheck size={18}/><span className="roam-nav-label">Account & subscription</span></Link>}
-      {lockedItem("reports", "Reports", <UserCog size={18}/>)}
+      {effectiveRole !== "STAFF" && lockedItem("reports", "Reports", <UserCog size={18}/>)}
       <Link title="How-to guides" className={active === "help" ? "active" : ""} href={`/workspace/${slug}/help`}><BookOpen size={18}/><span className="roam-nav-label">How-to guides</span></Link>
       <Link href="/admin" title="Platform admin" className="roam-admin-link"><ShieldCheck size={18}/><span className="roam-nav-label">Platform admin</span></Link>
     </nav>

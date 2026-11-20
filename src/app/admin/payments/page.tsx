@@ -110,7 +110,7 @@ export default function AdminPaymentsPage() {
 
   return <main className="min-h-screen bg-slate-950 px-5 py-10 text-slate-100"><div className="mx-auto max-w-7xl">
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-6">
-      <div><div className="flex flex-wrap gap-4"><Link href="/admin" className="inline-flex items-center gap-2 text-sm text-cyan-300"><ArrowLeft size={15}/> Platform console</Link><Link href="/admin/plans" className="text-sm text-cyan-300">Plans & subscriptions</Link><Link href="/admin/audit-logs" className="text-sm text-cyan-300">Audit history</Link></div>
+      <div><div className="flex flex-wrap gap-4"><Link href="/admin" className="inline-flex items-center gap-2 text-sm text-cyan-300"><ArrowLeft size={15}/> Platform console</Link><Link href="/admin/plans" className="text-sm text-cyan-300">Plans & subscriptions</Link><Link href="/admin/refunds" className="text-sm text-cyan-300">Subscription refunds</Link><Link href="/admin/audit-logs" className="text-sm text-cyan-300">Audit history</Link></div>
         <p className="mt-4 text-xs font-bold tracking-[.2em] text-cyan-400">PLATFORM BILLING</p><h1 className="mt-2 text-3xl font-bold">Manual payment settings</h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-400">Manage QR payment destinations and verify tenant subscription payments. Payments are not recorded as received until approved.</p>
       </div>

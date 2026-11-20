@@ -47,8 +47,8 @@ export async function POST(request: NextRequest) {
     const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
     const otp = await prisma.$transaction(async (tx) => {
       // Acquire locks in the same order for every request to keep counters race-safe.
-      await tx.$queryRawUnsafe("SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1))) AS advisory_lock", "email:" + email);
-      await tx.$queryRawUnsafe("SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1))) AS advisory_lock", "ip:" + ipHash);
+      await tx.$queryRawUnsafe("SELECT pg_advisory_xact_lock(hashtext($1)) IS NULL AS locked", "email:" + email);
+      await tx.$queryRawUnsafe("SELECT pg_advisory_xact_lock(hashtext($1)) IS NULL AS locked", "ip:" + ipHash);
 
       await tx.emailOtp.deleteMany({
         where: { codeHash: "RATE_LIMIT", expiresAt: { lt: now } },

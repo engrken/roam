@@ -43,7 +43,8 @@ export default function OperationsPage() {
    if(!schedule.vehicleId && vd.vehicles?.[0]) setSchedule(x=>({...x,vehicleId:vd.vehicles[0].id}));
    if(!service.vehicleId && vd.vehicles?.[0]) setService(x=>({...x,vehicleId:vd.vehicles[0].id}));
   } catch(e) { setError(e instanceof Error?e.message:"Unable to load operations data."); }
- },[slug,schedule.vehicleId,service.vehicleId]);
+ },[slug]);
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- load() asynchronously synchronizes the page with remote workspace data.
  useEffect(()=>{void load();},[load]);
  async function submit(e:FormEvent, endpoint:string, body:object, reset:()=>void, label:string){
   e.preventDefault();setBusy(true);setError("");setNotice("");

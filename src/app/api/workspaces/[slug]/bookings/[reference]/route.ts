@@ -220,7 +220,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       // inside the next 24 hours, send the pickup reminder now instead of waiting
       // for a cron run that may occur after pickup.
       const now = new Date();
-      const reminderWindowEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
       if (result.nextStatus === "CONFIRMED" && isWithinPickupReminderWindow(result.startAt, now)) {
         const timeZone = access.tenant.timezone || "Asia/Manila";
         const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(result.startAt);

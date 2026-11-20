@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import {
   ArrowRight, ArrowUpRight, BadgeCheck, Building2, CalendarDays, Check,
   ChevronRight, CircleHelp, Clock3, CreditCard, LockKeyhole, Mail,
@@ -139,7 +140,7 @@ export default function AccountPage() {
     <main className="roam-main roam-account-main">
       <header className="roam-topbar roam-account-topbar">
         <div><span className="roam-eyebrow">WORKSPACE SETTINGS</span><h1>Account & subscription</h1><p>Your workspace profile, plan and billing activity in one place.</p></div>
-        <a href="#account-security" className="roam-account-security-link"><LockKeyhole size={15}/> Account security</a>
+        <div className="flex flex-wrap items-center gap-2"><Link href={"/workspace/" + slug + "/payments"} className="roam-account-security-link"><CreditCard size={15}/> Make a payment</Link><a href="#account-security" className="roam-account-security-link"><LockKeyhole size={15}/> Account security</a></div>
       </header>
 
       {error && <div className="client-alert roam-account-alert" role="alert">{error}</div>}

@@ -97,6 +97,7 @@ model Tenant {
   vehicleServiceRecords VehicleServiceRecord[]
   operatingExpenses OperatingExpense[]
   subscriptionChangeRequests SubscriptionChangeRequest[]
+  subscriptionPaymentSubmissions SubscriptionPaymentSubmission[]
 }
 
 model User {
@@ -450,6 +451,53 @@ model SubscriptionChangeRequest {
   @@index([status, createdAt])
 }
 
+
+
+model SubscriptionPaymentMethod {
+  id             String   @id @default(cuid())
+  key            String   @unique
+  label          String
+  accountName    String?
+  instructions   String?  @db.Text
+  qrImageData    String?  @db.Text
+  qrContentType  String?
+  enabled        Boolean  @default(false)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  submissions    SubscriptionPaymentSubmission[]
+}
+
+model SubscriptionPaymentSubmission {
+  id                         String   @id @default(cuid())
+  tenantId                   String
+  methodId                   String
+  methodLabel                String
+  accountName                String?
+  reference                  String
+  amount                     Decimal  @db.Decimal(12, 2)
+  paidAt                     DateTime
+  receiptData                String?  @db.Text
+  receiptContentType         String?
+  status                     String   @default("PENDING")
+  provisionalUntil           DateTime
+  previousTenantStatus       TenantStatus
+  previousSubscriptionStatus String
+  previousCurrentPeriodStart DateTime?
+  previousCurrentPeriodEnd   DateTime?
+  previousTrialEndsAt        DateTime?
+  previousTrialGraceEndsAt   DateTime?
+  reviewedById               String?
+  reviewedAt                 DateTime?
+  rejectionReason            String?  @db.Text
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+  tenant                     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  method                     SubscriptionPaymentMethod @relation(fields: [methodId], references: [id], onDelete: Restrict)
+  @@unique([methodId, reference])
+  @@index([status, provisionalUntil])
+  @@index([tenantId, createdAt])
+}
 
 model RentalPayment {
   id        String   @id @default(cuid())

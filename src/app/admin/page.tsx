@@ -161,6 +161,7 @@ export default function AdminPage() {
         <nav aria-label="Platform navigation" className="flex flex-wrap items-center gap-x-5 gap-y-3 text-sm">
           <Link href="/admin" aria-current="page" className="text-white">Overview</Link>
           <Link href="/admin/plans" className="text-slate-400 hover:text-white">Plans & subscriptions</Link>
+          <Link href="/admin/payments" className="text-slate-400 hover:text-white">Payment settings</Link>
           <Link href="/admin/audit-logs" className="text-slate-400 hover:text-white">Audit history</Link>
           <Link href="/workspace" className="text-slate-400 hover:text-white">My workspace</Link>
           <button onClick={signOut} className="text-cyan-300 hover:text-white">Sign out</button>
@@ -282,6 +283,7 @@ export default function AdminPage() {
 
       <section className="mt-6 grid gap-3 md:grid-cols-3">
         <Link href="/admin/plans" className="group rounded-2xl border border-white/10 bg-slate-900 p-5 hover:border-cyan-300/40"><Wallet className="mb-4 text-cyan-300" size={21}/><h3 className="font-semibold">Plans & subscriptions</h3><p className="mt-1 text-xs leading-5 text-slate-400">Configure plan allowances and manage tenant plan assignments.</p><span className="mt-4 inline-block text-xs font-semibold text-cyan-300">Manage plans →</span></Link>
+        <Link href="/admin/payments" className="group rounded-2xl border border-white/10 bg-slate-900 p-5 hover:border-cyan-300/40"><Wallet className="mb-4 text-cyan-300" size={21}/><h3 className="font-semibold">Payment settings</h3><p className="mt-1 text-xs leading-5 text-slate-400">Manage GCash, Maya and bank QR codes, then review tenant payment submissions.</p><span className="mt-4 inline-block text-xs font-semibold text-cyan-300">Manage payments →</span></Link>
         <Link href="/admin/audit-logs" className="group rounded-2xl border border-white/10 bg-slate-900 p-5 hover:border-cyan-300/40"><ShieldCheck className="mb-4 text-cyan-300" size={21}/><h3 className="font-semibold">Audit history</h3><p className="mt-1 text-xs leading-5 text-slate-400">Review platform administrator actions and tenant changes.</p><span className="mt-4 inline-block text-xs font-semibold text-cyan-300">View audit trail →</span></Link>
         <div className="rounded-2xl border border-white/10 bg-slate-900 p-5"><Activity className="mb-4 text-cyan-300" size={21}/><h3 className="font-semibold">Platform operations</h3><p className="mt-1 text-xs leading-5 text-slate-400">Tenant access is controlled independently of subscription payment. Confirm billing outside ROAM until a payment provider is integrated.</p></div>
       </section>

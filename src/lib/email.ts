@@ -294,3 +294,57 @@ export async function sendReferralRewardEmail(input: {
     html: '<div style="background:#f3f6fb;padding:32px 16px;font-family:Arial,sans-serif;color:#172033;line-height:1.6"><div style="max-width:540px;margin:auto;background:#fff;border-radius:14px;padding:28px"><div style="font-size:22px;font-weight:800;letter-spacing:2px">ROAM</div><h2>You earned one month free!</h2><p>Your referral with <strong>' + safe(input.referredBusinessName) + '</strong> has qualified. Your workspace, <strong>' + safe(input.businessName) + '</strong>, has received one free month of ROAM.</p><p>Your referral partner also received one free month.</p><p style="margin:24px 0"><a href="' + safe(input.accountUrl) + '" style="display:inline-block;background:#087e9b;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:700">View account & subscription</a></p><p style="font-size:13px;color:#66758a">Thank you for helping more rental businesses discover ROAM.</p></div></div>',
   });
 }
+
+export async function sendSubscriptionPaymentEmail(input: {
+  recipient: string;
+  businessName: string;
+  status: "SUBMITTED" | "APPROVED" | "REJECTED" | "EXPIRED";
+  reference: string;
+  amount: number;
+  accountUrl: string;
+  provisionalUntil?: Date;
+  reason?: string;
+}) {
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  if (!from) throw new Error("Email sender is not configured.");
+  const safe = (value: string) => value.replace(/[&<>"']/g, character => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[character] || character);
+  const details = {
+    SUBMITTED: {
+      subject: "ROAM received your subscription payment submission",
+      heading: "Payment submitted for review",
+      message: "We received your payment details. Your workspace has provisional access while the ROAM team verifies the payment.",
+    },
+    APPROVED: {
+      subject: "Your ROAM subscription payment is confirmed",
+      heading: "Payment confirmed",
+      message: "Your payment has been approved and your subscription is now active or extended.",
+    },
+    REJECTED: {
+      subject: "Your ROAM subscription payment needs attention",
+      heading: "Payment submission rejected",
+      message: input.reason || "We could not verify this payment submission. Please review the payment details and contact ROAM if you need help.",
+    },
+    EXPIRED: {
+      subject: "Your ROAM provisional access has expired",
+      heading: "Payment confirmation period expired",
+      message: "The 3-day provisional access period ended before your payment was approved. Your previous subscription state has been restored.",
+    },
+  }[input.status];
+  const deadline = input.provisionalUntil
+    ? input.provisionalUntil.toLocaleString("en-PH", { timeZone: "Asia/Manila", dateStyle: "medium", timeStyle: "short" })
+    : "";
+  const text = [
+    "Hello " + input.businessName + ",", "",
+    details.message,
+    "Payment reference: " + input.reference,
+    "Amount submitted: PHP " + input.amount.toFixed(2),
+    ...(deadline ? ["Provisional access until: " + deadline] : []),
+    "", "View payment status: " + input.accountUrl, "", "ROAM",
+  ].join("\n");
+  await getTransport().sendMail({
+    from, to: input.recipient, subject: details.subject, text,
+    html: '<div style="background:#f3f6fb;padding:32px 16px;font-family:Arial,sans-serif;color:#172033;line-height:1.6"><div style="max-width:560px;margin:auto;background:#fff;border-radius:14px;padding:28px"><div style="font-size:22px;font-weight:800;letter-spacing:2px">ROAM</div><h2>' + safe(details.heading) + '</h2><p>Hello ' + safe(input.businessName) + ',</p><p>' + safe(details.message) + '</p><p><strong>Payment reference:</strong> ' + safe(input.reference) + '<br/><strong>Amount submitted:</strong> PHP ' + input.amount.toFixed(2) + (deadline ? '<br/><strong>Provisional access until:</strong> ' + safe(deadline) : '') + '</p><p style="margin:24px 0"><a href="' + safe(input.accountUrl) + '" style="display:inline-block;background:#087e9b;color:#fff;text-decoration:none;padding:13px 20px;border-radius:8px;font-weight:700">View payment status</a></p><p style="font-size:13px;color:#66758a">ROAM does not mark a payment as received until an administrator approves it.</p></div></div>',
+  });
+}

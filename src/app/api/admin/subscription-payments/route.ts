@@ -133,7 +133,7 @@ export async function PATCH(request: NextRequest) {
           });
           await tx.subscription.update({
             where: { tenantId: item.tenantId },
-            data: { status: "active", currentPeriodStart: periodStart, currentPeriodEnd: periodEnd, trialEndsAt: null, trialGraceEndsAt: null, referralCreditMonths: 0 },
+            data: { status: "active", currentPeriodStart: periodStart, currentPeriodEnd: periodEnd, trialEndsAt: null, trialGraceEndsAt: null, referralCreditMonths: 0, renewalReminderSentAt: null, renewalOverdueNoticeSentAt: null },
           });
           await tx.tenant.update({ where: { id: item.tenantId }, data: { status: "ACTIVE" } });
         } else {

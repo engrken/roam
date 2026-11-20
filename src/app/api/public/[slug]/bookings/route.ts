@@ -146,7 +146,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const result = await prisma.$transaction(async (tx) => {
       // Serialize requests for this tenant/vehicle so overlap checks and inserts are atomic.
       await tx.$queryRawUnsafe(
-        "SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))) AS advisory_lock",
+        "SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2)) IS NULL AS locked",
         tenant.id,
         vehicleId,
       );

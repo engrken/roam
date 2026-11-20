@@ -25,7 +25,8 @@ type AccountData = {
 const money = (amount: number, currency = "PHP") => new Intl.NumberFormat("en-PH", { style: "currency", currency }).format(amount);
 const date = (value: string | null) => value ? new Date(value).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }) : "—";
 const titleCase = (value: string) => value.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, letter => letter.toUpperCase());
-const capacity = (value: number | null) => value == null ? "Unlimited" : String(value);
+const capacity = (value: number | null, tier?: string) => tier === "ENTERPRISE" ? "Custom" : value == null ? "Unlimited" : String(value);
+const planPrice = (tier: string, amount: number) => tier === "ENTERPRISE" ? "Custom pricing" : money(amount) + " / month";
 const statusClass = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
 export default function AccountPage() {
@@ -175,9 +176,9 @@ export default function AccountPage() {
               return <article className={"roam-account-plan-card" + (isCurrent ? " is-current" : "")} key={plan.tier}>
                 {isCurrent && <span className="roam-account-current-label"><BadgeCheck size={13}/> CURRENT PLAN</span>}
                 <div className="roam-account-plan-card-title"><h3>{plan.name}</h3><span>{plan.tier}</span></div>
-                <div className="roam-account-plan-card-price">{money(plan.monthlyPrice)}<small>/ month</small></div>
+                <div className="roam-account-plan-card-price">{planPrice(plan.tier, plan.monthlyPrice)}{plan.tier !== "ENTERPRISE" && <small>/ month</small>}</div>
                 <p className="roam-account-plan-caption">{isCurrent ? "Your workspace is currently on this plan." : "Available for your workspace."}</p>
-                <div className="roam-account-capacities"><div><span>Vehicles</span><strong>{capacity(plan.maxVehicles)}</strong></div><div><span>Branches</span><strong>{capacity(plan.maxBranches)}</strong></div><div><span>Staff</span><strong>{capacity(plan.maxStaff)}</strong></div></div>
+                <div className="roam-account-capacities"><div><span>Vehicles</span><strong>{capacity(plan.maxVehicles, plan.tier)}</strong></div><div><span>Branches</span><strong>{capacity(plan.maxBranches, plan.tier)}</strong></div><div><span>Staff</span><strong>{capacity(plan.maxStaff, plan.tier)}</strong></div></div>
                 {isCurrent && <div className="roam-account-current-foot"><Check size={14}/> Active for this workspace</div>}
               </article>;
             })}
@@ -187,7 +188,7 @@ export default function AccountPage() {
             <div className="roam-account-request-controls">
               <label className="roam-account-visually-hidden" htmlFor="account-tier">Requested plan</label>
               <select id="account-tier" value={selectedTier} onChange={event => setSelectedTier(event.target.value)} disabled={!!pendingRequest || saving}>
-                <option value="">Select a plan</option>{data.plans.filter(plan => plan.tier !== tier).map(plan => <option key={plan.tier} value={plan.tier}>{plan.name} · {money(plan.monthlyPrice)}/mo</option>)}
+                <option value="">Select a plan</option>{data.plans.filter(plan => plan.tier !== tier).map(plan => <option key={plan.tier} value={plan.tier}>{plan.name} · {plan.tier === "ENTERPRISE" ? "Custom pricing" : money(plan.monthlyPrice) + "/mo"}</option>)}
               </select>
               <button className="roam-primary-button" type="button" disabled={!selectedTier || saving || !!pendingRequest} onClick={requestChange}>{saving ? "Submitting…" : "Request plan change"} <ArrowRight size={16}/></button>
             </div>

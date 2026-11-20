@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getTenantAccess, canManageFleet, hasWorkspaceTier, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 import { recordWorkspaceAudit } from "@/lib/workspace-audit";
+import { isPlanLimitReached } from "@/lib/plan-limits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -59,6 +60,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   try {
     const branch = await prisma.$transaction(async tx => {
+      await tx.$queryRawUnsafe("SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1))) AS advisory_lock", "branch-limit:" + access.tenant.id);
+      const subscription = await tx.subscription.findUnique({ where: { tenantId: access.tenant.id }, select: { plan: { select: { maxBranches: true } } } });
+      const limit = subscription?.plan.maxBranches ?? null;
+      const activeCount = await tx.branch.count({ where: { tenantId: access.tenant.id, isActive: true } });
+      if (isPlanLimitReached(limit, activeCount)) return null;
       const created = await tx.branch.create({
         data: { tenantId: access.tenant.id, ...parsed },
         select: { id: true, name: true, code: true, address: true, isActive: true, createdAt: true },
@@ -70,6 +76,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       });
       return created;
     });
+    if (!branch) return NextResponse.json({ error: "Your current plan has reached its active branch limit. Upgrade your workspace or deactivate an existing branch to continue.", code: "BRANCH_LIMIT_REACHED" }, { status: 409 });
     return NextResponse.json({ branch }, { status: 201 });
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
@@ -116,6 +123,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   try {
     const branch = await prisma.$transaction(async tx => {
+      if (data.isActive === true && !existing.isActive) {
+        await tx.$queryRawUnsafe("SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1))) AS advisory_lock", "branch-limit:" + access.tenant.id);
+        const subscription = await tx.subscription.findUnique({ where: { tenantId: access.tenant.id }, select: { plan: { select: { maxBranches: true } } } });
+        const limit = subscription?.plan.maxBranches ?? null;
+        const activeCount = await tx.branch.count({ where: { tenantId: access.tenant.id, isActive: true } });
+        if (isPlanLimitReached(limit, activeCount)) return null;
+      }
       const updated = await tx.branch.update({
         where: { id },
         data,
@@ -128,6 +142,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       });
       return updated;
     });
+    if (!branch) return NextResponse.json({ error: "Your current plan has reached its active branch limit. Upgrade your workspace or deactivate an existing branch to continue.", code: "BRANCH_LIMIT_REACHED" }, { status: 409 });
     return NextResponse.json({ branch });
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {

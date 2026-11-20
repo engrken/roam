@@ -612,3 +612,68 @@
   .roam-metric-grid{grid-template-columns:minmax(0,1fr)}
   .roam-main{padding-left:13px;padding-right:13px}
 }
+
+
+/* Final collapsed-rail correction: account for padding in the rail width and
+   explicitly suppress every text-bearing child of locked navigation items. */
+@media (min-width:761px){
+  .roam-sidebar.roam-sidebar-collapsed{
+    box-sizing:border-box;
+    width:76px;
+    min-width:76px;
+    padding:20px 8px;
+    overflow-x:hidden;
+  }
+  .roam-sidebar.roam-sidebar-collapsed .roam-side-nav{
+    width:100%;
+    min-width:0;
+    overflow-x:hidden;
+    scrollbar-width:none;
+  }
+  .roam-sidebar.roam-sidebar-collapsed .roam-side-nav::-webkit-scrollbar{
+    display:none;
+    width:0;
+  }
+  .roam-sidebar.roam-sidebar-collapsed .roam-side-nav .roam-nav-locked{
+    box-sizing:border-box;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    padding:10px 0;
+    overflow:hidden;
+    justify-content:center;
+    font-size:0;
+    white-space:nowrap;
+  }
+  .roam-sidebar.roam-sidebar-collapsed .roam-side-nav .roam-nav-locked .roam-nav-label,
+  .roam-sidebar.roam-sidebar-collapsed .roam-side-nav .roam-nav-locked .roam-nav-lock-label,
+  .roam-sidebar.roam-sidebar-collapsed .roam-side-nav .roam-nav-locked .roam-nav-lock-icon{
+    display:none !important;
+    visibility:hidden !important;
+    width:0 !important;
+    max-width:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+  }
+  .roam-sidebar.roam-sidebar-collapsed .roam-side-nav .roam-nav-locked > svg:first-child{
+    display:block;
+    visibility:visible;
+    width:19px;
+    height:19px;
+    flex:0 0 19px;
+    margin:0;
+  }
+  .roam-sidebar.roam-sidebar-collapsed .roam-side-nav a{
+    box-sizing:border-box;
+    width:100%;
+    min-width:0;
+    justify-content:center;
+    padding-left:0;
+    padding-right:0;
+    overflow:hidden;
+  }
+  .roam-sidebar.roam-sidebar-collapsed~.roam-main{
+    width:calc(100% - 76px);
+    margin-left:76px;
+  }
+}

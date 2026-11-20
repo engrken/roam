@@ -146,7 +146,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         const vehicleIds = current.items.map((item) => item.vehicleId).sort();
         for (const vehicleId of vehicleIds) {
           await tx.$queryRawUnsafe(
-            "SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))) AS advisory_lock",
+            "SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2)) IS NULL AS locked",
             access.tenant.id,
             vehicleId,
           );

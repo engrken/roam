@@ -91,6 +91,13 @@ export default function AccountPage() {
       const createdResponse = await fetch(endpoint, { method: "POST" });
       const created = await createdResponse.json();
       if (!createdResponse.ok) throw new Error(created.error || "Unable to create a QR payment request.");
+      if (created.existing && created.payment?.qrCodeData) {
+        setPaymentQrData(created.payment.qrCodeData);
+        setPaymentReference(created.payment.reference);
+        setPaymentStatus(created.payment.status);
+        setNotice("Your existing QR Ph payment request is still valid.");
+        return;
+      }
 
       const authorization = "Basic " + btoa(created.publicKey + ":");
       const methodResponse = await fetch("https://api.paymongo.com/v1/payment_methods", {
@@ -265,7 +272,8 @@ export default function AccountPage() {
         {subscription && !["FREE", "ENTERPRISE"].includes(subscription.tier) && subscription.plan.monthlyPrice > 0 && <section className="roam-panel roam-account-section" id="subscription-payment">
           <div className="roam-account-section-heading"><div><span className="roam-eyebrow">SECURE ONLINE PAYMENT</span><h2>Pay your subscription</h2><p>Use one QR Ph code with GCash, Maya, or a participating Philippine bank app.</p></div><span className="roam-account-heading-icon"><QrCode size={20}/></span></div>
           {paymentError && <div className="client-alert roam-account-alert" role="alert">{paymentError}</div>}
-          {paymentStatus === "PAID" ? <p className="client-success-inline" role="status"><Check size={16}/> Your latest QR payment has been received.</p> : <>
+          {paymentStatus === "PAID" && <p className="client-success-inline" role="status"><Check size={16}/> Your latest QR payment has been received. The subscription period has been updated.</p>}
+          <>
             <p>Amount due: <strong>{money(subscription.plan.monthlyPrice)}</strong> for the {subscription.plan.name} plan.</p>
             <button className="roam-primary-button" type="button" disabled={paymentBusy} onClick={() => void createSubscriptionQr()}>{paymentBusy ? "Preparing secure QR…" : paymentQrData ? "Generate a new QR code" : "Generate QR Ph payment"} <QrCode size={16}/></button>
             {paymentQrData && <div className="roam-account-payment-qr">

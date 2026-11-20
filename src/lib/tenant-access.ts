@@ -2,6 +2,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hasCurrentLegalAcceptance } from "@/lib/legal";
 import { NextResponse } from "next/server";
+import { canManageFleet, canManageTeam, canManageWorkspaceSettings, canManageBilling } from "@/lib/permissions";
+export { canManageFleet, canManageTeam, canManageWorkspaceSettings, canManageBilling } from "@/lib/permissions";
 
 export async function getTenantAccess(slug: string) {
   const user = await getCurrentUser();
@@ -18,10 +20,6 @@ export async function getTenantAccess(slug: string) {
     && !!tenant.subscription.trialGraceEndsAt
     && tenant.subscription.trialGraceEndsAt <= new Date();
   return { user, tenant, role: membership.role, trialReadOnly };
-}
-
-export function canManageFleet(role: string) {
-  return ["OWNER", "ADMIN", "MANAGER"].includes(role);
 }
 
 const planTierRank: Record<string, number> = {

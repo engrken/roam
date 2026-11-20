@@ -33,7 +33,7 @@ export async function PATCH(request: NextRequest) {
     const maxVehicles = body.maxVehicles === null || body.maxVehicles === "" ? null : Number(body.maxVehicles);
     const maxBranches = body.maxBranches === null || body.maxBranches === "" ? null : Number(body.maxBranches);
     const maxStaff = body.maxStaff === null || body.maxStaff === "" ? null : Number(body.maxStaff);
-    if (!["STARTER", "PRO", "BUSINESS", "ENTERPRISE"].includes(tier) || !name || name.length > 60 || !Number.isFinite(monthlyPrice) || monthlyPrice < 0 || monthlyPrice > 100000000) {
+    if (!["FREE", "STARTER", "PRO", "BUSINESS", "ENTERPRISE"].includes(tier) || !name || name.length > 60 || !Number.isFinite(monthlyPrice) || monthlyPrice < 0 || monthlyPrice > 100000000) {
       return NextResponse.json({ error: "Enter a valid plan name, tier and monthly price." }, { status: 400 });
     }
     for (const limit of [maxVehicles, maxBranches, maxStaff]) {
@@ -195,18 +195,19 @@ export async function PATCH(request: NextRequest) {
   if (body?.action === "assign-plan") {
     const tenantId = typeof body.tenantId === "string" ? body.tenantId : "";
     const tier = typeof body.tier === "string" ? body.tier : "";
-    if (!tenantId || !["STARTER", "PRO", "BUSINESS", "ENTERPRISE"].includes(tier)) return NextResponse.json({ error: "Choose a valid tenant and plan." }, { status: 400 });
-    const plan = await prisma.plan.findUnique({ where: { tier: tier as "STARTER" | "PRO" | "BUSINESS" | "ENTERPRISE", active: true } }).catch(() => null);
+    if (!tenantId || !["FREE", "STARTER", "PRO", "BUSINESS", "ENTERPRISE"].includes(tier)) return NextResponse.json({ error: "Choose a valid tenant and plan." }, { status: 400 });
+    const plan = await prisma.plan.findUnique({ where: { tier: tier as "FREE" | "STARTER" | "PRO" | "BUSINESS" | "ENTERPRISE", active: true } }).catch(() => null);
     if (!plan) return NextResponse.json({ error: "That plan is unavailable." }, { status: 404 });
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true } });
     if (!tenant) return NextResponse.json({ error: "Tenant not found." }, { status: 404 });
     const current = await prisma.subscription.findUnique({ where: { tenantId }, select: { status: true } });
     const subscription = await prisma.subscription.upsert({
       where: { tenantId },
-      create: { tenantId, planId: plan.id, tier: plan.tier, status: "manual_review", currentPeriodStart: new Date() },
-      update: { planId: plan.id, tier: plan.tier, status: current?.status === "canceled" || current?.status === "trialing" ? "manual_review" : current?.status || "manual_review" },
+      create: { tenantId, planId: plan.id, tier: plan.tier, status: plan.tier === "FREE" ? "complimentary" : "manual_review", currentPeriodStart: new Date() },
+      update: { planId: plan.id, tier: plan.tier, status: plan.tier === "FREE" ? "complimentary" : current?.status === "canceled" || current?.status === "trialing" || current?.status === "complimentary" ? "manual_review" : current?.status || "manual_review", currentPeriodStart: plan.tier === "FREE" ? new Date() : undefined, currentPeriodEnd: plan.tier === "FREE" ? null : undefined, trialEndsAt: plan.tier === "FREE" ? null : undefined, trialGraceEndsAt: plan.tier === "FREE" ? null : undefined },
       select: { tier: true, status: true, currentPeriodEnd: true },
     });
+    if (plan.tier === "FREE") await prisma.tenant.update({ where: { id: tenantId }, data: { status: "ACTIVE" } });
     await prisma.platformAuditLog.create({ data: {
       actorUserId: admin.id, actorEmail: admin.email, action: "tenant.plan.assigned",
       entityType: "tenant", entityId: tenantId, details: { tier: subscription.tier, status: subscription.status },

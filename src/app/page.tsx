@@ -39,14 +39,14 @@ function formatPlanPrice(value: number) {
 }
 
 function formatPlanLimit(value: number | null, singular: string) {
-  const plural = singular === "branch" ? "branches" : singular === "staff account" ? "staff accounts" : singular + "s";
+  const plural = singular === "branch" ? "branches" : singular === "workspace member" ? "staff accounts" : singular + "s";
   if (value === null) return "Unlimited " + plural;
   return value + " " + (value === 1 ? singular : plural);
 }
 
 function describePlanCapacity(plan: PublicPlan) {
   if (plan.tier === "ENTERPRISE") return "Custom fleet, branch, and team allowances based on your operation.";
-  return `Includes ${formatPlanLimit(plan.maxVehicles, "vehicle")}, ${formatPlanLimit(plan.maxBranches, "branch")}, and ${formatPlanLimit(plan.maxStaff, "staff account")}.`;
+  return `Includes ${formatPlanLimit(plan.maxVehicles, "vehicle")}, ${formatPlanLimit(plan.maxBranches, "branch")}, and ${formatPlanLimit(plan.maxStaff, "workspace member")}.`;
 }
 
 function planBenefits(tier: string) {
@@ -203,7 +203,7 @@ export default function Home() {
               {plan.tier !== "ENTERPRISE" ? <>
                 <li><Check/> {formatPlanLimit(plan.maxVehicles, "vehicle")}</li>
                 <li><Check/> {formatPlanLimit(plan.maxBranches, "branch")}</li>
-                <li><Check/> {formatPlanLimit(plan.maxStaff, "staff account")}</li>
+                <li><Check/> {formatPlanLimit(plan.maxStaff, "workspace member")}</li>
               </> : <>
                 <li><Check/> Custom vehicle allowance</li>
                 <li><Check/> Custom branch allowance</li>

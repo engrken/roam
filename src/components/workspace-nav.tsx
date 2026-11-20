@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard, CarFront, LogOut, ShieldCheck, CalendarDays, MapPin, Users,
-  BookOpen, FileText, UserCog, MessageCircle, Wallet, Menu, X, LockKeyhole, Wrench,
+  BookOpen, FileText, UserCog, MessageCircle, Wallet, Menu, X, LockKeyhole, Wrench, ClipboardList,
   ArrowUpRight,
 } from "lucide-react";
 
@@ -37,7 +37,7 @@ const lockedFeatures: Record<FeatureKey, FeatureInfo> = {
   },
 };
 
-export function WorkspaceNav({ slug, name, role, active }: { slug: string; name: string; role: string; active: "overview" | "fleet" | "maintenance" | "calendar" | "bookings" | "messages" | "finance" | "branches" | "customers" | "help" | "rental-terms" | "team" | "settings" | "reports" | "account" }) {
+export function WorkspaceNav({ slug, name, role, active }: { slug: string; name: string; role: string; active: "overview" | "fleet" | "maintenance" | "calendar" | "bookings" | "messages" | "finance" | "branches" | "customers" | "help" | "rental-terms" | "team" | "settings" | "reports" | "account" | "audit" }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [tier, setTier] = useState("FREE");
@@ -95,6 +95,7 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
       <Link className={active === "customers" ? "active" : ""} href={`/workspace/${slug}/customers`}><Users size={18}/> Customers</Link>
       <Link className={active === "rental-terms" ? "active" : ""} href={`/workspace/${slug}/rental-terms`}><FileText size={18}/> Rental terms</Link>
       {lockedItem("team", "Team & access", <UserCog size={18}/>)}
+      {(effectiveRole === "OWNER" || effectiveRole === "ADMIN") && <Link className={active === "audit" ? "active" : ""} href={`/workspace/${slug}/audit`}><ClipboardList size={18}/> Audit history</Link>}
       <Link className={active === "settings" ? "active" : ""} href={`/workspace/${slug}/settings`}><UserCog size={18}/> Business settings</Link>
       {effectiveRole === "OWNER" && <Link className={active === "account" ? "active" : ""} href={`/workspace/${slug}/account`}><ShieldCheck size={18}/> Account & subscription</Link>}
       {lockedItem("reports", "Reports", <UserCog size={18}/>)}

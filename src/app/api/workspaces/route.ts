@@ -34,7 +34,6 @@ export async function POST(request: NextRequest) {
 
     const workspace = await prisma.$transaction(async (tx) => {
       const plans = [
-        { tier: "FREE" as const, name: "Complimentary", monthlyPrice: 0, maxVehicles: 1, maxBranches: 1, maxStaff: 1 },
         { tier: "STARTER" as const, name: "Starter", monthlyPrice: 99, maxVehicles: 2, maxBranches: 1, maxStaff: 1 },
         { tier: "PRO" as const, name: "Pro", monthlyPrice: 499, maxVehicles: 5, maxBranches: 2, maxStaff: 1 },
         { tier: "BUSINESS" as const, name: "Business", monthlyPrice: 999, maxVehicles: 15, maxBranches: 3, maxStaff: 8 },

@@ -71,14 +71,14 @@ export default function PlatformPlansPage() {
       setNotice(tenant.name + " is already assigned to this plan.");
       return;
     }
-    if (!window.confirm(`Assign the ${tier} plan to ${tenant.name}? This changes the workspace's plan limits immediately. Payment is not collected by ROAM.`)) return;
+    if (!window.confirm(`Assign the ${tier} plan to ${tenant.name}? This changes the workspace's plan limits immediately. Complimentary access is free; paid plans still require verified payment.`)) return;
     setBusy(tenant.id); setError(""); setNotice("");
     try {
       const response = await fetch("/api/admin/plans", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "assign-plan", tenantId: tenant.id, tier }) });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Unable to assign plan.");
       setTenants(items => items.map(item => item.id === tenant.id ? { ...item, subscription: { tier: body.subscription.tier, status: body.subscription.status, currentPeriodEnd: body.subscription.currentPeriodEnd, trialEndsAt: item.subscription?.trialEndsAt || null, monthlyPrice: plans.find(plan => plan.tier === body.subscription.tier)?.monthlyPrice || 0 } } : item));
-      setNotice("Plan assigned to " + tenant.name + ". Subscription status remains subject to manual billing review.");
+      setNotice("Plan assigned to " + tenant.name + ". Complimentary access is active immediately; paid subscriptions remain subject to billing review.");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to assign plan.");
     } finally { setBusy(""); }
@@ -121,7 +121,7 @@ export default function PlatformPlansPage() {
   }
 
   return <main className="min-h-screen bg-slate-950 px-5 py-10 text-slate-100"><div className="mx-auto max-w-7xl">
-    <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-6"><div><div className="flex flex-wrap gap-4"><Link href="/admin" className="inline-flex items-center gap-2 text-sm text-cyan-300"><ArrowLeft size={15}/> Platform console</Link><Link href="/admin/audit-logs" className="text-sm text-cyan-300">Audit history</Link></div><p className="mt-4 text-xs font-bold tracking-[.2em] text-cyan-400">PLATFORM CONFIGURATION</p><h1 className="mt-2 text-3xl font-bold">Plans & subscriptions</h1><p className="mt-2 text-sm text-slate-400">Configure plan allowances and manually assign a plan to a tenant.</p></div><button onClick={() => void load()} className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm"><RefreshCw size={15}/> Refresh</button></header>
+    <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-6"><div><div className="flex flex-wrap gap-4"><Link href="/admin" className="inline-flex items-center gap-2 text-sm text-cyan-300"><ArrowLeft size={15}/> Platform console</Link><Link href="/admin/audit-logs" className="text-sm text-cyan-300">Audit history</Link></div><p className="mt-4 text-xs font-bold tracking-[.2em] text-cyan-400">PLATFORM CONFIGURATION</p><h1 className="mt-2 text-3xl font-bold">Plans & subscriptions</h1><p className="mt-2 text-sm text-slate-400">Configure paid and complimentary plans, assign entitlements, and review tenant billing.</p></div><button onClick={() => void load()} className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm"><RefreshCw size={15}/> Refresh</button></header>
     {error && <p role="alert" className="mt-5 rounded-xl bg-red-950/60 p-3 text-sm text-red-200">{error}</p>}
     {notice && <p role="status" className="mt-5 rounded-xl bg-emerald-950/50 p-3 text-sm text-emerald-200">{notice}</p>}
     {loading ? <p className="py-12 text-slate-400">Loading platform plans…</p> : <>

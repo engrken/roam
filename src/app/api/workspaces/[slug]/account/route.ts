@@ -21,7 +21,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
         subscription: { include: { plan: { select: { name: true, monthlyPrice: true, maxVehicles: true, maxBranches: true, maxStaff: true } } } },
       },
     }),
-    prisma.plan.findMany({ where: { active: true }, orderBy: { monthlyPrice: "asc" }, select: { tier: true, name: true, monthlyPrice: true, maxVehicles: true, maxBranches: true, maxStaff: true } }),
+    prisma.plan.findMany({ where: { active: true, tier: { not: "FREE" } }, orderBy: { monthlyPrice: "asc" }, select: { tier: true, name: true, monthlyPrice: true, maxVehicles: true, maxBranches: true, maxStaff: true } }),
     prisma.billingRecord.findMany({ where: { tenantId: access.tenant.id }, orderBy: { issuedAt: "desc" }, take: 50 }),
     prisma.subscriptionChangeRequest.findMany({ where: { tenantId: access.tenant.id }, orderBy: { createdAt: "desc" }, take: 10 }),
   ]);
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (access.role !== "OWNER") return NextResponse.json({ error: "Only the workspace owner can request a subscription change." }, { status: 403 });
   const body = await request.json().catch(() => null);
   const tier = typeof body?.tier === "string" ? body.tier : "";
-  if (!["FREE", "STARTER", "PRO", "BUSINESS", "ENTERPRISE"].includes(tier)) return NextResponse.json({ error: "Choose a valid subscription tier." }, { status: 400 });
+  if (!["STARTER", "PRO", "BUSINESS", "ENTERPRISE"].includes(tier)) return NextResponse.json({ error: "Choose a valid subscription tier." }, { status: 400 });
 
   const [plan, subscription, pending] = await Promise.all([
     prisma.plan.findUnique({ where: { tier: tier as "STARTER" | "PRO" | "BUSINESS" | "ENTERPRISE", active: true } }),

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
+import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,7 +46,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (name.length < 2 || name.length > 120 || phone.length < 5 || phone.length > 30 || email.length > 254 || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) || licenseNo.length > 60 || address.length > 300) {
     return NextResponse.json({ error: "Enter a valid customer name, phone, email, license number and address." }, { status: 400 });
   }
-  const customer = await prisma.customer.create({ data: { tenantId: access.tenant.id, name, phone, email: email || null, licenseNo: licenseNo || null, address: address || null } });
+  const customer = await prisma.$transaction(async tx => {
+    const created = await tx.customer.create({ data: { tenantId: access.tenant.id, name, phone, email: email || null, licenseNo: licenseNo || null, address: address || null } });
+    await recordWorkspaceAudit(tx, {
+      tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+      action: "customer.created", targetType: "customer", targetId: created.id,
+      details: { changedFields: "name,phone,email,licenseNo,address" },
+    });
+    return created;
+  });
   return NextResponse.json({ customer }, { status: 201 });
 }
 
@@ -66,7 +75,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (!id || name.length < 2 || name.length > 120 || phone.length < 5 || phone.length > 30 || email.length > 254 || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) || licenseNo.length > 60 || address.length > 300) {
     return NextResponse.json({ error: "Enter valid customer details." }, { status: 400 });
   }
-  const result = await prisma.customer.updateMany({ where: { id, tenantId: access.tenant.id }, data: { name, phone, email: email || null, licenseNo: licenseNo || null, address: address || null } });
-  if (!result.count) return NextResponse.json({ error: "Customer not found." }, { status: 404 });
+  const result = await prisma.$transaction(async tx => {
+    const updated = await tx.customer.updateMany({ where: { id, tenantId: access.tenant.id }, data: { name, phone, email: email || null, licenseNo: licenseNo || null, address: address || null } });
+    if (!updated.count) return false;
+    await recordWorkspaceAudit(tx, {
+      tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+      action: "customer.updated", targetType: "customer", targetId: id,
+      details: { changedFields: "name,phone,email,licenseNo,address" },
+    });
+    return true;
+  });
+  if (!result) return NextResponse.json({ error: "Customer not found." }, { status: 404 });
   return NextResponse.json({ updated: true });
 }

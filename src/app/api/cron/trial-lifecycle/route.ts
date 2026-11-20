@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
   for (const subscription of paidSubscriptions) {
     const ownerEmail = subscription.tenant.memberships[0]?.user.email;
     if (!ownerEmail || !subscription.currentPeriodEnd || subscription.tenant.subscriptionPaymentSubmissions.length) { skipped++; continue; }
-    const accountUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\\/+$/, "")
+    const accountUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\/+$/, "")
       + "/workspace/" + encodeURIComponent(subscription.tenant.slug) + "/payments";
     const stages = [
       { stage: "REMINDER" as const, field: "renewalReminderSentAt" as const, due: !subscription.renewalReminderSentAt && subscription.currentPeriodEnd > now && subscription.currentPeriodEnd <= renewalCutoff },

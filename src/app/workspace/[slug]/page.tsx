@@ -7,7 +7,7 @@ import { WorkspaceNav } from "@/components/workspace-nav";
 
 type Overview = {
   workspace: { name: string; slug: string; role: string; currency: string; trial: null | { endsAt: string | null; graceEndsAt: string | null; readOnly: boolean } };
-  metrics: { totalVehicles:number; availableVehicles:number; rentedVehicles:number; reservedVehicles:number; maintenanceVehicles:number; activeBookings:number; pendingBookings:number; completedBookings:number; customers:number; branches:number; utilization:number; completedValue30d:number; collected30d:number; outstandingBalance:number; bookings7d:number };
+  metrics: { totalVehicles:number; availableVehicles:number; rentedVehicles:number; reservedVehicles:number; maintenanceVehicles:number; activeBookings:number; pendingBookings:number; completedBookings:number; customers:number; branches:number; utilization:number; completedValue30d:number | null; collected30d:number | null; outstandingBalance:number | null; bookings7d:number };
   actionCenter: {
     pendingCount:number;
     pickupCount:number;
@@ -17,10 +17,10 @@ type Overview = {
     pickupsToday:{id:string;reference:string;customer:string;startAt:string;endAt:string}[];
     returnsToday:{id:string;reference:string;customer:string;startAt:string;endAt:string}[];
     overdueReturns:{id:string;reference:string;customer:string;startAt:string;endAt:string}[];
-    outstandingCount:number;
+    outstandingCount:number | null;
   };
   bookingTrend: { date:string; label:string; bookings:number }[];
-  upcoming: { id:string; reference:string; status:string; startAt:string; endAt:string; totalAmount:number; customer:string; vehicles:string[] }[];
+  upcoming: { id:string; reference:string; status:string; startAt:string; endAt:string; totalAmount?:number; customer:string; vehicles:string[] }[];
 };
 
 const money=(value:number,currency="PHP")=>new Intl.NumberFormat("en-PH",{style:"currency",currency,maximumFractionDigits:0}).format(value);
@@ -78,10 +78,10 @@ export default function WorkspaceOverviewPage() {
       <section className="roam-metric-grid">
         <article className="roam-metric-card"><div className="roam-metric-icon"><CarFront/></div><span>Total fleet</span><strong>{metrics.totalVehicles}</strong><small>{metrics.availableVehicles} available now</small></article>
         <article className="roam-metric-card"><div className="roam-metric-icon"><CalendarDays/></div><span>Active bookings</span><strong>{metrics.activeBookings}</strong><small>{metrics.pendingBookings} pending confirmation</small></article>
-        <article className="roam-metric-card"><div className="roam-metric-icon"><CircleDollarSign/></div><span>Completed booking value · 30 days</span><strong>{money(metrics.completedValue30d,workspace.currency)}</strong><small>Completed rental value, not cash collected</small></article>
+        {workspace.role !== "STAFF" && <article className="roam-metric-card"><div className="roam-metric-icon"><CircleDollarSign/></div><span>Completed booking value · 30 days</span><strong>{money(metrics.completedValue30d || 0,workspace.currency)}</strong><small>Completed rental value, not cash collected</small></article>}
         <article className="roam-metric-card"><div className="roam-metric-icon"><Gauge/></div><span>Fleet utilization</span><strong>{metrics.utilization}%</strong><small>Rented or reserved vehicles</small></article>
       </section>
-      <section className="roam-panel roam-action-center">
+      {workspace.role !== "STAFF" && <section className="roam-panel roam-action-center">
         <div className="roam-panel-heading">
           <div><span className="roam-eyebrow">DAILY OPERATIONS</span><h2>Action center</h2><p className="roam-guide-description">The bookings and follow-ups that need attention today.</p></div>
           <button className="roam-link-btn" onClick={()=>router.push(`/workspace/${slug}/bookings`)}>Open bookings <ArrowUpRight size={14}/></button>
@@ -104,12 +104,12 @@ export default function WorkspaceOverviewPage() {
             {data.actionCenter.overdueReturns.length ? data.actionCenter.overdueReturns.slice(0,3).map(item=><button key={item.id} onClick={()=>router.push(`/workspace/${slug}/bookings`)}><span><b>{item.customer}</b><small>#{item.reference}</small></span><small>Past due</small></button>) : <p>No overdue returns.</p>}
           </article>
         </div>
-        <div className="roam-action-finance">
-          <div><span>Recorded collections · last 30 days</span><b>{money(metrics.collected30d,workspace.currency)}</b><small>Payments less recorded refunds</small></div>
-          <div><span>Outstanding balances</span><b>{money(metrics.outstandingBalance,workspace.currency)}</b><small>{data.actionCenter.outstandingCount} bookings with a balance</small></div>
+        {workspace.role !== "STAFF" && <div className="roam-action-finance">
+          <div><span>Recorded collections · last 30 days</span><b>{money(metrics.collected30d || 0,workspace.currency)}</b><small>Payments less recorded refunds</small></div>
+          <div><span>Outstanding balances</span><b>{money(metrics.outstandingBalance || 0,workspace.currency)}</b><small>{data.actionCenter.outstandingCount || 0} bookings with a balance</small></div>
           <button className="roam-secondary-btn" onClick={()=>router.push(`/workspace/${slug}/finance`)}>Review financials <ArrowUpRight size={15}/></button>
-        </div>
-      </section>
+        </div>}
+      </section>}
       <section className="roam-dashboard-grid">
         <article className="roam-panel roam-chart-panel">
           <div className="roam-panel-heading"><div><span className="roam-eyebrow">BOOKING ACTIVITY</span><h2>Bookings this week</h2></div><span className="roam-panel-total">{metrics.bookings7d} total</span></div>
@@ -126,7 +126,7 @@ export default function WorkspaceOverviewPage() {
       <section className="roam-dashboard-grid roam-lower-grid">
         <article className="roam-panel">
           <div className="roam-panel-heading"><div><span className="roam-eyebrow">NEXT ON THE CALENDAR</span><h2>Upcoming rentals</h2></div><span className="roam-panel-total">{data.upcoming.length} shown</span></div>
-          {data.upcoming.length ? <div className="roam-booking-list">{data.upcoming.map(b=><div className="roam-booking-row" key={b.id}><div className="roam-booking-date"><b>{new Date(b.startAt).toLocaleDateString("en-PH",{day:"2-digit"})}</b><small>{new Date(b.startAt).toLocaleDateString("en-PH",{month:"short"})}</small></div><div className="roam-booking-info"><b>{b.customer}</b><span>{b.reference} · {b.vehicles.join(", ")||"Vehicle pending"}</span></div><span className={`roam-booking-badge ${b.status.toLowerCase()}`}>{b.status}</span></div>)}</div>:<div className="roam-empty"><CalendarDays size={25}/><b>No upcoming rentals</b><span>Confirmed bookings will appear here.</span></div>}
+          {workspace.role === "STAFF" ? <div className="roam-empty"><CalendarDays size={25}/><b>Booking details are restricted</b><span>Ask a workspace manager for booking access.</span></div> : data.upcoming.length ? <div className="roam-booking-list">{data.upcoming.map(b=><div className="roam-booking-row" key={b.id}><div className="roam-booking-date"><b>{new Date(b.startAt).toLocaleDateString("en-PH",{day:"2-digit"})}</b><small>{new Date(b.startAt).toLocaleDateString("en-PH",{month:"short"})}</small></div><div className="roam-booking-info"><b>{b.customer}</b><span>{b.reference} · {b.vehicles.join(", ")||"Vehicle pending"}</span></div><span className={`roam-booking-badge ${b.status.toLowerCase()}`}>{b.status}</span></div>)}</div>:<div className="roam-empty"><CalendarDays size={25}/><b>No upcoming rentals</b><span>Confirmed bookings will appear here.</span></div>}
         </article>
         <article className="roam-panel roam-quick-panel">
           <div className="roam-panel-heading"><div><span className="roam-eyebrow">YOUR BUSINESS</span><h2>Workspace snapshot</h2></div></div>

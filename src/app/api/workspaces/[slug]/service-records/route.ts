@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
+import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 
 export const runtime = "nodejs";
 
@@ -36,10 +37,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (maintenanceId && !await prisma.vehicleMaintenance.findFirst({ where: { id: maintenanceId, tenantId: access.tenant.id, vehicleId }, select: { id: true } })) {
     return NextResponse.json({ error: "Maintenance record does not belong to this vehicle and workspace." }, { status: 400 });
   }
-  const record = await prisma.vehicleServiceRecord.create({ data: {
-    tenantId: access.tenant.id, vehicleId, serviceType, cost, odometerKm, performedAt,
-    description: typeof body.description === "string" ? body.description.trim().slice(0, 2000) : null,
-    maintenanceId,
-  } });
+  const record = await prisma.$transaction(async tx => {
+    const created = await tx.vehicleServiceRecord.create({ data: {
+      tenantId: access.tenant.id, vehicleId, serviceType, cost, odometerKm, performedAt,
+      description: typeof body.description === "string" ? body.description.trim().slice(0, 2000) : null,
+      maintenanceId,
+    } });
+    await recordWorkspaceAudit(tx, {
+      tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+      action: "service_record.created", targetType: "vehicleServiceRecord", targetId: created.id,
+      details: { vehicleId, serviceType, cost, odometerKm, performedAt: performedAt.toISOString() },
+    });
+    return created;
+  });
   return NextResponse.json({ record: { ...record, cost: Number(record.cost) } }, { status: 201 });
 }

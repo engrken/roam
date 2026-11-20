@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
 import { blockingMaintenanceStatuses } from "@/lib/maintenance-availability";
+import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 
 export const runtime = "nodejs";
 
@@ -58,6 +59,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       tenantId: access.tenant.id, vehicleId, title, startAt, endAt,
       description: typeof body.description === "string" ? body.description.trim().slice(0, 2000) : null,
     } });
+    await recordWorkspaceAudit(tx, {
+      tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+      action: "maintenance.scheduled", targetType: "vehicleMaintenance", targetId: maintenance.id,
+      details: { vehicleId, title, startAt: startAt.toISOString(), endAt: endAt.toISOString() },
+    });
     return { maintenance };
   });
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 409 });
@@ -73,7 +79,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (!canManageFleet(access.role)) return NextResponse.json({ error: "You do not have permission to manage maintenance." }, { status: 403 });
   const body = await request.json().catch(() => null);
   if (!body?.id || !["COMPLETED", "CANCELLED"].includes(body.status)) return NextResponse.json({ error: "A maintenance ID and valid status are required." }, { status: 400 });
-  const result = await prisma.vehicleMaintenance.updateMany({ where: { id: String(body.id), tenantId: access.tenant.id }, data: { status: body.status } });
-  if (!result.count) return NextResponse.json({ error: "Maintenance record not found." }, { status: 404 });
+  const result = await prisma.$transaction(async tx => {
+    const existing = await tx.vehicleMaintenance.findFirst({ where: { id: String(body.id), tenantId: access.tenant.id }, select: { id: true, vehicleId: true, status: true } });
+    if (!existing) return null;
+    await tx.vehicleMaintenance.update({ where: { id: existing.id }, data: { status: body.status } });
+    await recordWorkspaceAudit(tx, {
+      tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+      action: "maintenance.status_changed", targetType: "vehicleMaintenance", targetId: existing.id,
+      details: { vehicleId: existing.vehicleId, fromStatus: existing.status, toStatus: body.status },
+    });
+    return existing;
+  });
+  if (!result) return NextResponse.json({ error: "Maintenance record not found." }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

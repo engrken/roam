@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
+import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 
 export const runtime = "nodejs";
 const types = ["MOTORCYCLE","SCOOTER","SEDAN","HATCHBACK","SUV","MPV","VAN","PICKUP","BUS","TRUCK","OTHER"] as const;
@@ -49,14 +50,22 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Choose a branch in this workspace." }, { status: 400 });
   }
   try {
-    const vehicle = await prisma.vehicle.create({ data: {
-      tenantId: access.tenant.id, branchId, type, make, model, plateNumber, year,
-      color: typeof body.color === "string" ? body.color.trim().slice(0, 40) : null,
-      transmission: typeof body.transmission === "string" ? body.transmission : null,
-      seats: Number.isInteger(Number(body.seats)) && Number(body.seats) > 0 ? Number(body.seats) : null,
-      dailyRate, securityDeposit: Number.isFinite(Number(body.securityDeposit)) && Number(body.securityDeposit) >= 0 ? Number(body.securityDeposit) : 0,
-      status: "AVAILABLE",
-    } });
+    const vehicle = await prisma.$transaction(async tx => {
+      const created = await tx.vehicle.create({ data: {
+        tenantId: access.tenant.id, branchId, type, make, model, plateNumber, year,
+        color: typeof body.color === "string" ? body.color.trim().slice(0, 40) : null,
+        transmission: typeof body.transmission === "string" ? body.transmission : null,
+        seats: Number.isInteger(Number(body.seats)) && Number(body.seats) > 0 ? Number(body.seats) : null,
+        dailyRate, securityDeposit: Number.isFinite(Number(body.securityDeposit)) && Number(body.securityDeposit) >= 0 ? Number(body.securityDeposit) : 0,
+        status: "AVAILABLE",
+      } });
+      await recordWorkspaceAudit(tx, {
+        tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+        action: "vehicle.created", targetType: "vehicle", targetId: created.id,
+        details: { make, model, plateNumber, branchId },
+      });
+      return created;
+    });
     return NextResponse.json({ vehicle: { id: vehicle.id, make: vehicle.make, model: vehicle.model, plateNumber: vehicle.plateNumber } }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "A vehicle with this plate number may already exist in this workspace." }, { status: 409 });
@@ -87,8 +96,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         return NextResponse.json({ error: `Your ${plan.plan.name} plan allows up to ${plan.plan.maxVehicles} active vehicles. Upgrade your plan to reactivate this vehicle.` }, { status: 403 });
       }
     }
-    const result = await prisma.vehicle.updateMany({ where: { id, tenantId: access.tenant.id }, data: { status: body.status } });
-    if (!result.count) return NextResponse.json({ error: "Vehicle not found." }, { status: 404 });
+    const result = await prisma.$transaction(async tx => {
+      const updated = await tx.vehicle.updateMany({ where: { id, tenantId: access.tenant.id }, data: { status: body.status } });
+      if (!updated.count) return false;
+      await recordWorkspaceAudit(tx, {
+        tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+        action: "vehicle.status_changed", targetType: "vehicle", targetId: id,
+        details: { fromStatus: current.status, toStatus: body.status },
+      });
+      return true;
+    });
+    if (!result) return NextResponse.json({ error: "Vehicle not found." }, { status: 404 });
     return NextResponse.json({ vehicle: { id, status: body.status } });
   }
 
@@ -105,12 +123,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: "Choose a branch in this workspace." }, { status: 400 });
   }
   try {
-    const result = await prisma.vehicle.updateMany({ where: { id, tenantId: access.tenant.id }, data: {
-      type: body.type, make, model, plateNumber, year, branchId, dailyRate,
-      color: typeof body.color === "string" ? body.color.trim().slice(0, 40) : null,
-      securityDeposit: Number.isFinite(Number(body.securityDeposit)) && Number(body.securityDeposit) >= 0 ? Number(body.securityDeposit) : 0,
-    } });
-    if (!result.count) return NextResponse.json({ error: "Vehicle not found." }, { status: 404 });
+    const result = await prisma.$transaction(async tx => {
+      const existing = await tx.vehicle.findFirst({ where: { id, tenantId: access.tenant.id }, select: { id: true } });
+      if (!existing) return false;
+      await tx.vehicle.update({ where: { id }, data: {
+        type: body.type, make, model, plateNumber, year, branchId, dailyRate,
+        color: typeof body.color === "string" ? body.color.trim().slice(0, 40) : null,
+        securityDeposit: Number.isFinite(Number(body.securityDeposit)) && Number(body.securityDeposit) >= 0 ? Number(body.securityDeposit) : 0,
+      } });
+      await recordWorkspaceAudit(tx, {
+        tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+        action: "vehicle.updated", targetType: "vehicle", targetId: id,
+        details: { make, model, plateNumber, branchId },
+      });
+      return true;
+    });
+    if (!result) return NextResponse.json({ error: "Vehicle not found." }, { status: 404 });
     return NextResponse.json({ vehicle: { id, make, model, plateNumber } });
   } catch {
     return NextResponse.json({ error: "A vehicle with this plate number may already exist in this workspace." }, { status: 409 });

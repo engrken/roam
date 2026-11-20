@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
+import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 
 export const runtime = "nodejs";
 const categories = ["FUEL", "MAINTENANCE", "INSURANCE", "REGISTRATION", "SALARIES", "UTILITIES", "RENT", "SUPPLIES", "MARKETING", "OTHER"];
@@ -39,10 +40,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     vehicleId ? prisma.vehicle.findFirst({ where: { id: vehicleId, tenantId: access.tenant.id }, select: { id: true } }) : null,
   ]);
   if ((branchId && !branch) || (vehicleId && !vehicle)) return NextResponse.json({ error: "Branch or vehicle is not part of this workspace." }, { status: 400 });
-  const expense = await prisma.operatingExpense.create({ data: {
-    tenantId: access.tenant.id, branchId, vehicleId, category, description, amount,
-    currency: access.tenant.currency || "PHP", incurredAt,
-    reference: typeof body.reference === "string" ? body.reference.trim().slice(0, 120) : null,
-  } });
+  const expense = await prisma.$transaction(async tx => {
+    const created = await tx.operatingExpense.create({ data: {
+      tenantId: access.tenant.id, branchId, vehicleId, category, description, amount,
+      currency: access.tenant.currency || "PHP", incurredAt,
+      reference: typeof body.reference === "string" ? body.reference.trim().slice(0, 120) : null,
+    } });
+    await recordWorkspaceAudit(tx, {
+      tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+      action: "expense.recorded", targetType: "operatingExpense", targetId: created.id,
+      details: { category, amount, currency: access.tenant.currency || "PHP", branchId, vehicleId },
+    });
+    return created;
+  });
   return NextResponse.json({ expense: { ...expense, amount: Number(expense.amount) } }, { status: 201 });
 }

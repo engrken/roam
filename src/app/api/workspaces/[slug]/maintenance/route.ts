@@ -43,7 +43,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       vehicleId,
     );
     const bookingConflict = await tx.bookingItem.findFirst({
-      where: { vehicleId, booking: { tenantId: access.tenant.id, status: { in: ["CONFIRMED", "ACTIVE"] }, startAt: { lt: endAt }, endAt: { gt: startAt } } },
+      where: { vehicleId, booking: { tenantId: access.tenant.id, status: { in: ["PENDING", "CONFIRMED", "ACTIVE"] }, startAt: { lt: endAt }, endAt: { gt: startAt } } },
       select: { id: true },
     });
     const maintenanceConflict = await tx.vehicleMaintenance.findFirst({

@@ -1,25 +1,10 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { verifyPayMongoSignature } from "@/lib/paymongo-signature";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { addCalendarMonths, grantReferralMonth } from "@/lib/referrals";
 import { sendReferralRewardEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
-
-function verifySignature(rawBody: string, signatureHeader: string, secret: string, liveMode: boolean) {
-  const parts = Object.fromEntries(signatureHeader.split(",").map(part => {
-    const [key, ...value] = part.trim().split("=");
-    return [key, value.join("=")];
-  }));
-  const timestamp = parts.t;
-  const received = liveMode ? parts.li : parts.te;
-  if (!timestamp || !received || !/^\d+$/.test(timestamp)) return false;
-  if (Math.abs(Date.now() / 1000 - Number(timestamp)) > 300) return false;
-  const expected = createHmac("sha256", secret).update(timestamp + "." + rawBody).digest("hex");
-  const expectedBuffer = Buffer.from(expected, "hex");
-  const receivedBuffer = Buffer.from(received, "hex");
-  return expectedBuffer.length === receivedBuffer.length && timingSafeEqual(expectedBuffer, receivedBuffer);
-}
 
 function isUniqueViolation(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error && error.code === "P2002";
@@ -44,7 +29,7 @@ export async function POST(request: NextRequest) {
   const eventId = event.data?.id || "";
   const eventType = attributes?.type || "";
   const paymentData = attributes?.data;
-  if (!eventId || !eventType || !verifySignature(rawBody, signature, webhookSecret, attributes?.livemode === true)) {
+  if (!eventId || !eventType || !verifyPayMongoSignature(rawBody, signature, webhookSecret, attributes?.livemode === true)) {
     return NextResponse.json({ error: "Invalid webhook signature or event." }, { status: 401 });
   }
 

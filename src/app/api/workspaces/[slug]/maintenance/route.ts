@@ -37,7 +37,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!vehicle) return NextResponse.json({ error: "Vehicle not found in this workspace." }, { status: 404 });
   const [bookingConflict, maintenanceConflict] = await Promise.all([
     prisma.bookingItem.findFirst({ where: { vehicleId, booking: { tenantId: access.tenant.id, status: { in: ["CONFIRMED", "ACTIVE"] }, startAt: { lt: endAt }, endAt: { gt: startAt } } }, select: { id: true } }),
-    prisma.vehicleMaintenance.findFirst({ where: { tenantId: access.tenant.id, vehicleId, status: { not: "CANCELLED" }, startAt: { lt: endAt }, endAt: { gt: startAt } }, select: { id: true } }),
+    prisma.vehicleMaintenance.findFirst({ where: { tenantId: access.tenant.id, vehicleId, status: { in: ["SCHEDULED", "IN_PROGRESS"] }, startAt: { lt: endAt }, endAt: { gt: startAt } }, select: { id: true } }),
   ]);
   if (bookingConflict) return NextResponse.json({ error: "This vehicle already has a confirmed or active booking during those dates." }, { status: 409 });
   if (maintenanceConflict) return NextResponse.json({ error: "This vehicle already has a maintenance period during those dates." }, { status: 409 });

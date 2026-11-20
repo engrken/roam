@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
+import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 
 export const runtime = "nodejs";
 
@@ -22,6 +23,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const body = await request.json().catch(() => null);
   const rentalTerms = typeof body?.rentalTerms === "string" ? body.rentalTerms.trim() : "";
   if (rentalTerms.length > 12000) return NextResponse.json({ error: "Rental terms must be 12,000 characters or fewer." }, { status: 400 });
-  await prisma.tenant.update({ where: { id: access.tenant.id }, data: { rentalTerms: rentalTerms || null } });
+  await prisma.$transaction(async tx => {
+    await tx.tenant.update({ where: { id: access.tenant.id }, data: { rentalTerms: rentalTerms || null } });
+    await recordWorkspaceAudit(tx, {
+      tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+      action: "rental_terms.updated", targetType: "workspace", targetId: access.tenant.id,
+      details: { termsLength: rentalTerms.length },
+    });
+  });
   return NextResponse.json({ ok: true, rentalTerms });
 }

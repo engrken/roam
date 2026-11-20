@@ -40,7 +40,7 @@ export async function PATCH(request: NextRequest) {
       if (limit !== null && (!Number.isInteger(limit) || limit < 1 || limit > 100000)) return NextResponse.json({ error: "Plan limits must be positive whole numbers or unlimited." }, { status: 400 });
     }
     const plan = await prisma.plan.update({
-      where: { tier: tier as "FREE" | "STARTER" | "PRO" | "BUSINESS" | "ENTERPRISE" },
+      where: { tier: tier as "STARTER" | "PRO" | "BUSINESS" | "ENTERPRISE" },
       data: { name, monthlyPrice, maxVehicles, maxBranches, maxStaff, active: body.active !== false },
       select: { id: true, tier: true, name: true, monthlyPrice: true, maxVehicles: true, maxBranches: true, maxStaff: true, active: true },
     }).catch(() => null);

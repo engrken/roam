@@ -154,6 +154,8 @@ model Subscription {
   trialReminderSentAt DateTime?
   trialExpiredNoticeSentAt DateTime?
   trialReadOnlyNoticeSentAt DateTime?
+  renewalReminderSentAt DateTime?
+  renewalOverdueNoticeSentAt DateTime?
   referralCreditMonths Int @default(0)
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt

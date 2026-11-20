@@ -4,6 +4,7 @@ import { head } from "@vercel/blob";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 import { isTenantTrialReadOnly } from "@/lib/tenant-access";
 export const runtime="nodejs";
 const hash=(v:string)=>createHash("sha256").update(v).digest("hex");
@@ -18,7 +19,7 @@ export async function POST(request:NextRequest){
     const booking=await prisma.booking.findFirst({where:{reference,publicTokenHash:hash(token)},select:{id:true,tenantId:true,tenant:{select:{status:true}}}});
     if(!booking)throw new Error("Booking access link is invalid.");
     if(!["ACTIVE","TRIAL"].includes(booking.tenant.status))throw new Error("This rental business is not currently accepting document uploads.");
-    const clientIp=request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()||request.headers.get("x-real-ip")||"unknown";
+    const clientIp=getClientIp(request.headers);
     const [bookingAllowed,ipAllowed]=await Promise.all([
      consumeRateLimit("customer-booking-upload",booking.id,12,60*60*1000),
      consumeRateLimit("customer-booking-upload-ip",clientIp,40,60*60*1000),

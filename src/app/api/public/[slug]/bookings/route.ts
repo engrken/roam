@@ -59,7 +59,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         },
         maintenances: {
           none: {
-            status: { not: "CANCELLED" },
+            status: { in: ["SCHEDULED", "IN_PROGRESS"] },
             startAt: { lt: requestedEnd },
             endAt: { gt: requestedStart },
           },

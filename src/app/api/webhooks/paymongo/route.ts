@@ -138,14 +138,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Webhook processing failed." }, { status: 500 });
   }
 
-  if (referralReward) {
+  const confirmedReferralReward = referralReward as { referredTenantId: string; referrerTenantId: string } | null;
+  if (confirmedReferralReward) {
     try {
       const tenants = await prisma.tenant.findMany({
-        where: { id: { in: [referralReward.referredTenantId, referralReward.referrerTenantId] } },
+        where: { id: { in: [confirmedReferralReward.referredTenantId, confirmedReferralReward.referrerTenantId] } },
         select: { id: true, name: true, slug: true, memberships: { where: { role: "OWNER" }, select: { user: { select: { email: true } } }, take: 1 } },
       });
-      const referred = tenants.find(item => item.id === referralReward?.referredTenantId);
-      const referrer = tenants.find(item => item.id === referralReward?.referrerTenantId);
+      const referred = tenants.find(item => item.id === confirmedReferralReward.referredTenantId);
+      const referrer = tenants.find(item => item.id === confirmedReferralReward.referrerTenantId);
       const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\/+$/, "");
       await Promise.allSettled([
         ...(referred?.memberships[0]?.user.email && referrer ? [sendReferralRewardEmail({

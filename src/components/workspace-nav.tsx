@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard, CarFront, LogOut, ShieldCheck, CalendarDays, MapPin, Users,
-  BookOpen, FileText, UserCog, MessageCircle, Wallet, Menu, X, LockKeyhole,
+  BookOpen, FileText, UserCog, MessageCircle, Wallet, Menu, X, LockKeyhole, Wrench,
   ArrowUpRight,
 } from "lucide-react";
 
@@ -37,7 +37,7 @@ const lockedFeatures: Record<FeatureKey, FeatureInfo> = {
   },
 };
 
-export function WorkspaceNav({ slug, name, role, active }: { slug: string; name: string; role: string; active: "overview" | "fleet" | "calendar" | "bookings" | "messages" | "finance" | "branches" | "customers" | "help" | "rental-terms" | "team" | "settings" | "reports" | "account" }) {
+export function WorkspaceNav({ slug, name, role, active }: { slug: string; name: string; role: string; active: "overview" | "fleet" | "maintenance" | "calendar" | "bookings" | "messages" | "finance" | "branches" | "customers" | "help" | "rental-terms" | "team" | "settings" | "reports" | "account" }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [tier, setTier] = useState("FREE");
@@ -86,6 +86,7 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
     <nav className="roam-side-nav" id="roam-workspace-menu" aria-label="Workspace navigation" onClick={() => setMenuOpen(false)}>
       <Link className={active === "overview" ? "active" : ""} href={`/workspace/${slug}`}><LayoutDashboard size={18}/> Overview</Link>
       <Link className={active === "fleet" ? "active" : ""} href={`/workspace/${slug}/fleet`}><CarFront size={18}/> Fleet management</Link>
+      <Link className={active === "maintenance" ? "active" : ""} href={`/workspace/${slug}/maintenance`}><Wrench size={18}/> Maintenance & expenses</Link>
       <Link className={active === "calendar" ? "active" : ""} href={`/workspace/${slug}/calendar`}><CalendarDays size={18}/> Fleet calendar</Link>
       <Link className={active === "bookings" ? "active" : ""} href={`/workspace/${slug}/bookings`}><CalendarDays size={18}/> Bookings</Link>
       <Link className={active === "messages" ? "active" : ""} href={`/workspace/${slug}/messages`}><MessageCircle size={18}/> Customer messages</Link>

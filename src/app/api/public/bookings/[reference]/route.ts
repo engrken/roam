@@ -2,6 +2,7 @@ import { NextRequest,NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 import { sendBookingMessageNotification } from "@/lib/email";
 import { isTenantTrialReadOnly } from "@/lib/tenant-access";
 export const runtime="nodejs";
@@ -18,9 +19,10 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{referenc
 export async function POST(request:NextRequest,{params}:{params:Promise<{reference:string}>}){
  const {reference}=await params;const body=await request.json().catch(()=>null);const token=typeof body?.token==="string"?body.token:"";const message=typeof body?.message==="string"?body.message.trim():"";
  if(token.length<20||message.length<1||message.length>2000)return NextResponse.json({error:"Enter a message (up to 2,000 characters) using your booking access link."},{status:400});
- const booking=await prisma.booking.findFirst({where:{reference,publicTokenHash:hash(token)},select:{id:true,tenantId:true,tenant:{select:{name:true,email:true,slug:true}}}});
+ const booking=await prisma.booking.findFirst({where:{reference,publicTokenHash:hash(token)},select:{id:true,tenantId:true,tenant:{select:{name:true,email:true,slug:true,status:true}}}});
  if(!booking)return NextResponse.json({error:"Booking not found."},{status:404});
- const clientIp=request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()||request.headers.get("x-real-ip")||"unknown";
+ if(!["ACTIVE","TRIAL"].includes(booking.tenant.status))return NextResponse.json({error:"This rental business is not currently accepting messages."},{status:423});
+ const clientIp=getClientIp(request.headers);
  const [bookingAllowed,ipAllowed]=await Promise.all([
   consumeRateLimit("customer-booking-message",booking.id,10,60*60*1000),
   consumeRateLimit("customer-booking-message-ip",clientIp,40,60*60*1000),

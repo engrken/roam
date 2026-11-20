@@ -88,6 +88,7 @@ model Tenant {
   subscription Subscription?
   invitations  TeamInvitation[]
   billingRecords BillingRecord[]
+  subscriptionRefunds SubscriptionRefund[]
   referralCode String @unique
   referralsSent Referral[] @relation("ReferralReferrer")
   referralReceived Referral? @relation("ReferralReferredTenant")
@@ -433,8 +434,31 @@ model BillingRecord {
   paidAt      DateTime?
   createdAt   DateTime @default(now())
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  refunds     SubscriptionRefund[]
   @@index([tenantId, issuedAt])
   @@index([tenantId, status])
+}
+
+model SubscriptionRefund {
+  id             String   @id @default(cuid())
+  tenantId       String
+  billingRecordId String
+  amount         Decimal  @db.Decimal(12, 2)
+  currency       String   @default("PHP")
+  method         String
+  reference      String?
+  reason         String   @db.Text
+  status         String   @default("PENDING")
+  recordedById   String
+  completedById  String?
+  completedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  billingRecord  BillingRecord @relation(fields: [billingRecordId], references: [id], onDelete: Cascade)
+  @@index([tenantId, createdAt])
+  @@index([status, createdAt])
+  @@index([billingRecordId, status])
 }
 
 model SubscriptionChangeRequest {

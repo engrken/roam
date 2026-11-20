@@ -31,10 +31,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Enter a vehicle, service type, valid cost, odometer reading, and service date." }, { status: 400 });
   }
   if (!await prisma.vehicle.findFirst({ where: { id: vehicleId, tenantId: access.tenant.id }, select: { id: true } })) return NextResponse.json({ error: "Vehicle not found in this workspace." }, { status: 404 });
+  const maintenanceId = typeof body.maintenanceId === "string" ? body.maintenanceId : null;
+  if (maintenanceId && !await prisma.vehicleMaintenance.findFirst({ where: { id: maintenanceId, tenantId: access.tenant.id, vehicleId }, select: { id: true } })) {
+    return NextResponse.json({ error: "Maintenance record does not belong to this vehicle and workspace." }, { status: 400 });
+  }
   const record = await prisma.vehicleServiceRecord.create({ data: {
     tenantId: access.tenant.id, vehicleId, serviceType, cost, odometerKm, performedAt,
     description: typeof body.description === "string" ? body.description.trim().slice(0, 2000) : null,
-    maintenanceId: typeof body.maintenanceId === "string" ? body.maintenanceId : null,
+    maintenanceId,
   } });
   return NextResponse.json({ record: { ...record, cost: Number(record.cost) } }, { status: 201 });
 }

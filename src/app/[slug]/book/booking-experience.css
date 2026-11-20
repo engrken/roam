@@ -109,3 +109,6 @@
  .roam-customer-payment-summary>div{grid-template-columns:1fr auto;align-items:center}
  .roam-customer-payment-summary b{text-align:right}
 }
+
+.roam-booking-hint button{flex:0 0 auto;padding:0;border:0;background:transparent;color:var(--green);font:800 10px 'DM Sans',sans-serif;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:620px){.roam-booking-hint{flex-wrap:wrap}.roam-booking-hint button{margin-left:25px}}

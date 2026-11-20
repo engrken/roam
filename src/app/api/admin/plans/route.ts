@@ -92,7 +92,7 @@ export async function PATCH(request: NextRequest) {
         const referralForLock = await tx.referral.findUnique({ where: { referredTenantId: tenantId }, select: { referrerTenantId: true } });
         const lockTenantIds = [tenantId, referralForLock?.referrerTenantId].filter((id): id is string => !!id).sort();
         for (const lockTenantId of lockTenantIds) {
-          await tx.$queryRawUnsafe("SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtext($1))) AS advisory_lock", "subscription-payment:" + lockTenantId);
+          await tx.$queryRawUnsafe("SELECT pg_advisory_xact_lock(hashtext($1)) IS NULL AS locked", "subscription-payment:" + lockTenantId);
         }
         const subscription = await tx.subscription.findUnique({
           where: { tenantId },

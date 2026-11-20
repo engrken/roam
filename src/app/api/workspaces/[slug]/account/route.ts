@@ -76,7 +76,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (access.role !== "OWNER") return NextResponse.json({ error: "Only the workspace owner can request a subscription change." }, { status: 403 });
   const body = await request.json().catch(() => null);
   const tier = typeof body?.tier === "string" ? body.tier : "";
-  if (!["STARTER", "PRO", "BUSINESS", "ENTERPRISE"].includes(tier)) return NextResponse.json({ error: "Choose a valid subscription tier." }, { status: 400 });
+  if (!["FREE", "STARTER", "PRO", "BUSINESS", "ENTERPRISE"].includes(tier)) return NextResponse.json({ error: "Choose a valid subscription tier." }, { status: 400 });
 
   const [plan, subscription, pending] = await Promise.all([
     prisma.plan.findUnique({ where: { tier: tier as "STARTER" | "PRO" | "BUSINESS" | "ENTERPRISE", active: true } }),
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const change = await prisma.$transaction(async tx => {
     const created = await tx.subscriptionChangeRequest.create({
-      data: { tenantId: access.tenant.id, requestedTier: tier as "STARTER" | "PRO" | "BUSINESS" | "ENTERPRISE", currentTier, requestedById: access.user.id },
+      data: { tenantId: access.tenant.id, requestedTier: tier as "FREE" | "STARTER" | "PRO" | "BUSINESS" | "ENTERPRISE", currentTier, requestedById: access.user.id },
       select: { id: true, currentTier: true, requestedTier: true, status: true, createdAt: true },
     });
     await recordWorkspaceAudit(tx, {

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendLoginCode } from "@/lib/email";
 import { getCurrentUser } from "@/lib/auth";
+import { getClientIp } from "@/lib/request-ip";
 
 export const runtime = "nodejs";
 
@@ -37,8 +38,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-    const clientIp = forwarded || request.headers.get("x-real-ip") || "unknown";
+    const clientIp = getClientIp(request.headers);
     const ipHash = createHash("sha256").update(clientIp).digest("hex");
     const ipBucket = "ip-" + ipHash + "@rate-limit.invalid";
     const now = new Date();

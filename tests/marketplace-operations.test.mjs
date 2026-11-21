@@ -6,6 +6,7 @@ import {
   marketplaceAvailabilityRange,
   marketplaceDateRange,
   marketplaceInquirySchema,
+  marketplaceHandoffChecksSchema,
 } from "../src/lib/marketplace-operations.ts";
 
 const validInquiry = {
@@ -71,4 +72,18 @@ test("Marketplace inquiry handoff follows an explicit non-booking transition pat
   assert.equal(canTransitionMarketplaceInquiryStatus("CLOSED", "CONTACTED"), false);
   assert.equal(canTransitionMarketplaceInquiryStatus("NEW", "NEW"), true);
   assert.equal(canTransitionMarketplaceInquiryStatus("NEW", "CONFIRMED"), false);
+});
+
+
+test("manual booking readiness requires every operational check", () => {
+  const complete = {
+    availabilityRechecked: true,
+    finalPriceAndFeesReviewed: true,
+    pickupAndReturnConfirmed: true,
+    renterRequirementsReviewed: true,
+    rentalTermsReviewed: true,
+  };
+  assert.equal(marketplaceHandoffChecksSchema.safeParse(complete).success, true);
+  assert.equal(marketplaceHandoffChecksSchema.safeParse({ ...complete, rentalTermsReviewed: false }).success, false);
+  assert.equal(marketplaceHandoffChecksSchema.safeParse({ ...complete, availabilityRechecked: undefined }).success, false);
 });

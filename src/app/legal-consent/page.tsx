@@ -22,7 +22,7 @@ export default function LegalConsentPage() {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!accepted) { setError("You must accept both documents to continue."); return; }
+    if (!accepted) { setError("You must agree to the Terms and acknowledge the Privacy Policy to continue."); return; }
     setBusy(true); setError("");
     try {
       const response = await fetch("/api/legal/accept", {

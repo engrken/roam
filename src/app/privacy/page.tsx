@@ -17,7 +17,7 @@ export default function PrivacyPage() {
       <h1>Privacy Policy</h1>
       <p className="legal-updated">Effective date: November 21, 2026 · Last updated: November 21, 2026</p>
       <div className="legal-notice">
-        **Operator details that must be completed before public launch:** Replace the fields below with the actual legal operator's full name, business address and working privacy contact. This policy is a general product draft, not a substitute for review against ROAM's final data flows and applicable law.
+        Operator details that must be completed before public launch: replace the fields below with the actual legal operator's full name, business address and working privacy contact. This policy is a general product draft, not a substitute for review against ROAM's final data flows and applicable law.
       </div>
 
       <h2>1. Who we are and what this policy covers</h2>

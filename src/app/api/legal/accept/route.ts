@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => null);
   if (body?.accepted !== true || body?.termsVersion !== TERMS_VERSION || body?.privacyVersion !== PRIVACY_VERSION) {
-    return NextResponse.json({ error: "Please review and accept the current Terms of Service and Privacy Policy." }, { status: 400 });
+    return NextResponse.json({ error: "Please agree to the current Terms of Service and acknowledge the Privacy Policy." }, { status: 400 });
   }
 
   const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();

@@ -17,7 +17,7 @@ export default function TermsPage() {
       <h1>Terms &amp; Conditions</h1>
       <p className="legal-updated">Effective date: November 21, 2026 · Last updated: November 21, 2026</p>
       <div className="legal-notice">
-        These general terms cover ROAM's rental-management software, website and marketplace features. Marketplace interest forms are not bookings or vehicle listings. Any live marketplace transaction, host onboarding, payment or rental may be subject to additional terms displayed before you proceed. **Operator details that must be completed before public launch:** [INSERT FULL LEGAL NAME OF ROAM OPERATOR], [INSERT BUSINESS ADDRESS] and [INSERT WORKING SUPPORT CONTACT]. This general draft requires review by qualified Philippine counsel against the final service model.
+        These general terms cover ROAM's rental-management software, website and marketplace features. Marketplace interest forms are not bookings or vehicle listings. Any live marketplace transaction, host onboarding, payment or rental may be subject to additional terms displayed before you proceed. Operator details that must be completed before public launch: [INSERT FULL LEGAL NAME OF ROAM OPERATOR], [INSERT BUSINESS ADDRESS] and [INSERT WORKING SUPPORT CONTACT]. This general draft requires review by qualified Philippine counsel against the final service model.
       </div>
 
       <h2>1. The ROAM service and operator</h2>
@@ -97,7 +97,7 @@ export default function TermsPage() {
 
       <h2>20. Complaints and dispute resolution</h2>
       <p>For a concern about ROAM, use the support or complaint channel published by the operator. For a concern about a vehicle, host, rental condition, cancellation or rental performance, contact the rental provider identified in the relevant offer or booking confirmation. We may assist with communications or review a platform-rule complaint, but this does not make ROAM the rental provider or replace a party's legal rights.</p>
-      <p>Where an internet transaction is covered by Philippine law, the parties may use the applicable internal redress mechanism and any required escalation process. Nothing in these Terms prevents a user from bringing a complaint before a court, regulator or agency where permitted by law, or shortens a statutory deadline or remedy.</p>
+      <p>Where an internet transaction is covered by the Philippine Internet Transactions Act, the parties may use the platform's internal redress mechanism before escalating a complaint. Under that Act, the internal redress mechanism is deemed exhausted if the complaint remains unresolved after seven (7) calendar days from filing. Nothing in these Terms prevents a user from bringing a complaint before a court, regulator or agency where permitted by law, or shortens a statutory deadline or remedy.</p>
 
       <h2>21. Governing law and general provisions</h2>
       <p>These Terms are governed by the laws of the Republic of the Philippines, without excluding mandatory protections or rights that apply in another jurisdiction. Disputes are subject to the jurisdiction of the competent courts or authorities, with venue and procedure determined by applicable law. If a provision is found invalid or unenforceable, the remaining provisions continue to apply to the extent legally possible. A failure to enforce a provision is not a waiver of it. These Terms, together with feature-specific terms that apply to you, form the agreement for your use of ROAM.</p>

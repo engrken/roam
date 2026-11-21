@@ -715,6 +715,7 @@ model MarketplaceListing {
   tenant        Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   hostProfile   MarketplaceHostProfile   @relation(fields: [hostProfileId, tenantId], references: [id, tenantId], onDelete: Cascade)
   vehicle       Vehicle                  @relation(fields: [vehicleId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  @@unique([vehicleId, tenantId])
   @@index([tenantId, status, createdAt])
   @@index([status, submittedAt])
 }

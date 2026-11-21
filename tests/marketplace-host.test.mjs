@@ -55,7 +55,7 @@ test("vehicle listings can be submitted only after the Host profile enters revie
   assert.equal(canSubmitMarketplaceListing("SUSPENDED"), false);
   assert.equal(canSubmitMarketplaceListing("SUBMITTED"), true);
   assert.equal(canSubmitMarketplaceListing("IN_REVIEW"), true);
-  assert.equal(canSubmitMarketplaceListing("NEEDS_INFORMATION"), true);
+  assert.equal(canSubmitMarketplaceListing("NEEDS_INFORMATION"), false);
   assert.equal(canSubmitMarketplaceListing("PREQUALIFIED"), true);
 });
 

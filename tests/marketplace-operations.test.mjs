@@ -35,7 +35,7 @@ test("inquiry validation requires contact permission and normalizes email", () =
   assert.equal(marketplaceInquirySchema.safeParse({ ...validInquiry, requesterEmail: "invalid" }).success, false);
 });
 
-test("date ranges use Manila midnight and include the selected return date", () => {
+test("date ranges use Manila midnight and exclude the return date", () => {
   const range = marketplaceDateRange("2027-01-10", "2027-01-12");
   assert.ok(range);
   assert.equal(range.nights, 2);
@@ -45,7 +45,7 @@ test("date ranges use Manila midnight and include the selected return date", () 
 
 test("date ranges reject invalid calendar dates and spans longer than 30 days", () => {
   assert.equal(marketplaceDateRange("2027-02-30", "2027-03-01"), null);
-  assert.equal(marketplaceDateRange("2027-01-01", "2027-01-31"), null);
+  assert.equal(marketplaceDateRange("2027-01-01", "2027-02-01"), null);
   assert.equal(marketplaceDateRange("2027-01-10", "2027-01-10"), null);
   assert.equal(marketplaceAvailabilityRange("2027-01-10", "2027-01-10")?.nights, 1);
   assert.equal(marketplaceDateRange("2027-01-12", "2027-01-10"), null);

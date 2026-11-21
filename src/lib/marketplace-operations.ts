@@ -27,10 +27,12 @@ export const marketplaceInquirySchema = z.object({
 });
 
 export function marketplaceDateRange(startDate: string, endDate: string) {
-  const startAt = new Date(`${startDate}T00:00:00.000Z`);
-  const endAt = new Date(`${endDate}T00:00:00.000Z`);
-  if (!Number.isFinite(startAt.getTime()) || !Number.isFinite(endAt.getTime())) return null;
-  if (startAt.toISOString().slice(0, 10) !== startDate || endAt.toISOString().slice(0, 10) !== endDate) return null;
+  const startCheck = new Date(`${startDate}T00:00:00.000Z`);
+  const endCheck = new Date(`${endDate}T00:00:00.000Z`);
+  if (!Number.isFinite(startCheck.getTime()) || !Number.isFinite(endCheck.getTime())) return null;
+  if (startCheck.toISOString().slice(0, 10) !== startDate || endCheck.toISOString().slice(0, 10) !== endDate) return null;
+  const startAt = new Date(`${startDate}T00:00:00+08:00`);
+  const endAt = new Date(`${endDate}T00:00:00+08:00`);
   if (endAt < startAt) return null;
   endAt.setUTCDate(endAt.getUTCDate() + 1);
   const nights = Math.round((endAt.getTime() - startAt.getTime()) / 86_400_000);

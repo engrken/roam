@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { canManageFleet, getTenantAccess, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 import { recordWorkspaceAudit } from "@/lib/workspace-audit";
-import { isMarketplaceInquiryStatus, marketplaceAvailabilityBlockSchema, marketplaceDateRange } from "@/lib/marketplace-operations";
+import { isMarketplaceInquiryStatus, marketplaceAvailabilityBlockSchema, marketplaceAvailabilityRange } from "@/lib/marketplace-operations";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const parsed = marketplaceAvailabilityBlockSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Choose a listing and a valid date range (up to 30 days)." }, { status: 400 });
-  const range = marketplaceDateRange(parsed.data.startDate, parsed.data.endDate);
+  const range = marketplaceAvailabilityRange(parsed.data.startDate, parsed.data.endDate);
   if (!range || parsed.data.startDate < todayInManila()) return NextResponse.json({ error: "Availability blocks must start today or later and cannot exceed 30 days." }, { status: 400 });
 
   try {

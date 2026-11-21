@@ -15,13 +15,13 @@ export async function GET(request: NextRequest) {
   const statusParam = request.nextUrl.searchParams.get("status") || "";
   const statuses = ["SUBMITTED", "IN_REVIEW", "NEEDS_INFORMATION", "PREQUALIFIED", "DECLINED", "SUSPENDED"];
   const where: Prisma.MarketplaceHostProfileWhereInput = {};
-  if (statuses.includes(statusParam)) where.status = statusParam as Prisma.EnumMarketplaceHostStatusFilter["equals"];
+  if (statuses.includes(statusParam)) where.status = statusParam as "SUBMITTED" | "IN_REVIEW" | "NEEDS_INFORMATION" | "PREQUALIFIED" | "DECLINED" | "SUSPENDED";
   if (query) where.OR = [
     { displayName: { contains: query, mode: "insensitive" } },
     { email: { contains: query, mode: "insensitive" } },
     { city: { contains: query, mode: "insensitive" } },
     { province: { contains: query, mode: "insensitive" } },
-    { tenant: { name: { contains: query, mode: "insensitive" } } },
+    { tenant: { is: { name: { contains: query, mode: "insensitive" } } } },
   ];
 
   const profiles = await prisma.marketplaceHostProfile.findMany({
@@ -97,7 +97,8 @@ export async function PATCH(request: NextRequest) {
           where: { id },
           data: {
             status, reviewedAt: status === "IN_REVIEW" ? null : new Date(),
-            internalNotes: internalNotes || null, hostMessage: hostMessage || null,
+            ...(Object.prototype.hasOwnProperty.call(body, "internalNotes") ? { internalNotes: internalNotes || null } : {}),
+            ...(Object.prototype.hasOwnProperty.call(body, "hostMessage") ? { hostMessage: hostMessage || null } : {}),
           },
         });
         if (status === "DECLINED" || status === "SUSPENDED") {
@@ -128,7 +129,8 @@ export async function PATCH(request: NextRequest) {
         where: { id },
         data: {
           status, reviewedAt: status === "IN_REVIEW" ? null : new Date(),
-          internalNotes: internalNotes || null, hostMessage: hostMessage || null,
+          ...(Object.prototype.hasOwnProperty.call(body, "internalNotes") ? { internalNotes: internalNotes || null } : {}),
+          ...(Object.prototype.hasOwnProperty.call(body, "hostMessage") ? { hostMessage: hostMessage || null } : {}),
         },
       });
       await tx.platformAuditLog.create({

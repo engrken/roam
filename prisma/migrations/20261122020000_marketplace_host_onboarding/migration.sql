@@ -45,6 +45,7 @@ CREATE UNIQUE INDEX "MarketplaceHostProfile_id_tenantId_key" ON "MarketplaceHost
 CREATE INDEX "MarketplaceHostProfile_status_submittedAt_idx" ON "MarketplaceHostProfile"("status", "submittedAt");
 
 CREATE UNIQUE INDEX "MarketplaceListing_vehicleId_key" ON "MarketplaceListing"("vehicleId");
+CREATE UNIQUE INDEX "MarketplaceListing_vehicleId_tenantId_key" ON "MarketplaceListing"("vehicleId", "tenantId");
 CREATE INDEX "MarketplaceListing_tenantId_status_createdAt_idx" ON "MarketplaceListing"("tenantId", "status", "createdAt");
 CREATE INDEX "MarketplaceListing_status_submittedAt_idx" ON "MarketplaceListing"("status", "submittedAt");
 

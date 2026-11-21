@@ -62,6 +62,14 @@ export default function MarketplaceOperationsPage() {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [statuses, setStatuses] = useState<Record<string, string>>({});
   const [replyStyles, setReplyStyles] = useState<Record<string, string>>({});
+  const [handoffChecks, setHandoffChecks] = useState<Record<string, Record<string, boolean>>>({});
+  const checklist = [
+    ["availabilityRechecked", "Availability and date conflicts rechecked"],
+    ["finalPriceAndFeesReviewed", "Final price, deposits and fees reviewed"],
+    ["pickupAndReturnConfirmed", "Pickup and return logistics confirmed"],
+    ["renterRequirementsReviewed", "Renter requirements reviewed"],
+    ["rentalTermsReviewed", "Applicable rental terms reviewed"],
+  ] as const;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -113,16 +121,23 @@ export default function MarketplaceOperationsPage() {
   }
 
   async function updateInquiry(inquiry: Inquiry) {
+    const nextStatus = statuses[inquiry.id] || inquiry.status;
+    const checks = handoffChecks[inquiry.id] || {};
+    if (nextStatus === "READY_FOR_MANUAL_BOOKING" && inquiry.status !== "READY_FOR_MANUAL_BOOKING" && checklist.some(([key]) => checks[key] !== true)) {
+      setError("Complete all five pre-handoff checks before marking this inquiry ready.");
+      return;
+    }
     setSaving(true); setError(""); setNotice("");
     try {
       const response = await fetch(`/api/workspaces/${encodeURIComponent(slug)}/marketplace/operations`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: inquiry.id, status: statuses[inquiry.id] || inquiry.status, hostNote: notes[inquiry.id] ?? inquiry.hostNote ?? "" }),
+        body: JSON.stringify({ id: inquiry.id, status: nextStatus, hostNote: notes[inquiry.id] ?? inquiry.hostNote ?? "", ...(nextStatus === "READY_FOR_MANUAL_BOOKING" ? { handoffChecks: checks } : {}) }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to update inquiry.");
       setStatuses((current) => { const next = { ...current }; delete next[inquiry.id]; return next; });
       setNotes((current) => { const next = { ...current }; delete next[inquiry.id]; return next; });
+      setHandoffChecks((current) => { const next = { ...current }; delete next[inquiry.id]; return next; });
       setNotice("Inquiry updated."); await load();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to update inquiry."); }
     finally { setSaving(false); }
@@ -164,6 +179,11 @@ export default function MarketplaceOperationsPage() {
             <pre className="mt-3 whitespace-pre-wrap rounded-lg border border-slate-200 bg-white p-3 text-xs leading-5 text-slate-700">{renterReplyDraft(item, replyStyles[item.id] || "CHECKING")}</pre>
             <p className="mt-2 text-[11px] leading-5 text-amber-800">Draft only — ROAM does not send this message. Manually verify live availability, final price, fees, pickup details and current rental terms before sending. No reservation or payment is created here.</p>
           </div>
+          {(statuses[item.id] || item.status) === "READY_FOR_MANUAL_BOOKING" && item.status !== "READY_FOR_MANUAL_BOOKING" && <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm font-semibold text-amber-950">Manual booking readiness checks</p>
+            <p className="mt-1 text-xs leading-5 text-amber-900">Confirm each item after checking your current operational records. Completion is recorded in the workspace audit trail; it does not create a reservation.</p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">{checklist.map(([key, label]) => <label key={key} className="flex items-start gap-2 text-xs text-amber-950"><input type="checkbox" checked={handoffChecks[item.id]?.[key] === true} onChange={e=>setHandoffChecks(current=>({...current,[item.id]:{...(current[item.id]||{}),[key]:e.target.checked}}))} className="mt-0.5"/> <span>{label}</span></label>)}</div>
+          </div>}
           <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_2fr_auto]"><select className="roam-input" value={statuses[item.id] || item.status} onChange={e=>setStatuses({...statuses,[item.id]:e.target.value})}>{inquiryStatusOptions(item.status).map(value=><option key={value} value={value}>{statusLabel(value)}</option>)}</select><input className="roam-input" maxLength={1500} placeholder="Internal note (optional)" value={notes[item.id] ?? item.hostNote ?? ""} onChange={e=>setNotes({...notes,[item.id]:e.target.value})}/><button disabled={saving} onClick={()=>void updateInquiry(item)} className="rounded-lg bg-slate-950 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">Save</button></div>
         </article>)}</div> : <div className="mt-4 rounded-xl border border-dashed border-slate-200 p-8 text-center"><Inbox className="mx-auto text-slate-400"/><p className="mt-2 text-sm text-slate-600">No renter inquiries yet.</p></div>}
       </section>

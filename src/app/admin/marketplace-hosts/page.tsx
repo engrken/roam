@@ -156,7 +156,7 @@ export default function MarketplaceHostsAdminPage() {
                   <div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-semibold">{profile.displayName}</h2><span className="rounded-full bg-cyan-400/10 px-2.5 py-1 text-[10px] font-bold text-cyan-200">{profile.status.replaceAll("_", " ")}</span><span className="rounded-full bg-white/5 px-2.5 py-1 text-[10px] text-slate-300">{profile.providerType}</span></div>
                   <p className="mt-2 text-sm text-slate-300">{profile.email}{profile.phone ? " · " + profile.phone : ""}</p>
                   <p className="mt-1 text-xs text-slate-400">{[profile.city, profile.province].filter(Boolean).join(", ")} · Submitted {dateLabel(profile.submittedAt)}</p>
-                  <p className="mt-2 flex items-center gap-2 text-xs text-slate-500"><Building2 size={13}/><Link href={`/workspace/${profile.tenant.slug}`} className="text-cyan-300 hover:underline">{profile.tenant.name}</Link> · Workspace owner: {profile.tenant.owner?.email || "Not available"}</p>
+                  <p className="mt-2 flex items-center gap-2 text-xs text-slate-500"><Building2 size={13}/><Link href={`/admin/tenants/${profile.tenant.id}`} className="text-cyan-300 hover:underline">{profile.tenant.name}</Link> · Workspace owner: {profile.tenant.owner?.email || "Not available"}</p>
                   {profile.description && <p className="mt-3 max-w-3xl whitespace-pre-wrap text-sm leading-6 text-slate-400">{profile.description}</p>}
                   {profile.hostMessage && <p className="mt-3 rounded-lg bg-sky-950/40 p-3 text-xs text-sky-100">Last message to Host: {profile.hostMessage}</p>}
                 </div>

@@ -1,0 +1,43 @@
+import { z } from "zod";
+
+const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
+export const marketplaceAvailabilityBlockSchema = z.object({
+  listingId: z.string().trim().min(1).max(100),
+  startDate: dateOnly,
+  endDate: dateOnly,
+  label: z.string().trim().max(100).optional().or(z.literal("")),
+}).refine((value) => value.startDate <= value.endDate, {
+  message: "End date must be on or after start date.",
+  path: ["endDate"],
+});
+
+export const marketplaceInquirySchema = z.object({
+  listingId: z.string().trim().min(1).max(100),
+  requesterName: z.string().trim().min(2).max(120),
+  requesterEmail: z.string().trim().toLowerCase().email().max(254),
+  requesterPhone: z.string().trim().max(40).optional().or(z.literal("")),
+  startDate: dateOnly,
+  endDate: dateOnly,
+  message: z.string().trim().max(1500).optional().or(z.literal("")),
+  contactConsent: z.literal(true),
+}).refine((value) => value.startDate <= value.endDate, {
+  message: "End date must be on or after start date.",
+  path: ["endDate"],
+});
+
+export function marketplaceDateRange(startDate: string, endDate: string) {
+  const startAt = new Date(`${startDate}T00:00:00.000Z`);
+  const endAt = new Date(`${endDate}T00:00:00.000Z`);
+  if (!Number.isFinite(startAt.getTime()) || !Number.isFinite(endAt.getTime())) return null;
+  if (startAt.toISOString().slice(0, 10) !== startDate || endAt.toISOString().slice(0, 10) !== endDate) return null;
+  if (endAt < startAt) return null;
+  endAt.setUTCDate(endAt.getUTCDate() + 1);
+  const nights = Math.round((endAt.getTime() - startAt.getTime()) / 86_400_000);
+  if (nights < 1 || nights > 30) return null;
+  return { startAt, endAt, nights };
+}
+
+export function isMarketplaceInquiryStatus(status: string) {
+  return ["CONTACTED", "DECLINED", "CLOSED"].includes(status);
+}

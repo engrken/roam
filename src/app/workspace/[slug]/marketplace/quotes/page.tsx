@@ -174,6 +174,13 @@ export default function MarketplaceQuotesPage() {
               </form>}
               <button type="button" onClick={() => { void navigator.clipboard.writeText(quoteText(inquiry, latest)).then(() => setNotice("Quote draft copied. Review all details before sharing."), () => setError("Clipboard access was unavailable. Select and copy the quote text manually.")); }} className="mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"><ClipboardCopy size={14}/> Copy quote draft</button>
             </div>
+            {inquiry.rentalQuotes.length > 1 && <div className="rounded-xl border border-slate-200 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Earlier quote versions</p>
+              <div className="mt-3 grid gap-2">{inquiry.rentalQuotes.slice(1).map((quote) => <div key={quote.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                <div><p className="text-xs font-semibold text-slate-800">Version {quote.version} · {quote.status}</p><p className="mt-1 text-xs text-slate-500">{money(quote.totalAmount, quote.currency)} · valid until {date(quote.validUntil)}</p></div>
+                <button type="button" onClick={() => { void navigator.clipboard.writeText(quoteText(inquiry, quote)).then(() => setNotice("Earlier quote version copied."), () => setError("Clipboard access was unavailable. Select and copy the quote text manually.")); }} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700">Copy v{quote.version}</button>
+              </div>)}</div>
+            </div>}
           </div> : <p className="mt-4 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">No quote has been prepared for this inquiry.</p>}
           {eligible ? <form onSubmit={(event) => void createQuote(event, inquiry)} className="mt-4 grid gap-3 border-t border-slate-100 pt-4">
             <div><h3 className="text-sm font-semibold text-slate-900">{latest ? "Prepare a revised quote version" : "Prepare quote draft"}</h3><p className="mt-1 text-xs text-slate-500">Each save creates a new immutable version and supersedes earlier active versions. Amounts are in {currency}.</p></div>

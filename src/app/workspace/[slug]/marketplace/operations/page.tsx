@@ -93,6 +93,8 @@ export default function MarketplaceOperationsPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to update inquiry.");
+      setStatuses((current) => { const next = { ...current }; delete next[inquiry.id]; return next; });
+      setNotes((current) => { const next = { ...current }; delete next[inquiry.id]; return next; });
       setNotice("Inquiry updated."); await load();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to update inquiry."); }
     finally { setSaving(false); }

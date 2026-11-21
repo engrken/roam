@@ -141,6 +141,7 @@ model Tenant {
   subscriptionPaymentSubmissions SubscriptionPaymentSubmission[]
   marketplaceHostProfile MarketplaceHostProfile?
   marketplaceListings MarketplaceListing[]
+  marketplaceRentalQuotes MarketplaceRentalQuote[]
   marketplaceHostNotifications MarketplaceHostNotification[]
 }
 
@@ -767,6 +768,8 @@ model MarketplaceBookingInquiry {
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   listing              MarketplaceListing @relation(fields: [listingId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  rentalQuotes         MarketplaceRentalQuote[]
+  @@unique([id, tenantId])
   @@index([tenantId, status, createdAt])
   @@index([listingId, startAt, endAt])
   @@index([listingId, requesterEmail, createdAt])
@@ -792,4 +795,36 @@ model MarketplaceHostNotification {
   @@index([tenantId, createdAt])
   @@index([emailStatus, createdAt])
   @@index([targetType, targetId, createdAt])
+}
+
+
+model MarketplaceRentalQuote {
+  id                    String   @id @default(cuid())
+  tenantId              String
+  inquiryId             String
+  version               Int
+  status                String   @default("DRAFT")
+  currency              String   @default("PHP") @db.VarChar(3)
+  dailyRate             Decimal  @db.Decimal(12, 2)
+  rentalDays            Int
+  baseAmount            Decimal  @db.Decimal(12, 2)
+  addOns                Json
+  discountAmount        Decimal  @db.Decimal(12, 2)
+  fees                  Json
+  totalAmount           Decimal  @db.Decimal(12, 2)
+  validUntil            DateTime
+  snapshot              Json
+  agreementReference    String?  @db.VarChar(160)
+  agreementReviewedAt   DateTime?
+  agreementReviewedById String?
+  approvedAt            DateTime?
+  approvedById          String?
+  createdById           String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  inquiry               MarketplaceBookingInquiry @relation(fields: [inquiryId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  @@unique([inquiryId, tenantId, version])
+  @@unique([id, tenantId])
+  @@index([tenantId, status, createdAt])
 }

@@ -142,7 +142,7 @@ export default function MarketplaceHostsAdminPage() {
         <div className="flex flex-wrap items-center gap-3 border-b border-white/10 p-4">
           <label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-lg border border-white/10 bg-slate-950 px-3 py-2"><Search size={14} className="text-slate-500"/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search Host, workspace or city…" className="w-full bg-transparent text-xs text-white outline-none placeholder:text-slate-600"/></label>
           <select value={filter} onChange={(event) => setFilter(event.target.value)} aria-label="Filter Host status" className="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white">
-            <option value="ALL">All statuses</option>{["DRAFT", "SUBMITTED", ...reviewStatuses].map((status) => <option key={status} value={status}>{status.replaceAll("_", " ")}</option>)}
+            <option value="ALL">All statuses</option>{["SUBMITTED", ...reviewStatuses].map((status) => <option key={status} value={status}>{status.replaceAll("_", " ")}</option>)}
           </select>
           <span className="text-xs text-slate-500">{filtered.length} of {profiles.length} Host profiles</span>
         </div>

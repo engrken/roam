@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://roam-kentbsece-7567.vercel.app"),
-  title: { default: "ROAM — Move More. Manage Smarter.", template: "%s | ROAM" },
-  description: "ROAM is a vehicle rental operations and asset management platform for motorcycles, cars, SUVs, vans, pickups, buses, and more.",
+  metadataBase: new URL("https://roamph.vercel.app"),
+  title: { default: "ROAM — Vehicle Rental Marketplace & Host Platform", template: "%s | ROAM" },
+  description: "Discover vehicles from independent owners and rental businesses through the upcoming ROAM Marketplace. Hosts can prepare their vehicle rental business, while operators can manage fleets and bookings with ROAM Workspace.",
   applicationName: "ROAM",
   keywords: ["vehicle rental software", "fleet management", "rental operations", "car rental SaaS", "motorcycle rental", "Philippines"],
   icons: { icon: "/favicon.svg", shortcut: "/favicon.svg", apple: "/apple-touch-icon.svg" },
-  openGraph: { title: "ROAM — Move More. Manage Smarter.", description: "A clearer way to run your vehicle rental business.", type: "website", siteName: "ROAM" },
+  openGraph: { title: "ROAM — Vehicle Rental Marketplace", description: "A connected vehicle rental platform for renters, independent Hosts, and rental businesses. Marketplace discovery is coming soon.", type: "website", siteName: "ROAM" },
   robots: { index: true, follow: true }
 };
 

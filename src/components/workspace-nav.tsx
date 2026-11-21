@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
-  LayoutDashboard, CarFront, LogOut, ShieldCheck, CalendarDays, MapPin, Users,
+  LayoutDashboard, CarFront, LogOut, ShieldCheck, CalendarDays, MapPin, Users, Store,
   BookOpen, FileText, UserCog, MessageCircle, Wallet, Menu, X, LockKeyhole, Wrench, ClipboardList,
   ArrowUpRight, ChevronLeft, ChevronRight,
 } from "lucide-react";
@@ -37,7 +37,7 @@ const lockedFeatures: Record<FeatureKey, FeatureInfo> = {
   },
 };
 
-export function WorkspaceNav({ slug, name, role, active }: { slug: string; name: string; role: string; active: "overview" | "fleet" | "maintenance" | "calendar" | "bookings" | "messages" | "finance" | "branches" | "customers" | "help" | "rental-terms" | "team" | "settings" | "reports" | "account" | "audit" }) {
+export function WorkspaceNav({ slug, name, role, active }: { slug: string; name: string; role: string; active: "overview" | "fleet" | "marketplace" | "maintenance" | "calendar" | "bookings" | "messages" | "finance" | "branches" | "customers" | "help" | "rental-terms" | "team" | "settings" | "reports" | "account" | "audit" }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
@@ -88,6 +88,7 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
     <nav className="roam-side-nav" id="roam-workspace-menu" aria-label="Workspace navigation" onClick={() => setMenuOpen(false)}>
       <Link title="Overview" className={active === "overview" ? "active" : ""} href={`/workspace/${slug}`}><LayoutDashboard size={18}/><span className="roam-nav-label">Overview</span></Link>
       <Link title="Fleet management" className={active === "fleet" ? "active" : ""} href={`/workspace/${slug}/fleet`}><CarFront size={18}/><span className="roam-nav-label">Fleet management</span></Link>
+      {effectiveRole !== "STAFF" && <Link title="Marketplace host onboarding" className={active === "marketplace" ? "active" : ""} href={`/workspace/${slug}/marketplace`}><Store size={18}/><span className="roam-nav-label">Marketplace</span></Link>}
       {effectiveRole !== "STAFF" && <>
         <Link title="Maintenance & expenses" className={active === "maintenance" ? "active" : ""} href={`/workspace/${slug}/maintenance`}><Wrench size={18}/><span className="roam-nav-label">Maintenance & expenses</span></Link>
         <Link title="Fleet calendar" className={active === "calendar" ? "active" : ""} href={`/workspace/${slug}/calendar`}><CalendarDays size={18}/><span className="roam-nav-label">Fleet calendar</span></Link>

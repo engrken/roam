@@ -160,6 +160,7 @@ export default function AdminPage() {
         <div><Link href="/" className="text-2xl font-black tracking-[.2em]">ROAM</Link><p className="mt-1 text-[11px] font-bold tracking-[.2em] text-cyan-400">PLATFORM CONTROL CENTER</p></div>
         <nav aria-label="Platform navigation" className="flex flex-wrap items-center gap-x-5 gap-y-3 text-sm">
           <Link href="/admin" aria-current="page" className="text-white">Overview</Link>
+          <Link href="/admin/marketplace-leads" className="text-slate-400 hover:text-white">Marketplace leads</Link>
           <Link href="/admin/plans" className="text-slate-400 hover:text-white">Plans & subscriptions</Link>
           <Link href="/admin/payments" className="text-slate-400 hover:text-white">Payment settings</Link>
           <Link href="/admin/audit-logs" className="text-slate-400 hover:text-white">Audit history</Link>

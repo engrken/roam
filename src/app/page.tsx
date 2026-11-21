@@ -16,12 +16,12 @@ function Brand({ light = false }: { light?: boolean }) {
 }
 
 const features = [
-  { icon: CarFront, title: "One fleet, every vehicle", text: "Manage motorcycles, scooters, cars, SUVs, MPVs, vans, pickups, buses, and commercial vehicles in one organized workspace." },
-  { icon: CalendarDays, title: "Bookings without the back-and-forth", text: "Keep reservations, rental periods, availability, and handovers visible so your team can stay in sync." },
-  { icon: Users, title: "Customers and teams, connected", text: "Keep customer records and staff access organized with role-aware tools for your rental operation." },
-  { icon: BarChart3, title: "Know how your business is moving", text: "Bring fleet activity, bookings, and business performance into a clearer operational picture." },
-  { icon: Wrench, title: "Keep every asset road-ready", text: "Track vehicle status and maintenance needs as part of your day-to-day fleet workflow." },
-  { icon: ShieldCheck, title: "Built with business boundaries", text: "A multi-tenant foundation designed to keep each rental business's workspace and records separate." }
+  { icon: CarFront, title: "More ways to find a ride", text: "A planned discovery experience for motorcycles, cars, SUVs, vans, pickups, and other vehicle types from local providers." },
+  { icon: Users, title: "Independent hosts and rental teams", text: "Bring individual vehicle owners and established rental businesses into one marketplace experience." },
+  { icon: ShieldCheck, title: "A staged trust process", text: "Host profiles and vehicle submissions go through preliminary review before any public marketplace launch." },
+  { icon: CalendarDays, title: "Clearer rental conversations", text: "Build toward a more organized journey from discovering a vehicle to discussing rental details with its provider." },
+  { icon: BarChart3, title: "Tools behind the listing", text: "Rental businesses can use a ROAM workspace to manage fleet records, bookings, customers, and daily operations." },
+  { icon: Wrench, title: "Operations that keep moving", text: "Keep vehicle status, maintenance, expenses, and business activity organized in one connected workspace." }
 ];
 
 type PublicPlan = {
@@ -68,9 +68,9 @@ function planBenefits(tier: string) {
 }
 
 const steps = [
-  ["01", "Set up your rental business", "Create your workspace, add branches, and invite your team."],
-  ["02", "Bring your fleet together", "Add your vehicles, rates, and availability in one place."],
-  ["03", "Manage the rental journey", "Organize bookings, customers, vehicle handovers, and returns."]
+  ["01", "Tell us what you need", "Renters can join early access; vehicle owners and rental businesses can register host interest."],
+  ["02", "Prepare a Host profile", "Interested providers can prepare their business details and vehicle drafts for preliminary review."],
+  ["03", "Launch in clear stages", "Public discovery, booking, and any applicable commercial terms will be introduced only after the marketplace is ready."]
 ];
 
 export default function Home() {
@@ -113,11 +113,12 @@ export default function Home() {
   const configuredPlanSummary = plans.map(plan => `${plan.name}: ${plan.tier === "ENTERPRISE" ? "custom pricing" : formatPlanPrice(plan.monthlyPrice) + "/month"} (${describePlanCapacity(plan)})`).join("; ");
   const configuredCapacitySummary = plans.map(plan => `${plan.name} — ${describePlanCapacity(plan)}`).join(" ");
   const faqs = [
-    ["What types of vehicles can ROAM manage?", "ROAM is being designed for private vehicle rental operators managing motorcycles, scooters, cars, SUVs, MPVs, vans, pickups, buses, trucks, and other rentable vehicle types."],
-    ["Can more than one rental business use ROAM?", "Yes. Each rental business gets its own workspace, team membership, and operational records."],
-    ["How do I get started?", "Create an account using your email, verify your one-time code, then create your rental business workspace with a 14-day free trial."],
-    ["What happens after the free trial?", plans.length ? "Choose the plan that fits your rental operation: " + configuredPlanSummary + ". Every tier includes core fleet, booking, customer, messaging, and financial workflows. Branch management and operational reports start on Pro; team invitations and role management start on Business." : "Our plan options are temporarily unavailable. Please check back shortly."],
-    ["What changes when I upgrade?", plans.length ? "You get more operating capacity based on the selected plan: " + configuredCapacitySummary + " Feature availability also expands by tier: multi-branch management and operational reports start on Pro, while team access starts on Business." : "Plan limits depend on the active plan configured by ROAM."]
+    ["What is ROAM Marketplace?", "ROAM is building a vehicle rental marketplace where renters can discover vehicles from independent owners and rental businesses. Public discovery and booking are not live yet."],
+    ["Can individual owners and rental businesses join?", "Yes. Both independent vehicle owners and established rental operators can register Host interest. Preliminary onboarding is separate from legal or vehicle verification."],
+    ["Can I use ROAM Workspace today?", "Yes. Rental businesses can create a workspace to organize fleet records, bookings, customers, maintenance, and other rental operations."],
+    ["What happens after the Workspace free trial?", plans.length ? "Choose the Workspace plan that fits your rental operation: " + configuredPlanSummary + ". These plans cover SaaS operating features and capacity; they are separate from any future marketplace fees or commissions." : "Our Workspace plan options are temporarily unavailable. Please check back shortly."],
+    ["When will renters be able to book vehicles?", "We are starting with early-access interest and Host onboarding. Public listings, bookings, payment handling, and marketplace commercial terms will be announced as those parts are ready."],
+    ["Does preliminary Host approval mean a vehicle is verified?", "No. A preliminary review is an early screening step only. It is not a certification of identity, ownership, registration, safety, insurance, or legal authority."]
   ];
 
   return <main className={`site ${dark ? "theme-dark" : ""}`}>
@@ -125,16 +126,17 @@ export default function Home() {
       <div className="container nav-wrap">
         <Brand />
         <nav className={`main-nav ${menuOpen ? "nav-open" : ""}`} aria-label="Main navigation">
-          <a href="#platform" onClick={() => setMenuOpen(false)}>Platform</a>
-          <a href="#how-it-works" onClick={() => setMenuOpen(false)}>How it works</a>
-          <a href="#plans" onClick={() => setMenuOpen(false)}>Plans</a>
+          <Link href="/marketplace" onClick={() => setMenuOpen(false)}>Marketplace</Link>
+          <Link href="/become-a-host" onClick={() => setMenuOpen(false)}>Become a host</Link>
+          <a href="#platform" onClick={() => setMenuOpen(false)}>For operators</a>
+          <a href="#plans" onClick={() => setMenuOpen(false)}>Workspace plans</a>
           <a href="#faq" onClick={() => setMenuOpen(false)}>FAQs</a>
-          <Link className="nav-mobile-cta" href="/register" onClick={() => setMenuOpen(false)}>Create free account <ArrowRight size={15}/></Link>
+          <Link className="nav-mobile-cta" href="/register" onClick={() => setMenuOpen(false)}>Start a workspace <ArrowRight size={15}/></Link>
         </nav>
         <div className="nav-actions">
           <button className="icon-button theme-toggle" onClick={toggleTheme} aria-label={dark ? "Switch to light theme" : "Switch to dark theme"} title={dark ? "Light theme" : "Dark theme"}>{dark ? <Sun size={18}/> : <Moon size={18}/>}</button>
           <Link className="text-link" href="/login">Sign in</Link>
-          <Link className="btn button button-small button-dark" href="/register">Start free <ArrowRight size={15}/></Link>
+          <Link className="btn button button-small button-dark" href="/register">Workspace trial <ArrowRight size={15}/></Link>
           <button className="icon-button menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? "Close menu" : "Open menu"}>{menuOpen ? <X/> : <Menu/>}</button>
         </div>
       </div>
@@ -143,55 +145,65 @@ export default function Home() {
     <section className="hero">
       <div className="hero-grid container">
         <div className="hero-copy">
-          <div className="eyebrow"><span className="eyebrow-dot"/> RENTAL OPERATIONS, REIMAGINED</div>
-          <h1>Move more.<br/><span>Manage smarter.</span></h1>
-          <p className="hero-lead">A clearer way to run your vehicle rental business. Bring your fleet, bookings, customers, and daily operations together in one connected platform.</p>
+          <div className="eyebrow"><span className="eyebrow-dot"/> THE VEHICLE RENTAL MARKETPLACE</div>
+          <h1>Find your ride.<br/><span>Move your world.</span></h1>
+          <p className="hero-lead">ROAM is bringing renters, independent vehicle owners, and rental businesses together. Discover the idea, join early access, or prepare to become a Host.</p>
           <div className="hero-actions">
-            <Link className="btn button button-primary" href="/register">Create your free workspace <ArrowRight size={17}/></Link>
-            <Link className="text-link" href="/login">Sign in <span><ArrowRight size={16}/></span></Link>
+            <Link className="btn button button-primary" href="/marketplace">Explore ROAM Marketplace <ArrowRight size={17}/></Link>
+            <Link className="text-link" href="/become-a-host">Become a host <span><ArrowRight size={16}/></span></Link>
           </div>
-          <div className="hero-proof"><span className="proof-icon"><ShieldCheck size={16}/></span><span>Designed for independent operators and growing rental teams.</span></div>
+          <div className="hero-proof"><span className="proof-icon"><ShieldCheck size={16}/></span><span>Built for renters, local vehicle owners, and established rental operators.</span></div>
         </div>
-        <div className="hero-art" aria-label="Illustration of a vehicle rental operations dashboard">
+        <div className="hero-art" aria-label="Illustrative preview of the upcoming ROAM vehicle rental marketplace">
           <div className="art-glow"/>
           <div className="dashboard-card">
-            <div className="dash-top"><div><span className="dash-kicker">ROAM WORKSPACE</span><strong>Fleet overview</strong></div><span className="dash-avatar">R</span></div>
+            <div className="dash-top"><div><span className="dash-kicker">ROAM MARKETPLACE</span><strong>Find a ride that fits</strong></div><span className="dash-avatar">R</span></div>
             <div className="dash-stats">
-              <div><span>Fleet visibility</span><strong>All in one place</strong><small><i/> Organized by status</small></div>
-              <div><span>Rental workflow</span><strong>Connected</strong><small><i/> From booking to return</small></div>
+              <div><span>For renters</span><strong>Explore options</strong><small><i/> By vehicle and location</small></div>
+              <div><span>For Hosts</span><strong>Share your fleet</strong><small><i/> Individual or business</small></div>
             </div>
             <div className="fleet-panel">
-              <div className="fleet-panel-head"><strong>Vehicle categories</strong><span>FLEET MIX</span></div>
-              <div className="vehicle-line"><span className="vehicle-icon"><Bike size={17}/></span><span>Motorcycles & scooters</span><b>2-wheel</b></div>
-              <div className="vehicle-line"><span className="vehicle-icon"><CarFront size={17}/></span><span>Cars & SUVs</span><b>Personal</b></div>
-              <div className="vehicle-line"><span className="vehicle-icon"><BusFront size={17}/></span><span>Vans & utility vehicles</span><b>Commercial</b></div>
-              <div className="vehicle-line"><span className="vehicle-icon"><Truck size={17}/></span><span>Pickups, buses & trucks</span><b>More</b></div>
+              <div className="fleet-panel-head"><strong>Vehicle categories</strong><span>MARKETPLACE PREVIEW</span></div>
+              <div className="vehicle-line"><span className="vehicle-icon"><Bike size={17}/></span><span>Motorcycles & scooters</span><b>2 wheels</b></div>
+              <div className="vehicle-line"><span className="vehicle-icon"><CarFront size={17}/></span><span>Cars, sedans & SUVs</span><b>Everyday</b></div>
+              <div className="vehicle-line"><span className="vehicle-icon"><BusFront size={17}/></span><span>MPVs & vans</span><b>Group trips</b></div>
+              <div className="vehicle-line"><span className="vehicle-icon"><Truck size={17}/></span><span>Pickups, buses & trucks</span><b>Utility</b></div>
             </div>
-            <div className="dash-bottom"><span><i/> WORKSPACE PREVIEW</span><span>MOVE MORE. ↗</span></div>
+            <div className="dash-bottom"><span><i/> ILLUSTRATIVE PREVIEW</span><span>COMING SOON ↗</span></div>
           </div>
-          <div className="floating-chip chip-one"><span className="chip-check"><Check size={13}/></span><span><b>One connected view</b><small>Fleet and bookings</small></span></div>
-          <div className="floating-chip chip-two"><span className="chip-pin"><MapPin size={15}/></span><span><b>Multiple branches</b><small>Built to grow with you</small></span></div>
+          <div className="floating-chip chip-one"><span className="chip-check"><Check size={13}/></span><span><b>For every journey</b><small>More ways to move</small></span></div>
+          <div className="floating-chip chip-two"><span className="chip-pin"><MapPin size={15}/></span><span><b>For local Hosts</b><small>Owners and rental teams</small></span></div>
         </div>
       </div>
-      <div className="hero-bottom container"><span>ONE WORKSPACE FOR YOUR RENTAL BUSINESS</span><span className="hero-bottom-line"/><span>PHILIPPINES-READY · ASIA/MANILA TIME</span></div>
+      <div className="hero-bottom container"><span>RENTERS · VEHICLE HOSTS · RENTAL OPERATORS</span><span className="hero-bottom-line"/><span>PUBLIC DISCOVERY COMING SOON</span></div>
     </section>
 
+    <section className="home-pathways" aria-labelledby="home-pathways-title">
+      <div className="container">
+        <div className="home-pathways-heading"><div><div className="eyebrow">ONE PLATFORM · THREE WAYS TO TAKE PART</div><h2 id="home-pathways-title">Wherever you sit in the rental journey, there’s a place for you.</h2></div><p>ROAM is developing the marketplace and the tools that help rental providers manage the work behind every trip.</p></div>
+        <div className="home-pathways-grid">
+          <article className="home-pathway-card"><span className="home-pathway-icon"><CarFront size={21}/></span><p>FOR RENTERS</p><h3>Find your next ride.</h3><span>Tell us where you’re based and what kind of vehicle you’re looking for. Join the early-access list.</span><Link href="/early-access">Get renter early access <ArrowRight size={15}/></Link></article>
+          <article className="home-pathway-card home-pathway-featured"><span className="home-pathway-icon"><MapPin size={21}/></span><p>FOR VEHICLE HOSTS</p><h3>Bring your vehicle to ROAM.</h3><span>Independent owners and rental businesses can register their interest and prepare for staged onboarding.</span><Link href="/become-a-host">Become an early Host <ArrowRight size={15}/></Link></article>
+          <article className="home-pathway-card"><span className="home-pathway-icon"><BarChart3 size={21}/></span><p>FOR RENTAL OPERATORS</p><h3>Run your operation with clarity.</h3><span>Use a ROAM workspace to organize fleet, bookings, customers, maintenance, and business activity.</span><Link href="/register">Explore ROAM Workspace <ArrowRight size={15}/></Link></article>
+        </div>
+      </div>
+    </section>
     <section className="vehicle-strip"><div className="container vehicle-strip-inner"><span>FROM TWO WHEELS</span><Bike/><span>TO EVERYDAY DRIVES</span><CarFront/><span>TO WORKHORSE FLEETS</span><Truck/><span>ONE ROAM WORKSPACE</span></div></section>
 
     <section className="section section-platform" id="platform">
       <div className="container">
-        <div className="section-intro"><div><div className="eyebrow">YOUR BUSINESS, IN BETTER ORDER</div><h2>Everything your rental operation needs to move forward.</h2></div><p>Spend less time switching between lists and messages. ROAM brings the essential parts of rental operations into a shared, structured workspace.</p></div>
+        <div className="section-intro"><div><div className="eyebrow">THE TOOLS BEHIND EVERY RENTAL</div><h2>More than a listing page. A connected place for the people who make rentals happen.</h2></div><p>ROAM is being shaped around both sides of the rental journey: discovery for renters and practical operating tools for Hosts and rental businesses.</p></div>
         <div className="feature-grid">{features.map(({icon: Icon,title,text},i)=><article className="feature-card" key={title}><div className="feature-top"><span className="feature-icon"><Icon size={20}/></span><span className="feature-number">0{i+1}</span></div><h3>{title}</h3><p>{text}</p></article>)}</div>
       </div>
     </section>
 
     <section className="section how-section" id="how-it-works"><div className="container how-grid">
-      <div className="how-heading"><div className="eyebrow">A SIMPLE PLACE TO START</div><h2>From scattered operations to a smoother rental flow.</h2><p>Create an account, set up your first rental business, and invite your team when you are ready.</p><Link href="/register" className="text-link">Create a free account <ArrowRight size={16}/></Link></div>
+      <div className="how-heading"><div className="eyebrow">BUILT IN STAGES</div><h2>A more connected rental journey starts with the right foundations.</h2><p>We’re opening interest first, preparing Hosts next, and building toward public vehicle discovery and bookings.</p><Link href="/marketplace" className="text-link">See the marketplace roadmap <ArrowRight size={16}/></Link></div>
       <div className="steps">{steps.map(([n,t,d])=><div className="step" key={n}><span className="step-num">{n}</span><div><h3>{t}</h3><p>{d}</p></div><ArrowRight className="step-arrow" size={18}/></div>)}</div>
     </div></section>
 
     <section className="section plans-section" id="plans"><div className="container plans-inner">
-      <div className="plans-copy"><div className="eyebrow">SIMPLE, TRANSPARENT PRICING</div><h2>Start lean. Add capacity as your rental business grows.</h2><p>Every plan includes the core ROAM rental operations toolkit. Choose a tier based on how many vehicles, locations, and staff accounts your business needs. All prices are monthly and shown in Philippine pesos.</p><Link className="btn button button-primary" href="/register">Start your 14-day free trial <ArrowRight size={16}/></Link><span className="pricing-note">14 days free to get set up. No charge during your trial.</span></div>
+      <div className="plans-copy"><div className="eyebrow">FOR RENTAL OPERATORS</div><h2>ROAM Workspace keeps your rental business in order.</h2><p>These subscription plans cover the operating tools for rental businesses: fleet records, bookings, customers, team access, maintenance, and reporting. Marketplace booking and Host commercial terms will be explained separately before public bookings open.</p><Link className="btn button button-primary" href="/register">Start a 14-day workspace trial <ArrowRight size={16}/></Link><span className="pricing-note">Workspace plans are separate from future marketplace commercial terms.</span></div>
       <div className="plan-preview plan-grid">
         {plansLoading ? <p className="plan-loading" role="status">Loading current plans…</p> : plans.length ? plans.map(plan => {
           const featured = plan.tier === "PRO";
@@ -230,8 +242,8 @@ export default function Home() {
 
     <section className="section faq-section" id="faq"><div className="container faq-grid"><div><div className="eyebrow">GOOD TO KNOW</div><h2>Questions before you get moving?</h2><p>Here are a few things to know about the ROAM platform as it takes shape.</p></div><div className="faq-list">{faqs.map(([q,a],i)=><div className={`faq-item ${faqOpen===i?"faq-active":""}`} key={q}><button onClick={()=>setFaqOpen(faqOpen===i?-1:i)} aria-expanded={faqOpen===i}><span>{q}</span><ChevronDown size={18}/></button>{faqOpen===i&&<p>{a}</p>}</div>)}</div></div></section>
 
-    <section className="contact-section" id="contact"><div className="container contact-card"><div className="contact-orbit"/><div className="eyebrow">YOUR NEXT MOVE STARTS HERE</div><h2>Ready to run rentals with more clarity?</h2><p>Create your free account today and set up your first rental business workspace in minutes.</p><Link className="btn button button-light" href="/register">Create your free account <ArrowRight size={17}/></Link><span className="contact-note">Free to get started. No credit card required.</span></div></section>
+    <section className="contact-section" id="contact"><div className="container contact-card"><div className="contact-orbit"/><div className="eyebrow">GET CLOSER TO THE FIRST RELEASE</div><h2>Be part of the next way to rent and share vehicles.</h2><p>Join as a renter or register as a Host. Rental businesses can also start using ROAM Workspace today.</p><div className="home-final-actions"><Link className="btn button button-light" href="/early-access">Join renter early access <ArrowRight size={17}/></Link><Link className="home-final-host-link" href="/become-a-host">I’m interested in hosting <ArrowRight size={15}/></Link></div><span className="contact-note">Marketplace discovery and booking are not live yet.</span></div></section>
 
-    <footer className="site-footer"><div className="container"><div className="footer-main"><div><Brand/><p>Rental Operations and Asset Management</p><span className="footer-tagline">Move More. Manage Smarter.</span></div><div className="footer-links"><div><b>EXPLORE</b><a href="#platform">Platform</a><a href="#how-it-works">How it works</a><a href="#plans">Plans</a><a href="#faq">FAQs</a></div><div><b>INFORMATION</b><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a><a href="#contact">Contact</a></div></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} ROAM. All rights reserved.</span><span>Built for the people who keep things moving.</span></div></div></footer>
+    <footer className="site-footer"><div className="container"><div className="footer-main"><div><Brand/><p>Vehicle Rental Marketplace & Operations Platform</p><span className="footer-tagline">Find your ride. Move your world.</span></div><div className="footer-links"><div><b>EXPLORE</b><Link href="/marketplace">Marketplace</Link><Link href="/early-access">Renter early access</Link><Link href="/become-a-host">Become a Host</Link><a href="#platform">For operators</a><a href="#plans">Workspace plans</a><a href="#faq">FAQs</a></div><div><b>INFORMATION</b><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a><a href="#contact">Contact</a></div></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} ROAM. All rights reserved.</span><span>Built for the people who keep things moving.</span></div></div></footer>
   </main>;
 }

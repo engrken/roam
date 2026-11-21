@@ -22,7 +22,7 @@ export default function LegalConsentPage() {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!accepted) { setError("You must accept both documents to continue."); return; }
+    if (!accepted) { setError("You must agree to the Terms and acknowledge the Privacy Policy to continue."); return; }
     setBusy(true); setError("");
     try {
       const response = await fetch("/api/legal/accept", {
@@ -50,7 +50,7 @@ export default function LegalConsentPage() {
     <Link href="/" className="roam-auth-brand"><span className="roam-brand-mark">R</span> ROAM</Link>
     <div className="roam-auth-eyebrow"><ShieldCheck size={14}/> ACCOUNT & DATA PROTECTION</div>
     <h1>Before you continue</h1>
-    <p className="roam-auth-description">Please review the documents below. Your acceptance is required to access your ROAM workspace. We record the policy versions and time of acceptance.</p>
+    <p className="roam-auth-description">Please review the documents below. You must agree to the Terms of Service and acknowledge the Privacy Policy to access your ROAM workspace. We record the document versions and time of your response.</p>
     <div className="roam-consent-docs">
       <Link href="/terms" target="_blank">Terms of Service <span>Version {TERMS_VERSION}</span></Link>
       <Link href="/privacy" target="_blank">Privacy Policy <span>Version {PRIVACY_VERSION}</span></Link>

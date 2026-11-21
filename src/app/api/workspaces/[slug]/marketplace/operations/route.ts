@@ -6,6 +6,7 @@ import { isMarketplaceInquiryStatus, marketplaceAvailabilityBlockSchema, marketp
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+const todayInManila = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const parsed = marketplaceAvailabilityBlockSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Choose a listing and a valid date range (up to 30 days)." }, { status: 400 });
   const range = marketplaceDateRange(parsed.data.startDate, parsed.data.endDate);
-  if (!range || range.startAt < new Date()) return NextResponse.json({ error: "Availability blocks must start today or later and cannot exceed 30 days." }, { status: 400 });
+  if (!range || parsed.data.startDate < todayInManila()) return NextResponse.json({ error: "Availability blocks must start today or later and cannot exceed 30 days." }, { status: 400 });
 
   try {
     const result = await prisma.$transaction(async (tx) => {

@@ -5,7 +5,7 @@ import { getClientIp } from "@/lib/request-ip";
 import { prisma } from "@/lib/prisma";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
-const CONSENT_VERSION="marketplace-interest-2026-11-21";
+const CONSENT_VERSION="marketplace-interest-2026-11-21-v2";
 export async function POST(request:NextRequest){
  const body=await request.json().catch(()=>null);
  if(!body||typeof body!=="object") return NextResponse.json({error:"Please check the form and try again."},{status:400});

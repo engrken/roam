@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   isMarketplaceInquiryStatus,
   marketplaceAvailabilityBlockSchema,
+  marketplaceAvailabilityRange,
   marketplaceDateRange,
   marketplaceInquirySchema,
 } from "../src/lib/marketplace-operations.ts";
@@ -37,14 +38,16 @@ test("inquiry validation requires contact permission and normalizes email", () =
 test("date ranges use Manila midnight and include the selected return date", () => {
   const range = marketplaceDateRange("2027-01-10", "2027-01-12");
   assert.ok(range);
-  assert.equal(range.nights, 3);
+  assert.equal(range.nights, 2);
   assert.equal(range.startAt.toISOString(), "2027-01-09T16:00:00.000Z");
-  assert.equal(range.endAt.toISOString(), "2027-01-12T16:00:00.000Z");
+  assert.equal(range.endAt.toISOString(), "2027-01-11T16:00:00.000Z");
 });
 
 test("date ranges reject invalid calendar dates and spans longer than 30 days", () => {
   assert.equal(marketplaceDateRange("2027-02-30", "2027-03-01"), null);
   assert.equal(marketplaceDateRange("2027-01-01", "2027-01-31"), null);
+  assert.equal(marketplaceDateRange("2027-01-10", "2027-01-10"), null);
+  assert.equal(marketplaceAvailabilityRange("2027-01-10", "2027-01-10")?.nights, 1);
   assert.equal(marketplaceDateRange("2027-01-12", "2027-01-10"), null);
 });
 

@@ -42,6 +42,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   });
 
   return NextResponse.json({
+    role: access.role,
     currency: tenantCurrency(access.tenant.currency),
     inquiries: inquiries.map((item) => ({
       ...item,

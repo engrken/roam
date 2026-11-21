@@ -53,6 +53,7 @@ export default function MarketplaceHostsAdminPage() {
     } finally { setLoading(false); }
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch the protected Host review queue on entry.
   useEffect(() => { void load(); }, [load]);
 
   const filtered = useMemo(() => {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { canManageFleet, getTenantAccess, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 import { recordWorkspaceAudit } from "@/lib/workspace-audit";
-import { canTransitionMarketplaceInquiryStatus, isMarketplaceInquiryStatus, marketplaceAvailabilityBlockSchema, marketplaceAvailabilityRange } from "@/lib/marketplace-operations";
+import { canTransitionMarketplaceInquiryStatus, isMarketplaceInquiryStatus, marketplaceAvailabilityBlockSchema, marketplaceAvailabilityRange, marketplaceHandoffChecksSchema } from "@/lib/marketplace-operations";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -147,6 +147,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     select: { id: true, status: true, listingId: true },
   });
   if (!existing) return NextResponse.json({ error: "Renter inquiry not found." }, { status: 404 });
+  let verifiedHandoffChecks: ReturnType<typeof marketplaceHandoffChecksSchema.parse> | null = null;
+  if (status === "READY_FOR_MANUAL_BOOKING" && existing.status !== "READY_FOR_MANUAL_BOOKING") {
+    const checks = marketplaceHandoffChecksSchema.safeParse(body?.handoffChecks);
+    if (!checks.success) {
+      return NextResponse.json({ error: "Complete all five pre-handoff checks before marking this inquiry ready for manual booking." }, { status: 400 });
+    }
+    verifiedHandoffChecks = checks.data;
+  }
   if (!canTransitionMarketplaceInquiryStatus(existing.status, status)) {
     return NextResponse.json({
       error: `An inquiry cannot move from ${existing.status.replaceAll("_", " ").toLowerCase()} to ${status.replaceAll("_", " ").toLowerCase()}.`,
@@ -166,7 +174,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       await recordWorkspaceAudit(tx, {
         tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
         action: "marketplace.inquiry.updated", targetType: "marketplace_booking_inquiry",
-        targetId: id, details: { from: existing.status, to: status, listingId: existing.listingId },
+        targetId: id, details: { from: existing.status, to: status, listingId: existing.listingId, ...(verifiedHandoffChecks ? { handoffChecks: verifiedHandoffChecks, handoffChecklistCompletedAt: new Date().toISOString() } : {}) },
       });
       return inquiry;
     });

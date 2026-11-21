@@ -8,6 +8,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const todayInManila = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
+const tenantCurrency = (value?: string | null) => {
+  const code = (value || "PHP").toUpperCase();
+  return /^[A-Z]{3}$/.test(code) ? code : "PHP";
+};
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -38,7 +42,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   });
 
   return NextResponse.json({
-    currency: access.tenant.currency || "PHP",
+    currency: tenantCurrency(access.tenant.currency),
     inquiries: inquiries.map((item) => ({
       ...item,
       dailyRateSnapshot: Number(item.dailyRateSnapshot),
@@ -81,9 +85,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const endDate = new Date(inquiry.endAt).toISOString().slice(0, 10);
   const rentalDays = Math.round((inquiry.endAt.getTime() - inquiry.startAt.getTime()) / 86_400_000);
   const validUntilDate = new Date(`${parsed.data.validUntil}T00:00:00.000Z`);
+  const maxExpiryDate = new Date(`${todayInManila()}T00:00:00.000Z`);
+  maxExpiryDate.setUTCDate(maxExpiryDate.getUTCDate() + 30);
   if (!Number.isFinite(validUntilDate.getTime()) || validUntilDate.toISOString().slice(0, 10) !== parsed.data.validUntil
     || parsed.data.validUntil < todayInManila()
-    || parsed.data.validUntil > new Date(Date.now() + 31 * 86_400_000).toISOString().slice(0, 10)) {
+    || parsed.data.validUntil > maxExpiryDate.toISOString().slice(0, 10)) {
     return NextResponse.json({ error: "Quote expiry must be today or within the next 30 days." }, { status: 400 });
   }
   const totals = marketplaceQuoteTotals({
@@ -95,7 +101,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   });
   if (!totals) return NextResponse.json({ error: "The quote total is invalid or exceeds the supported amount." }, { status: 400 });
 
-  const currency = (access.tenant.currency || "PHP").toUpperCase().slice(0, 3);
+  const currency = tenantCurrency(access.tenant.currency);
   const validUntil = new Date(`${parsed.data.validUntil}T23:59:59.999+08:00`);
   const snapshot = {
     inquiryId: inquiry.id,

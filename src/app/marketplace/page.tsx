@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { ArrowRight, CarFront, MapPin, Search, SlidersHorizontal, Store } from "lucide-react";
 import MarketplacePublicShell from "@/components/marketplace-public-shell";
 import { prisma } from "@/lib/prisma";

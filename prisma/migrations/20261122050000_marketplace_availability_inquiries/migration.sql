@@ -31,6 +31,8 @@ CREATE TABLE "MarketplaceBookingInquiry" (
   CONSTRAINT "MarketplaceBookingInquiry_pkey" PRIMARY KEY ("id")
 );
 
+CREATE UNIQUE INDEX "MarketplaceListing_id_tenantId_key" ON "MarketplaceListing"("id", "tenantId");
+
 CREATE INDEX "MarketplaceAvailabilityBlock_tenantId_startAt_endAt_idx" ON "MarketplaceAvailabilityBlock"("tenantId", "startAt", "endAt");
 CREATE INDEX "MarketplaceAvailabilityBlock_listingId_startAt_endAt_idx" ON "MarketplaceAvailabilityBlock"("listingId", "startAt", "endAt");
 CREATE INDEX "MarketplaceBookingInquiry_tenantId_status_createdAt_idx" ON "MarketplaceBookingInquiry"("tenantId", "status", "createdAt");

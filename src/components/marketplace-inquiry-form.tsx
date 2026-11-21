@@ -38,7 +38,7 @@ export function MarketplaceInquiryForm({ listingId }: { listingId: string }) {
       <label className="block text-xs font-medium text-slate-700">Return date<input required type="date" min={minReturnDate} className="mt-1 w-full min-w-0 rounded-lg border border-slate-200 px-2 py-2.5 text-sm" value={form.endDate} onChange={e=>setForm({...form,endDate:e.target.value})}/></label>
     </div>
     <label className="block text-xs font-medium text-slate-700">Message (optional)<textarea maxLength={1500} rows={3} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm" value={form.message} onChange={e=>setForm({...form,message:e.target.value})} placeholder="Any questions for the Host?"/></label>
-    <label className="flex items-start gap-2 text-xs leading-5 text-slate-600"><input required type="checkbox" checked={form.contactConsent} onChange={e=>setForm({...form,contactConsent:e.target.checked})} className="mt-0.5"/><span>I agree that ROAM may share these contact details and dates with this vehicle's Host so they can respond to my inquiry.</span></label>
+    <label className="flex items-start gap-2 text-xs leading-5 text-slate-600"><input required type="checkbox" checked={form.contactConsent} onChange={e=>setForm({...form,contactConsent:e.target.checked})} className="mt-0.5"/><span>I agree that ROAM may share these contact details and dates with this vehicle&apos;s Host so they can respond to my inquiry.</span></label>
     <button disabled={busy} className="w-full rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{busy ? "Sending…" : "Send rental inquiry"}</button>
   </form>;
 }

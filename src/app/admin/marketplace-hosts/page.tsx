@@ -12,6 +12,8 @@ type Listing = {
   submittedAt: string | null; reviewedAt: string | null; internalNotes: string | null; hostMessage: string | null;
   vehicle: { id: string; type: string; make: string; model: string; year: number | null; dailyRate: number; status: string; branchName: string };
 };
+type HostNotification = { id: string; targetType: string; targetId: string; status: string; title: string; message: string; emailStatus: "PENDING" | "SENDING" | "SENT" | "FAILED"; emailError: string | null; emailSentAt: string | null; createdAt: string };
+type ListingDraft = { status: ReviewStatus; hostMessage: string };
 type Profile = {
   id: string; tenantId: string; providerType: string; displayName: string; description: string | null;
   email: string; phone: string | null; city: string; province: string | null; status: HostStatus;
@@ -19,6 +21,7 @@ type Profile = {
   createdAt: string;
   tenant: { id: string; name: string; slug: string; email: string; phone: string | null; owner: { name: string | null; email: string } | null };
   listings: Listing[];
+  notifications: HostNotification[];
 };
 type ReviewDraft = { status: ReviewStatus; internalNotes: string; hostMessage: string };
 const reviewStatuses: ReviewStatus[] = ["IN_REVIEW", "NEEDS_INFORMATION", "PREQUALIFIED", "DECLINED", "SUSPENDED"];
@@ -28,6 +31,7 @@ const money = (value: number) => new Intl.NumberFormat("en-PH", { style: "curren
 export default function MarketplaceHostsAdminPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [drafts, setDrafts] = useState<Record<string, ReviewDraft>>({});
+  const [listingDrafts, setListingDrafts] = useState<Record<string, ListingDraft>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState("");
   const [error, setError] = useState("");
@@ -48,6 +52,10 @@ export default function MarketplaceHostsAdminPage() {
         internalNotes: profile.internalNotes || "",
         hostMessage: profile.hostMessage || "",
       }])));
+      setListingDrafts(Object.fromEntries(items.flatMap((profile) => profile.listings.map((listing) => [listing.id, {
+        status: reviewStatuses.includes(listing.status as ReviewStatus) ? listing.status as ReviewStatus : "IN_REVIEW",
+        hostMessage: listing.hostMessage || "",
+      }]))));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to load Host applications.");
     } finally { setLoading(false); }
@@ -88,26 +96,53 @@ export default function MarketplaceHostsAdminPage() {
     } finally { setSaving(""); }
   }
 
-  async function reviewListing(profile: Profile, listing: Listing, status: ReviewStatus) {
+  async function reviewListing(profile: Profile, listing: Listing) {
+    const draft = listingDrafts[listing.id];
+    if (!draft) return;
+    if (draft.status === "NEEDS_INFORMATION" && !draft.hostMessage.trim()) {
+      setError("Add a clear message describing what the Host needs to provide.");
+      return;
+    }
     setSaving(listing.id); setError(""); setNotice("");
     try {
       const response = await fetch("/api/admin/marketplace-hosts", {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entityType: "LISTING", id: listing.id, status }),
+        body: JSON.stringify({ entityType: "LISTING", id: listing.id, status: draft.status, hostMessage: draft.hostMessage }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to update listing review.");
       setProfiles((items) => items.map((item) => item.id === profile.id
-        ? { ...item, listings: item.listings.map((entry) => entry.id === listing.id ? { ...entry, status: data.record.status } : entry) }
+        ? { ...item, listings: item.listings.map((entry) => entry.id === listing.id ? { ...entry, status: data.record.status, hostMessage: draft.hostMessage } : entry) }
         : item));
-      setNotice("Vehicle listing review updated.");
+      setNotice(data.notification?.emailStatus === "SENT" ? "Vehicle listing review updated and Host email sent." : data.notification ? "Vehicle listing review updated. Email delivery needs attention." : "Vehicle listing review updated.");
+      await load();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to update listing review.");
     } finally { setSaving(""); }
   }
 
+  async function retryNotification(notification: HostNotification) {
+    setSaving(notification.id); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/admin/marketplace-hosts", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "RETRY_NOTIFICATION", id: notification.id }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to retry Host email.");
+      setNotice(data.notification?.emailStatus === "SENT" ? "Host update email sent." : "Host update email could not be delivered. Check SMTP configuration.");
+      await load();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to retry Host email.");
+    } finally { setSaving(""); }
+  }
+
   function updateDraft(id: string, key: keyof ReviewDraft, value: string) {
     setDrafts((items) => ({ ...items, [id]: { ...items[id], [key]: value } }));
+  }
+
+  function updateListingDraft(id: string, key: keyof ListingDraft, value: string) {
+    setListingDrafts((items) => ({ ...items, [id]: { ...items[id], [key]: value } }));
   }
 
   return <main className="min-h-screen bg-slate-950 px-5 py-8 text-slate-100 sm:px-7">
@@ -170,14 +205,26 @@ export default function MarketplaceHostsAdminPage() {
                 <button onClick={() => void saveReview(profile)} disabled={saving === profile.id || !draft} className="self-end rounded-lg bg-cyan-300 px-4 py-2.5 text-xs font-bold text-slate-950 disabled:opacity-50">{saving === profile.id ? "Saving…" : "Save review"}</button>
               </div>
 
+              {profile.notifications.length > 0 && <div className="mt-5 rounded-xl border border-white/10 bg-slate-950/60 p-4">
+                <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold">Host update history</h3><span className="text-xs text-slate-500">Latest {profile.notifications.length}</span></div>
+                <div className="grid gap-2">{profile.notifications.map((notification) => <div key={notification.id} className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-white/5 bg-slate-900/70 p-3">
+                  <div className="min-w-0 flex-1"><p className="text-xs font-semibold">{notification.title}</p><p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-400">{notification.message}</p><p className="mt-2 text-[10px] text-slate-500">{dateLabel(notification.createdAt)} · Email: {notification.emailStatus}{notification.emailSentAt ? " at " + dateLabel(notification.emailSentAt) : ""}</p>{notification.emailError && <p className="mt-1 text-[10px] text-rose-300">{notification.emailError}</p>}</div>
+                  {notification.emailStatus === "FAILED" && <button onClick={() => void retryNotification(notification)} disabled={saving === notification.id} className="rounded-lg border border-amber-300/30 px-3 py-2 text-[10px] font-bold text-amber-200 disabled:opacity-50">{saving === notification.id ? "Retrying…" : "Retry email"}</button>}
+                </div>)}</div>
+              </div>}
+
               <div className="mt-5">
                 <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold">Vehicle listing drafts</h3><span className="text-xs text-slate-500">{profile.listings.length} listing(s)</span></div>
                 {profile.listings.length ? <div className="grid gap-3 xl:grid-cols-2">
                   {profile.listings.map((listing) => <div key={listing.id} className="rounded-xl border border-white/10 bg-slate-950/50 p-4">
                     <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-medium">{listing.vehicle.make} {listing.vehicle.model} {listing.vehicle.year || ""}</p><p className="mt-1 text-xs text-slate-400">{listing.vehicle.type.replaceAll("_", " ")} · {listing.vehicle.branchName} · {money(listing.vehicle.dailyRate)}/day</p></div><span className="rounded-full bg-white/5 px-2.5 py-1 text-[10px] text-slate-300">{listing.status.replaceAll("_", " ")}</span></div>
                     <p className="mt-3 text-sm font-semibold">{listing.headline}</p>{listing.description && <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-400">{listing.description}</p>}
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3"><span className="text-[11px] text-slate-500">Submitted {dateLabel(listing.submittedAt)}</span><select disabled={saving === listing.id} value={reviewStatuses.includes(listing.status as ReviewStatus) ? listing.status : "IN_REVIEW"} onChange={(event) => void reviewListing(profile, listing, event.target.value as ReviewStatus)} aria-label={`Review status for ${listing.headline}`} className="rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white">{reviewStatuses.map((status) => <option key={status} value={status}>{status.replaceAll("_", " ")}</option>)}</select></div>
-                    {listing.hostMessage && <p className="mt-3 text-xs text-sky-200">Host message: {listing.hostMessage}</p>}
+                    <div className="mt-4 grid gap-3 border-t border-white/10 pt-3 sm:grid-cols-[190px_1fr]">
+                      <label className="text-xs text-slate-400">Review status<select disabled={saving === listing.id} value={listingDrafts[listing.id]?.status || "IN_REVIEW"} onChange={(event) => updateListingDraft(listing.id, "status", event.target.value)} aria-label={`Review status for ${listing.headline}`} className="mt-2 w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white">{reviewStatuses.map((status) => <option key={status} value={status}>{status.replaceAll("_", " ")}</option>)}</select></label>
+                      <label className="text-xs text-slate-400">Message to Host<textarea value={listingDrafts[listing.id]?.hostMessage || ""} onChange={(event) => updateListingDraft(listing.id, "hostMessage", event.target.value)} rows={2} maxLength={1500} className="mt-2 w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white" placeholder="Explain the decision or information needed"/></label>
+                      <div className="sm:col-span-2"><button onClick={() => void reviewListing(profile, listing)} disabled={saving === listing.id || !listingDrafts[listing.id]} className="rounded-lg bg-cyan-300 px-4 py-2.5 text-xs font-bold text-slate-950 disabled:opacity-50">{saving === listing.id ? "Saving…" : "Save listing review"}</button></div>
+                    </div>
+                    {listing.hostMessage && <p className="mt-3 text-xs text-sky-200">Current Host message: {listing.hostMessage}</p>}
                   </div>)}
                 </div> : <p className="rounded-lg border border-dashed border-white/10 p-5 text-xs text-slate-500">No vehicle listing drafts have been submitted.</p>}
               </div>

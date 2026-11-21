@@ -33,11 +33,19 @@ export function marketplaceDateRange(startDate: string, endDate: string) {
   if (startCheck.toISOString().slice(0, 10) !== startDate || endCheck.toISOString().slice(0, 10) !== endDate) return null;
   const startAt = new Date(`${startDate}T00:00:00+08:00`);
   const endAt = new Date(`${endDate}T00:00:00+08:00`);
-  if (endAt < startAt) return null;
-  endAt.setUTCDate(endAt.getUTCDate() + 1);
-  const nights = Math.round((endAt.getTime() - startAt.getTime()) / 86_400_000);
+  const durationMs = endAt.getTime() - startAt.getTime();
+  const nights = Math.round(durationMs / 86_400_000);
   if (nights < 1 || nights > 30) return null;
   return { startAt, endAt, nights };
+}
+
+export function marketplaceAvailabilityRange(startDate: string, inclusiveEndDate: string) {
+  const startCheck = new Date(`${startDate}T00:00:00.000Z`);
+  const endCheck = new Date(`${inclusiveEndDate}T00:00:00.000Z`);
+  if (!Number.isFinite(startCheck.getTime()) || !Number.isFinite(endCheck.getTime())) return null;
+  if (startCheck.toISOString().slice(0, 10) !== startDate || endCheck.toISOString().slice(0, 10) !== inclusiveEndDate || inclusiveEndDate < startDate) return null;
+  endCheck.setUTCDate(endCheck.getUTCDate() + 1);
+  return marketplaceDateRange(startDate, endCheck.toISOString().slice(0, 10));
 }
 
 export function isMarketplaceInquiryStatus(status: string) {

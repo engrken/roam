@@ -57,6 +57,7 @@ export default function MarketplaceQuotesPage() {
   const { slug } = useParams<{ slug: string }>();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [currency, setCurrency] = useState("PHP");
+  const [role, setRole] = useState("STAFF");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -70,6 +71,7 @@ export default function MarketplaceQuotesPage() {
       if (!response.ok) throw new Error(data.error || "Unable to load rental quotes.");
       setInquiries(data.inquiries || []);
       setCurrency(data.currency || "PHP");
+      setRole(data.role || "STAFF");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to load rental quotes.");
     } finally { setLoading(false); }

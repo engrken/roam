@@ -3,9 +3,15 @@ import { Prisma } from "@prisma/client";
 import { getPlatformAdmin } from "@/lib/platform-admin";
 import { prisma } from "@/lib/prisma";
 import { isMarketplaceReviewStatus } from "@/lib/marketplace-host";
+import {
+  createMarketplaceHostNotification,
+  deliverMarketplaceHostNotification,
+} from "@/lib/marketplace-notifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const statuses = ["SUBMITTED", "IN_REVIEW", "NEEDS_INFORMATION", "PREQUALIFIED", "DECLINED", "SUSPENDED"] as const;
 
 export async function GET(request: NextRequest) {
   const admin = await getPlatformAdmin();
@@ -13,9 +19,10 @@ export async function GET(request: NextRequest) {
 
   const query = (request.nextUrl.searchParams.get("q") || "").trim().slice(0, 100);
   const statusParam = request.nextUrl.searchParams.get("status") || "";
-  const statuses = ["SUBMITTED", "IN_REVIEW", "NEEDS_INFORMATION", "PREQUALIFIED", "DECLINED", "SUSPENDED"];
   const where: Prisma.MarketplaceHostProfileWhereInput = { status: { not: "DRAFT" } };
-  if (statuses.includes(statusParam)) where.status = statusParam as "SUBMITTED" | "IN_REVIEW" | "NEEDS_INFORMATION" | "PREQUALIFIED" | "DECLINED" | "SUSPENDED";
+  if (statuses.includes(statusParam as (typeof statuses)[number])) {
+    where.status = statusParam as (typeof statuses)[number];
+  }
   if (query) where.OR = [
     { displayName: { contains: query, mode: "insensitive" } },
     { email: { contains: query, mode: "insensitive" } },
@@ -33,6 +40,11 @@ export async function GET(request: NextRequest) {
         select: {
           id: true, name: true, slug: true, email: true, phone: true,
           memberships: { where: { role: "OWNER" }, take: 1, include: { user: { select: { name: true, email: true } } } },
+          marketplaceHostNotifications: {
+            orderBy: { createdAt: "desc" },
+            take: 5,
+            select: { id: true, targetType: true, targetId: true, status: true, title: true, message: true, emailStatus: true, emailError: true, emailSentAt: true, createdAt: true },
+          },
         },
       },
       listings: {
@@ -61,6 +73,7 @@ export async function GET(request: NextRequest) {
         email: profile.tenant.memberships[0].user.email,
       } : null,
     },
+    notifications: profile.tenant.marketplaceHostNotifications,
     listings: profile.listings.map((listing) => ({
       id: listing.id, headline: listing.headline, description: listing.description,
       status: listing.status, submittedAt: listing.submittedAt, reviewedAt: listing.reviewedAt,
@@ -80,47 +93,80 @@ export async function PATCH(request: NextRequest) {
   if (!admin) return NextResponse.json({ error: "Platform administrator access required." }, { status: 403 });
 
   const body = await request.json().catch(() => null);
+  if (body?.action === "RETRY_NOTIFICATION") {
+    const notificationId = typeof body.id === "string" ? body.id.trim() : "";
+    if (!notificationId) return NextResponse.json({ error: "Notification ID is required." }, { status: 400 });
+    const delivered = await deliverMarketplaceHostNotification(notificationId);
+    if (!delivered.found) return NextResponse.json({ error: "Host notification not found." }, { status: 404 });
+    return NextResponse.json({ notification: { id: notificationId, emailStatus: delivered.emailStatus } });
+  }
+
   const entityType = body?.entityType;
   const id = typeof body?.id === "string" ? body.id.trim() : "";
   const status = body?.status;
   const internalNotes = typeof body?.internalNotes === "string" ? body.internalNotes.trim().slice(0, 3000) : "";
+  const hasHostMessage = Object.prototype.hasOwnProperty.call(body || {}, "hostMessage");
   const hostMessage = typeof body?.hostMessage === "string" ? body.hostMessage.trim().slice(0, 1500) : "";
   if (!id || !["HOST_PROFILE", "LISTING"].includes(entityType) || !isMarketplaceReviewStatus(status)) {
     return NextResponse.json({ error: "Choose a valid marketplace record and review status." }, { status: 400 });
+  }
+  if (status === "NEEDS_INFORMATION" && !hostMessage) {
+    return NextResponse.json({ error: "Add a clear message describing the information needed from the Host." }, { status: 400 });
   }
 
   try {
     const result = await prisma.$transaction(async (tx) => {
       if (entityType === "HOST_PROFILE") {
-        const previous = await tx.marketplaceHostProfile.findUnique({ where: { id }, select: { id: true, tenantId: true, status: true } });
+        const previous = await tx.marketplaceHostProfile.findUnique({
+          where: { id },
+          select: { id: true, tenantId: true, status: true, hostMessage: true },
+        });
         if (!previous) throw new Error("MARKETPLACE_RECORD_NOT_FOUND");
         const updated = await tx.marketplaceHostProfile.update({
           where: { id },
           data: {
             status, reviewedAt: status === "IN_REVIEW" ? null : new Date(),
             ...(Object.prototype.hasOwnProperty.call(body, "internalNotes") ? { internalNotes: internalNotes || null } : {}),
-            ...(Object.prototype.hasOwnProperty.call(body, "hostMessage") ? { hostMessage: hostMessage || null } : {}),
+            ...(hasHostMessage ? { hostMessage: hostMessage || null } : {}),
+          },
+          include: {
+            tenant: { select: { slug: true } },
           },
         });
         if (status === "DECLINED" || status === "SUSPENDED") {
           await tx.marketplaceListing.updateMany({
             where: { tenantId: previous.tenantId, status: { notIn: ["DECLINED", "SUSPENDED"] } },
-            data: { status, reviewedAt: new Date(), hostMessage: hostMessage || "Marketplace listing review is paused because the host profile is not eligible to proceed." },
+            data: { status, reviewedAt: new Date(), hostMessage: hostMessage || "Marketplace listing review is paused because the Host profile is not eligible to proceed." },
           });
         }
+
+        const hostMessageChanged = hasHostMessage && previous.hostMessage !== updated.hostMessage;
+        let notificationId: string | null = null;
+        if (previous.status !== updated.status || hostMessageChanged) {
+          const notification = await createMarketplaceHostNotification(tx, {
+            tenantId: updated.tenantId, targetType: "HOST_PROFILE", targetId: updated.id,
+            status: updated.status, recipientEmail: updated.email, recipientName: updated.displayName,
+            hostMessage: updated.hostMessage,
+          });
+          notificationId = notification.id;
+        }
+
         await tx.platformAuditLog.create({
           data: {
             actorUserId: admin.id, actorEmail: admin.email,
             action: "marketplace.host_profile.reviewed", entityType: "marketplace_host_profile",
-            entityId: id, details: { from: previous.status, to: status },
+            entityId: id, details: { from: previous.status, to: status, notificationQueued: !!notificationId },
           },
         });
-        return { entityType, id: updated.id, status: updated.status };
+        return { entityType, id: updated.id, status: updated.status, notificationId };
       }
 
       const previous = await tx.marketplaceListing.findUnique({
         where: { id },
-        select: { id: true, tenantId: true, status: true, hostProfile: { select: { status: true } } },
+        select: {
+          id: true, tenantId: true, status: true, hostMessage: true,
+          hostProfile: { select: { status: true, email: true, displayName: true } },
+        },
       });
       if (!previous) throw new Error("MARKETPLACE_RECORD_NOT_FOUND");
       if (previous.hostProfile.status === "SUSPENDED" || previous.hostProfile.status === "DECLINED") {
@@ -131,19 +177,40 @@ export async function PATCH(request: NextRequest) {
         data: {
           status, reviewedAt: status === "IN_REVIEW" ? null : new Date(),
           ...(Object.prototype.hasOwnProperty.call(body, "internalNotes") ? { internalNotes: internalNotes || null } : {}),
-          ...(Object.prototype.hasOwnProperty.call(body, "hostMessage") ? { hostMessage: hostMessage || null } : {}),
+          ...(hasHostMessage ? { hostMessage: hostMessage || null } : {}),
         },
       });
+
+      const hostMessageChanged = hasHostMessage && previous.hostMessage !== updated.hostMessage;
+      let notificationId: string | null = null;
+      if (previous.status !== updated.status || hostMessageChanged) {
+        const notification = await createMarketplaceHostNotification(tx, {
+          tenantId: updated.tenantId, targetType: "LISTING", targetId: updated.id,
+          status: updated.status, recipientEmail: previous.hostProfile.email,
+          recipientName: previous.hostProfile.displayName, hostMessage: updated.hostMessage,
+        });
+        notificationId = notification.id;
+      }
+
       await tx.platformAuditLog.create({
         data: {
           actorUserId: admin.id, actorEmail: admin.email,
           action: "marketplace.listing.reviewed", entityType: "marketplace_listing",
-          entityId: id, details: { from: previous.status, to: status },
+          entityId: id, details: { from: previous.status, to: status, notificationQueued: !!notificationId },
         },
       });
-      return { entityType, id: updated.id, status: updated.status };
+      return { entityType, id: updated.id, status: updated.status, notificationId };
     });
-    return NextResponse.json({ record: result });
+
+    let emailStatus: string | null = null;
+    if (result.notificationId) {
+      const delivered = await deliverMarketplaceHostNotification(result.notificationId);
+      emailStatus = delivered.emailStatus;
+    }
+    return NextResponse.json({
+      record: { entityType: result.entityType, id: result.id, status: result.status },
+      notification: result.notificationId ? { id: result.notificationId, emailStatus } : null,
+    });
   } catch (error) {
     const code = error instanceof Error ? error.message : "";
     if (code === "MARKETPLACE_RECORD_NOT_FOUND") return NextResponse.json({ error: "Marketplace record not found." }, { status: 404 });

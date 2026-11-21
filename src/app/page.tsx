@@ -129,6 +129,7 @@ export default function Home() {
           <a href="#how-it-works" onClick={() => setMenuOpen(false)}>How it works</a>
           <a href="#plans" onClick={() => setMenuOpen(false)}>Plans</a>
           <a href="#faq" onClick={() => setMenuOpen(false)}>FAQs</a>
+          <Link href="/marketplace" onClick={() => setMenuOpen(false)}>Marketplace</Link>
           <Link className="nav-mobile-cta" href="/register" onClick={() => setMenuOpen(false)}>Create free account <ArrowRight size={15}/></Link>
         </nav>
         <div className="nav-actions">
@@ -176,6 +177,11 @@ export default function Home() {
       <div className="hero-bottom container"><span>ONE WORKSPACE FOR YOUR RENTAL BUSINESS</span><span className="hero-bottom-line"/><span>PHILIPPINES-READY · ASIA/MANILA TIME</span></div>
     </section>
 
+    <section className="marketplace-home-promo"><div className="container marketplace-home-promo-inner">
+      <div className="marketplace-promo-copy"><div className="eyebrow"><span className="eyebrow-dot"/> A NEW WAY TO FIND A RIDE</div><h2>ROAM Marketplace is on the way.</h2>
+      <p>We’re building a place where travelers can discover vehicles from independent owners and rental businesses. Explore the idea, join early access, or register your interest as a vehicle host.</p></div>
+      <div className="marketplace-promo-actions"><Link className="btn button button-primary" href="/marketplace">Explore the marketplace <ArrowRight size={16}/></Link><Link className="text-link" href="/become-a-host">List your vehicle <ArrowRight size={15}/></Link></div>
+      <span className="marketplace-promo-status">COMING SOON · EARLY ACCESS OPEN</span></div></section>
     <section className="vehicle-strip"><div className="container vehicle-strip-inner"><span>FROM TWO WHEELS</span><Bike/><span>TO EVERYDAY DRIVES</span><CarFront/><span>TO WORKHORSE FLEETS</span><Truck/><span>ONE ROAM WORKSPACE</span></div></section>
 
     <section className="section section-platform" id="platform">
@@ -232,6 +238,6 @@ export default function Home() {
 
     <section className="contact-section" id="contact"><div className="container contact-card"><div className="contact-orbit"/><div className="eyebrow">YOUR NEXT MOVE STARTS HERE</div><h2>Ready to run rentals with more clarity?</h2><p>Create your free account today and set up your first rental business workspace in minutes.</p><Link className="btn button button-light" href="/register">Create your free account <ArrowRight size={17}/></Link><span className="contact-note">Free to get started. No credit card required.</span></div></section>
 
-    <footer className="site-footer"><div className="container"><div className="footer-main"><div><Brand/><p>Rental Operations and Asset Management</p><span className="footer-tagline">Move More. Manage Smarter.</span></div><div className="footer-links"><div><b>EXPLORE</b><a href="#platform">Platform</a><a href="#how-it-works">How it works</a><a href="#plans">Plans</a><a href="#faq">FAQs</a></div><div><b>INFORMATION</b><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a><a href="#contact">Contact</a></div></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} ROAM. All rights reserved.</span><span>Built for the people who keep things moving.</span></div></div></footer>
+    <footer className="site-footer"><div className="container"><div className="footer-main"><div><Brand/><p>Rental Operations and Asset Management</p><span className="footer-tagline">Move More. Manage Smarter.</span></div><div className="footer-links"><div><b>EXPLORE</b><a href="#platform">Platform</a><a href="#how-it-works">How it works</a><a href="#plans">Plans</a><a href="#faq">FAQs</a><Link href="/marketplace">Marketplace</Link><Link href="/become-a-host">Become a host</Link></div><div><b>INFORMATION</b><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a><a href="#contact">Contact</a></div></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} ROAM. All rights reserved.</span><span>Built for the people who keep things moving.</span></div></div></footer>
   </main>;
 }

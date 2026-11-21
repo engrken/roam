@@ -67,6 +67,19 @@ enum VehicleType {
   OTHER
 }
 
+enum MarketplaceLeadType {
+  HOST
+  RENTER
+}
+
+enum MarketplaceLeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  WAITLISTED
+  ARCHIVED
+}
+
 model Tenant {
   id           String       @id @default(cuid())
   name         String
@@ -615,4 +628,24 @@ model OperatingExpense {
   @@index([tenantId, incurredAt])
   @@index([tenantId, category, incurredAt])
   @@index([vehicleId, incurredAt])
+}
+
+model MarketplaceLead {
+  id               String                @id @default(cuid())
+  type             MarketplaceLeadType
+  status           MarketplaceLeadStatus @default(NEW)
+  fullName         String
+  email            String
+  phone            String?
+  city             String
+  providerType     String?
+  vehicleCategory  String?
+  contactConsentAt DateTime
+  consentVersion   String
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@unique([type, email])
+  @@index([type, status, createdAt])
+  @@index([createdAt])
 }

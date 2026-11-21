@@ -80,6 +80,26 @@ enum MarketplaceLeadStatus {
   ARCHIVED
 }
 
+enum MarketplaceHostStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  NEEDS_INFORMATION
+  PREQUALIFIED
+  DECLINED
+  SUSPENDED
+}
+
+enum MarketplaceListingStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  NEEDS_INFORMATION
+  PREQUALIFIED
+  DECLINED
+  SUSPENDED
+}
+
 model Tenant {
   id           String       @id @default(cuid())
   name         String
@@ -112,6 +132,8 @@ model Tenant {
   operatingExpenses OperatingExpense[]
   subscriptionChangeRequests SubscriptionChangeRequest[]
   subscriptionPaymentSubmissions SubscriptionPaymentSubmission[]
+  marketplaceHostProfile MarketplaceHostProfile?
+  marketplaceListings MarketplaceListing[]
 }
 
 model User {
@@ -218,7 +240,9 @@ model Vehicle {
   maintenances    VehicleMaintenance[]
   serviceRecords  VehicleServiceRecord[]
   operatingExpenses OperatingExpense[]
+  marketplaceListing MarketplaceListing?
   @@unique([tenantId, plateNumber])
+  @@unique([id, tenantId])
   @@index([tenantId, status])
   @@index([tenantId, branchId])
 }
@@ -648,4 +672,49 @@ model MarketplaceLead {
   @@unique([type, email])
   @@index([type, status, createdAt])
   @@index([createdAt])
+}
+
+
+model MarketplaceHostProfile {
+  id            String               @id @default(cuid())
+  tenantId      String               @unique
+  providerType  String
+  displayName   String
+  description   String?              @db.Text
+  email         String
+  phone         String?
+  city          String
+  province      String?
+  status        MarketplaceHostStatus @default(DRAFT)
+  submittedAt   DateTime?
+  reviewedAt    DateTime?
+  internalNotes String?              @db.Text
+  hostMessage   String?              @db.Text
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  tenant        Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  listings      MarketplaceListing[]
+  @@unique([id, tenantId])
+  @@index([status, submittedAt])
+}
+
+model MarketplaceListing {
+  id            String                   @id @default(cuid())
+  tenantId      String
+  hostProfileId String
+  vehicleId     String                   @unique
+  headline      String
+  description   String?                  @db.Text
+  status        MarketplaceListingStatus @default(DRAFT)
+  submittedAt   DateTime?
+  reviewedAt    DateTime?
+  internalNotes String?                  @db.Text
+  hostMessage   String?                  @db.Text
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  tenant        Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  hostProfile   MarketplaceHostProfile   @relation(fields: [hostProfileId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  vehicle       Vehicle                  @relation(fields: [vehicleId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  @@index([tenantId, status, createdAt])
+  @@index([status, submittedAt])
 }

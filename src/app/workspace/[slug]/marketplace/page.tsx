@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, CheckCircle2, ClipboardCheck, Plus, RefreshCw, Store } from "lucide-react";
+import { ArrowLeft, CalendarDays, CheckCircle2, ClipboardCheck, Plus, RefreshCw, Store } from "lucide-react";
 import { WorkspaceNav } from "@/components/workspace-nav";
 
 type HostStatus = "DRAFT" | "SUBMITTED" | "IN_REVIEW" | "NEEDS_INFORMATION" | "PREQUALIFIED" | "DECLINED" | "SUSPENDED";
@@ -157,7 +157,7 @@ export default function WorkspaceMarketplacePage() {
     <main className="roam-main">
       <header className="roam-topbar">
         <div><Link href={`/workspace/${slug}`} className="roam-back-link"><ArrowLeft size={14}/> Overview</Link><span className="roam-eyebrow">MARKETPLACE · PRE-LAUNCH</span><h1>Host onboarding</h1><p>Prepare your Host profile and private vehicle listing drafts for preliminary review.</p></div>
-        <div className="roam-topbar-actions"><button className="roam-secondary-btn" onClick={() => void load()}><RefreshCw size={15}/> Refresh</button></div>
+        <div className="roam-topbar-actions"><Link className="roam-secondary-btn" href={`/workspace/${slug}/marketplace/operations`}><CalendarDays size={15}/> Availability & inquiries</Link><button className="roam-secondary-btn" onClick={() => void load()}><RefreshCw size={15}/> Refresh</button></div>
       </header>
 
       <section className="roam-panel" style={{ borderColor: "#d97706", background: "#fffbeb" }}>

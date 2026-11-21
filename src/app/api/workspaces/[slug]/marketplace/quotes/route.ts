@@ -81,7 +81,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const endDate = new Date(inquiry.endAt).toISOString().slice(0, 10);
   const rentalDays = Math.round((inquiry.endAt.getTime() - inquiry.startAt.getTime()) / 86_400_000);
   const validUntilDate = new Date(`${parsed.data.validUntil}T00:00:00.000Z`);
-  if (validUntilDate.toISOString().slice(0, 10) !== parsed.data.validUntil
+  if (!Number.isFinite(validUntilDate.getTime()) || validUntilDate.toISOString().slice(0, 10) !== parsed.data.validUntil
     || parsed.data.validUntil < todayInManila()
     || parsed.data.validUntil > new Date(Date.now() + 31 * 86_400_000).toISOString().slice(0, 10)) {
     return NextResponse.json({ error: "Quote expiry must be today or within the next 30 days." }, { status: 400 });

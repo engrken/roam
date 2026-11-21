@@ -37,7 +37,5 @@ CREATE INDEX "MarketplaceBookingInquiry_tenantId_status_createdAt_idx" ON "Marke
 CREATE INDEX "MarketplaceBookingInquiry_listingId_startAt_endAt_idx" ON "MarketplaceBookingInquiry"("listingId", "startAt", "endAt");
 CREATE INDEX "MarketplaceBookingInquiry_listingId_requesterEmail_createdAt_idx" ON "MarketplaceBookingInquiry"("listingId", "requesterEmail", "createdAt");
 
-ALTER TABLE "MarketplaceAvailabilityBlock" ADD CONSTRAINT "MarketplaceAvailabilityBlock_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "MarketplaceAvailabilityBlock" ADD CONSTRAINT "MarketplaceAvailabilityBlock_listingId_fkey" FOREIGN KEY ("listingId") REFERENCES "MarketplaceListing"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "MarketplaceBookingInquiry" ADD CONSTRAINT "MarketplaceBookingInquiry_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "MarketplaceBookingInquiry" ADD CONSTRAINT "MarketplaceBookingInquiry_listingId_fkey" FOREIGN KEY ("listingId") REFERENCES "MarketplaceListing"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "MarketplaceAvailabilityBlock" ADD CONSTRAINT "MarketplaceAvailabilityBlock_listingId_tenantId_fkey" FOREIGN KEY ("listingId", "tenantId") REFERENCES "MarketplaceListing"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "MarketplaceBookingInquiry" ADD CONSTRAINT "MarketplaceBookingInquiry_listingId_tenantId_fkey" FOREIGN KEY ("listingId", "tenantId") REFERENCES "MarketplaceListing"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;

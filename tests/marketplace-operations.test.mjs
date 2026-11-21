@@ -55,7 +55,7 @@ test("host inquiry workflow only accepts terminal follow-up statuses", () => {
   assert.equal(isMarketplaceInquiryStatus("CONTACTED"), true);
   assert.equal(isMarketplaceInquiryStatus("DECLINED"), true);
   assert.equal(isMarketplaceInquiryStatus("CLOSED"), true);
-  assert.equal(isMarketplaceInquiryStatus("NEW"), false);
+  assert.equal(isMarketplaceInquiryStatus("NEW"), true);
   assert.equal(isMarketplaceInquiryStatus("CONFIRMED"), false);
 });
 

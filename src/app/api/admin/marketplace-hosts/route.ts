@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const query = (request.nextUrl.searchParams.get("q") || "").trim().slice(0, 100);
   const statusParam = request.nextUrl.searchParams.get("status") || "";
   const statuses = ["SUBMITTED", "IN_REVIEW", "NEEDS_INFORMATION", "PREQUALIFIED", "DECLINED", "SUSPENDED"];
-  const where: Prisma.MarketplaceHostProfileWhereInput = {};
+  const where: Prisma.MarketplaceHostProfileWhereInput = { status: { not: "DRAFT" } };
   if (statuses.includes(statusParam)) where.status = statusParam as "SUBMITTED" | "IN_REVIEW" | "NEEDS_INFORMATION" | "PREQUALIFIED" | "DECLINED" | "SUSPENDED";
   if (query) where.OR = [
     { displayName: { contains: query, mode: "insensitive" } },
@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
         },
       },
       listings: {
+        where: { status: { not: "DRAFT" } },
         orderBy: { createdAt: "desc" },
         include: {
           vehicle: {

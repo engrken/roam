@@ -31,7 +31,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       select: {
         id: true, listingId: true, requesterName: true, requesterEmail: true, requesterPhone: true,
         startAt: true, endAt: true, dailyRateSnapshot: true, message: true, status: true,
-        hostNote: true, createdAt: true, reviewedAt: true,
+        hostNote: true, createdAt: true, reviewedAt: true, contactConsentAt: true, consentVersion: true,
         listing: { select: { headline: true, vehicle: { select: { make: true, model: true } } } },
       },
     }),

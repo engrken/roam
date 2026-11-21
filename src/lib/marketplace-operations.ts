@@ -73,3 +73,12 @@ export function canTransitionMarketplaceInquiryStatus(from: string, to: string) 
   if (!isMarketplaceInquiryStatus(from) || !isMarketplaceInquiryStatus(to)) return false;
   return from === to || marketplaceInquiryTransitions[from].includes(to);
 }
+
+
+export const marketplaceHandoffChecksSchema = z.object({
+  availabilityRechecked: z.literal(true),
+  finalPriceAndFeesReviewed: z.literal(true),
+  pickupAndReturnConfirmed: z.literal(true),
+  renterRequirementsReviewed: z.literal(true),
+  rentalTermsReviewed: z.literal(true),
+});

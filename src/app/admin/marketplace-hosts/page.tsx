@@ -40,7 +40,7 @@ export default function MarketplaceHostsAdminPage() {
   const [filter, setFilter] = useState("ALL");
 
   const load = useCallback(async () => {
-    setLoading(true); setError(""); setNotice("");
+    setLoading(true); setError("");
     try {
       const response = await fetch("/api/admin/marketplace-hosts", { cache: "no-store" });
       const data = await response.json();

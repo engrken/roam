@@ -131,12 +131,12 @@ export default function Home() {
           <a href="#platform" onClick={() => setMenuOpen(false)}>For operators</a>
           <a href="#plans" onClick={() => setMenuOpen(false)}>Workspace plans</a>
           <a href="#faq" onClick={() => setMenuOpen(false)}>FAQs</a>
-          <Link className="nav-mobile-cta" href="/register" onClick={() => setMenuOpen(false)}>Create free account <ArrowRight size={15}/></Link>
+          <Link className="nav-mobile-cta" href="/register" onClick={() => setMenuOpen(false)}>Start a workspace <ArrowRight size={15}/></Link>
         </nav>
         <div className="nav-actions">
           <button className="icon-button theme-toggle" onClick={toggleTheme} aria-label={dark ? "Switch to light theme" : "Switch to dark theme"} title={dark ? "Light theme" : "Dark theme"}>{dark ? <Sun size={18}/> : <Moon size={18}/>}</button>
           <Link className="text-link" href="/login">Sign in</Link>
-          <Link className="btn button button-small button-dark" href="/register">Start free <ArrowRight size={15}/></Link>
+          <Link className="btn button button-small button-dark" href="/register">Workspace trial <ArrowRight size={15}/></Link>
           <button className="icon-button menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? "Close menu" : "Open menu"}>{menuOpen ? <X/> : <Menu/>}</button>
         </div>
       </div>

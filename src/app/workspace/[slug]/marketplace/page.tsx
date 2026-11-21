@@ -9,6 +9,7 @@ import { WorkspaceNav } from "@/components/workspace-nav";
 type HostStatus = "DRAFT" | "SUBMITTED" | "IN_REVIEW" | "NEEDS_INFORMATION" | "PREQUALIFIED" | "DECLINED" | "SUSPENDED";
 type ListingStatus = HostStatus;
 type HostForm = { providerType: "INDIVIDUAL" | "BUSINESS"; displayName: string; description: string; email: string; phone: string; city: string; province: string };
+type HostNotification = { id: string; targetType: "HOST_PROFILE" | "LISTING"; status: string; title: string; message: string; createdAt: string };
 type Vehicle = { id: string; type: string; make: string; model: string; year: number | null; dailyRate: number; branchName: string };
 type Listing = { id: string; headline: string; description: string | null; status: ListingStatus; submittedAt: string | null; hostMessage: string | null; vehicle: Vehicle & { color: string | null; status: string } };
 const initialHostForm: HostForm = { providerType: "BUSINESS", displayName: "", description: "", email: "", phone: "", city: "", province: "" };
@@ -21,6 +22,7 @@ export default function WorkspaceMarketplacePage() {
   const [profile, setProfile] = useState<(HostForm & { id: string; status: HostStatus; hostMessage: string | null; submittedAt: string | null; listings: Listing[] }) | null>(null);
   const [form, setForm] = useState<HostForm>(initialHostForm);
   const [eligibleVehicles, setEligibleVehicles] = useState<Vehicle[]>([]);
+  const [notifications, setNotifications] = useState<HostNotification[]>([]);
   const [role, setRole] = useState("STAFF");
   const [listingVehicleId, setListingVehicleId] = useState("");
   const [listingHeadline, setListingHeadline] = useState("");
@@ -40,6 +42,7 @@ export default function WorkspaceMarketplacePage() {
       if (!response.ok) throw new Error(data.error || "Unable to load marketplace workspace.");
       setRole(data.role || "STAFF");
       setEligibleVehicles(data.eligibleVehicles || []);
+      setNotifications(data.notifications || []);
       if (data.profile) {
         const saved = data.profile;
         setProfile(saved);
@@ -166,6 +169,15 @@ export default function WorkspaceMarketplacePage() {
 
       {error && <p className="client-alert mt-4" role="alert">{error}</p>}
       {notice && <p className="client-success-inline mt-4" role="status">{notice}</p>}
+
+      <section className="roam-panel mt-5">
+        <div className="roam-panel-heading"><div><span className="roam-eyebrow">HOST UPDATES</span><h2>Review messages</h2><p className="roam-guide-description">Status changes and messages from the ROAM review team appear here.</p></div><span className="roam-panel-total">{notifications.length} updates</span></div>
+        {notifications.length ? <div className="mt-4 grid gap-3">{notifications.map((item) => <article key={item.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2"><div className="font-semibold text-slate-900">{item.title}</div><span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold text-slate-600">{statusText(item.status)}</span></div>
+          <p className="mt-1 text-[11px] text-slate-500">{item.targetType === "HOST_PROFILE" ? "Host profile" : "Vehicle listing"} · {new Date(item.createdAt).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })}</p>
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{item.message}</p>
+        </article>)}</div> : <p className="mt-4 rounded-lg border border-dashed border-slate-200 p-5 text-sm text-slate-500">No review updates yet. ROAM will post feedback here when your Host profile or vehicle submissions are reviewed.</p>}
+      </section>
 
       <section className="roam-panel mt-5">
         <div className="roam-panel-heading"><div><span className="roam-eyebrow">HOST PROFILE</span><h2>Provider information</h2><p className="roam-guide-description">Use the contact details you want ROAM to use for onboarding communications.</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{statusText(profileStatus)}</span></div>

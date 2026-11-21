@@ -50,12 +50,12 @@ export default function WorkspaceMarketplacePage() {
         });
       } else {
         setProfile(null);
-        setForm((current) => ({
-          ...current,
-          displayName: current.displayName || data.workspace?.name || "",
-          email: current.email || data.workspace?.email || "",
-          phone: current.phone || data.workspace?.phone || "",
-        }));
+        setForm({
+          ...initialHostForm,
+          displayName: data.workspace?.name || "",
+          email: data.workspace?.email || "",
+          phone: data.workspace?.phone || "",
+        });
       }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to load marketplace workspace.");

@@ -38,6 +38,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   return NextResponse.json({
     role: access.role,
+    workspace: { name: access.tenant.name, email: access.tenant.email, phone: access.tenant.phone },
     profile: profile ? {
       id: profile.id, providerType: profile.providerType, displayName: profile.displayName,
       description: profile.description, email: profile.email, phone: profile.phone,

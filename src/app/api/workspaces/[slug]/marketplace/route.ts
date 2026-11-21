@@ -106,7 +106,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         ? await tx.marketplaceHostProfile.update({
             where: { id: existing.id },
             data: changed ? {
-              ...data, status: "DRAFT", isPublished: false, submittedAt: null, reviewedAt: null,
+              ...data, status: "DRAFT", submittedAt: null, reviewedAt: null,
               internalNotes: null, hostMessage: "Your profile details changed. Please review and submit them again.",
             } : data,
           })

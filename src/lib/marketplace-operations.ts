@@ -82,3 +82,45 @@ export const marketplaceHandoffChecksSchema = z.object({
   renterRequirementsReviewed: z.literal(true),
   rentalTermsReviewed: z.literal(true),
 });
+
+
+export const marketplaceQuoteLineItemSchema = z.object({
+  label: z.string().trim().min(1).max(100),
+  amount: z.number().finite().min(0).max(1_000_000),
+});
+
+export const marketplaceQuoteSchema = z.object({
+  inquiryId: z.string().trim().min(1).max(100),
+  dailyRate: z.number().finite().min(0).max(1_000_000),
+  addOns: z.array(marketplaceQuoteLineItemSchema).max(12),
+  discountAmount: z.number().finite().min(0).max(1_000_000),
+  fees: z.array(marketplaceQuoteLineItemSchema).max(12),
+  validUntil: dateOnly,
+});
+
+export const marketplaceQuoteApprovalSchema = z.object({
+  quoteId: z.string().trim().min(1).max(100),
+  agreementReference: z.string().trim().min(1).max(160),
+  agreementReviewed: z.literal(true),
+});
+
+export function marketplaceQuoteTotals(input: {
+  dailyRate: number;
+  rentalDays: number;
+  addOns: Array<{ amount: number }>;
+  discountAmount: number;
+  fees: Array<{ amount: number }>;
+}) {
+  const cents = (value: number) => Math.round(value * 100);
+  const baseCents = cents(input.dailyRate) * input.rentalDays;
+  const addOnCents = input.addOns.reduce((sum, item) => sum + cents(item.amount), 0);
+  const feeCents = input.fees.reduce((sum, item) => sum + cents(item.amount), 0);
+  const discountCents = cents(input.discountAmount);
+  const totalCents = baseCents + addOnCents + feeCents - discountCents;
+  if (!Number.isSafeInteger(totalCents) || totalCents < 0 || totalCents > 100_000_000_000) return null;
+  return {
+    baseAmount: (baseCents / 100).toFixed(2),
+    discountAmount: (discountCents / 100).toFixed(2),
+    totalAmount: (totalCents / 100).toFixed(2),
+  };
+}

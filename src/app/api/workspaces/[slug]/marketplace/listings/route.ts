@@ -120,7 +120,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         data: {
           headline: parsed.data.headline,
           description: parsed.data.description || null,
-          status: "DRAFT", submittedAt: null, reviewedAt: null, internalNotes: null,
+          status: "DRAFT", isPublished: false, submittedAt: null, reviewedAt: null, internalNotes: null,
           hostMessage: "Listing details changed. Please review and submit this listing again.",
         },
       });

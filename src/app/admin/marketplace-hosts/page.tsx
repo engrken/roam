@@ -8,7 +8,7 @@ type ReviewStatus = "IN_REVIEW" | "NEEDS_INFORMATION" | "PREQUALIFIED" | "DECLIN
 type HostStatus = "DRAFT" | "SUBMITTED" | ReviewStatus;
 type ListingStatus = "DRAFT" | "SUBMITTED" | ReviewStatus;
 type Listing = {
-  id: string; headline: string; description: string | null; status: ListingStatus;
+  id: string; headline: string; description: string | null; status: ListingStatus; isPublished: boolean;
   submittedAt: string | null; reviewedAt: string | null; internalNotes: string | null; hostMessage: string | null;
   vehicle: { id: string; type: string; make: string; model: string; year: number | null; dailyRate: number; status: string; branchName: string };
 };
@@ -30,6 +30,7 @@ const money = (value: number) => new Intl.NumberFormat("en-PH", { style: "curren
 
 export default function MarketplaceHostsAdminPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [publicationEnabled, setPublicationEnabled] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, ReviewDraft>>({});
   const [listingDrafts, setListingDrafts] = useState<Record<string, ListingDraft>>({});
   const [loading, setLoading] = useState(true);
@@ -46,6 +47,7 @@ export default function MarketplaceHostsAdminPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to load Host applications.");
       const items: Profile[] = data.profiles || [];
+      setPublicationEnabled(data.publicationEnabled === true);
       setProfiles(items);
       setDrafts(Object.fromEntries(items.map((profile) => [profile.id, {
         status: reviewStatuses.includes(profile.status as ReviewStatus) ? profile.status as ReviewStatus : "IN_REVIEW",
@@ -121,6 +123,23 @@ export default function MarketplaceHostsAdminPage() {
     } finally { setSaving(""); }
   }
 
+  async function togglePublication(listing: Listing) {
+    const action = listing.isPublished ? "UNPUBLISH_LISTING" : "PUBLISH_LISTING";
+    setSaving(listing.id); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/admin/marketplace-hosts", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, id: listing.id }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to update listing publication.");
+      setNotice(data.listing?.isPublished ? "Listing published in the public catalog." : "Listing removed from the public catalog.");
+      await load();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to update listing publication.");
+    } finally { setSaving(""); }
+  }
+
   async function retryNotification(notification: HostNotification) {
     setSaving(notification.id); setError(""); setNotice("");
     try {
@@ -157,6 +176,7 @@ export default function MarketplaceHostsAdminPage() {
           <p className="mt-4 text-xs font-bold tracking-[.2em] text-cyan-400">MARKETPLACE PRE-LAUNCH</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Host onboarding review</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">Review workspace Host profiles and vehicle listing drafts. This is a preliminary workflow only; no identity documents, vehicle documents or payment details are collected here.</p>
+          <p className="mt-2 text-xs text-slate-500">Public catalog: {publicationEnabled ? "enabled" : "disabled pending launch readiness"}.</p>
         </div>
         <button onClick={() => void load()} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-4 py-2.5 text-sm hover:bg-white/5 disabled:opacity-50"><RefreshCw size={15}/> Refresh</button>
       </header>
@@ -217,12 +237,16 @@ export default function MarketplaceHostsAdminPage() {
                 <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold">Vehicle listing drafts</h3><span className="text-xs text-slate-500">{profile.listings.length} listing(s)</span></div>
                 {profile.listings.length ? <div className="grid gap-3 xl:grid-cols-2">
                   {profile.listings.map((listing) => <div key={listing.id} className="rounded-xl border border-white/10 bg-slate-950/50 p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-medium">{listing.vehicle.make} {listing.vehicle.model} {listing.vehicle.year || ""}</p><p className="mt-1 text-xs text-slate-400">{listing.vehicle.type.replaceAll("_", " ")} · {listing.vehicle.branchName} · {money(listing.vehicle.dailyRate)}/day</p></div><span className="rounded-full bg-white/5 px-2.5 py-1 text-[10px] text-slate-300">{listing.status.replaceAll("_", " ")}</span></div>
+                    <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-medium">{listing.vehicle.make} {listing.vehicle.model} {listing.vehicle.year || ""}</p><p className="mt-1 text-xs text-slate-400">{listing.vehicle.type.replaceAll("_", " ")} · {listing.vehicle.branchName} · {money(listing.vehicle.dailyRate)}/day</p></div><div className="flex flex-wrap gap-2"><span className="rounded-full bg-white/5 px-2.5 py-1 text-[10px] text-slate-300">{listing.status.replaceAll("_", " ")}</span>{listing.isPublished && <span className="rounded-full bg-emerald-400/10 px-2.5 py-1 text-[10px] text-emerald-200">PUBLIC</span>}</div></div>
                     <p className="mt-3 text-sm font-semibold">{listing.headline}</p>{listing.description && <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-400">{listing.description}</p>}
                     <div className="mt-4 grid gap-3 border-t border-white/10 pt-3 sm:grid-cols-[190px_1fr]">
                       <label className="text-xs text-slate-400">Review status<select disabled={saving === listing.id} value={listingDrafts[listing.id]?.status || "IN_REVIEW"} onChange={(event) => updateListingDraft(listing.id, "status", event.target.value)} aria-label={`Review status for ${listing.headline}`} className="mt-2 w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white">{reviewStatuses.map((status) => <option key={status} value={status}>{status.replaceAll("_", " ")}</option>)}</select></label>
                       <label className="text-xs text-slate-400">Message to Host<textarea value={listingDrafts[listing.id]?.hostMessage || ""} onChange={(event) => updateListingDraft(listing.id, "hostMessage", event.target.value)} rows={2} maxLength={1500} className="mt-2 w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white" placeholder="Explain the decision or information needed"/></label>
                       <div className="sm:col-span-2"><button onClick={() => void reviewListing(profile, listing)} disabled={saving === listing.id || !listingDrafts[listing.id]} className="rounded-lg bg-cyan-300 px-4 py-2.5 text-xs font-bold text-slate-950 disabled:opacity-50">{saving === listing.id ? "Saving…" : "Save listing review"}</button></div>
+                    </div>
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3">
+                      <p className="text-[11px] text-slate-500">{listing.isPublished ? "Visible in public vehicle discovery while all eligibility checks pass." : publicationEnabled ? "Not visible to renters until published." : "Public publication is disabled until launch readiness is approved."}</p>
+                      {(listing.isPublished || publicationEnabled) && <button onClick={() => void togglePublication(listing)} disabled={saving === listing.id || (!listing.isPublished && listing.status !== "PREQUALIFIED")} className="rounded-lg border border-cyan-300/30 px-3 py-2 text-[10px] font-bold text-cyan-200 disabled:opacity-40">{saving === listing.id ? "Saving…" : listing.isPublished ? "Unpublish listing" : "Publish listing"}</button>}
                     </div>
                     {listing.hostMessage && <p className="mt-3 text-xs text-sky-200">Current Host message: {listing.hostMessage}</p>}
                   </div>)}

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   marketplaceHostReviewTitle,
   marketplaceHostReviewMessage,
-} from "../src/lib/marketplace-notifications.ts";
+} from "../src/lib/marketplace-notification-copy.ts";
 
 test("Host notification titles identify both target and review status", () => {
   assert.equal(marketplaceHostReviewTitle("HOST_PROFILE", "NEEDS_INFORMATION"), "Host profile needs information");

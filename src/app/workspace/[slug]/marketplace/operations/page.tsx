@@ -44,6 +44,7 @@ export default function MarketplaceOperationsPage() {
     } finally { setLoading(false); }
   }, [slug]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- load the Host operations dashboard on entry.
   useEffect(() => { void load(); }, [load]);
 
   async function addBlock(event: FormEvent) {

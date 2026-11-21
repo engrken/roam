@@ -116,7 +116,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         await tx.marketplaceListing.updateMany({
           where: { tenantId: access.tenant.id, status: { in: ["SUBMITTED", "IN_REVIEW", "NEEDS_INFORMATION", "PREQUALIFIED"] } },
           data: {
-            status: "DRAFT", submittedAt: null, reviewedAt: null, internalNotes: null,
+            status: "DRAFT", isPublished: false, submittedAt: null, reviewedAt: null, internalNotes: null,
             hostMessage: "The host profile changed. Please review and resubmit this listing.",
           },
         });

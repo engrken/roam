@@ -4,6 +4,7 @@ import {
   canEditMarketplaceStatus,
   canSubmitMarketplaceListing,
   isMarketplaceReviewStatus,
+  isMarketplaceListingPublic,
   marketplaceHostProfileSchema,
   marketplaceListingSchema,
 } from "../src/lib/marketplace-host.ts";
@@ -64,4 +65,16 @@ test("admin review status helper excludes draft and submitted states", () => {
   assert.equal(isMarketplaceReviewStatus("SUSPENDED"), true);
   assert.equal(isMarketplaceReviewStatus("DRAFT"), false);
   assert.equal(isMarketplaceReviewStatus("SUBMITTED"), false);
+});
+
+
+test("public listings require explicit launch enablement and all current eligibility checks", () => {
+  const eligible = { publicEnabled: true, isPublished: true, listingStatus: "PREQUALIFIED", hostStatus: "PREQUALIFIED", vehicleStatus: "AVAILABLE", tenantStatus: "ACTIVE" };
+  assert.equal(isMarketplaceListingPublic(eligible), true);
+  assert.equal(isMarketplaceListingPublic({ ...eligible, publicEnabled: false }), false);
+  assert.equal(isMarketplaceListingPublic({ ...eligible, isPublished: false }), false);
+  assert.equal(isMarketplaceListingPublic({ ...eligible, listingStatus: "IN_REVIEW" }), false);
+  assert.equal(isMarketplaceListingPublic({ ...eligible, hostStatus: "SUSPENDED" }), false);
+  assert.equal(isMarketplaceListingPublic({ ...eligible, vehicleStatus: "RENTED" }), false);
+  assert.equal(isMarketplaceListingPublic({ ...eligible, tenantStatus: "SUSPENDED" }), false);
 });

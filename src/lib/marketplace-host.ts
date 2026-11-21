@@ -39,3 +39,19 @@ export function canSubmitMarketplaceListing(hostStatus: string) {
 export function isMarketplaceReviewStatus(status: string) {
   return ["IN_REVIEW", "NEEDS_INFORMATION", "PREQUALIFIED", "DECLINED", "SUSPENDED"].includes(status);
 }
+
+export function isMarketplaceListingPublic(input: {
+  publicEnabled: boolean;
+  isPublished: boolean;
+  listingStatus: string;
+  hostStatus: string;
+  vehicleStatus: string;
+  tenantStatus: string;
+}) {
+  return input.publicEnabled
+    && input.isPublished
+    && input.listingStatus === "PREQUALIFIED"
+    && input.hostStatus === "PREQUALIFIED"
+    && input.vehicleStatus === "AVAILABLE"
+    && ["ACTIVE", "TRIAL"].includes(input.tenantStatus);
+}

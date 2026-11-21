@@ -714,6 +714,7 @@ model MarketplaceListing {
   headline      String
   description   String?                  @db.Text
   status        MarketplaceListingStatus @default(DRAFT)
+  isPublished   Boolean                  @default(false)
   submittedAt   DateTime?
   reviewedAt    DateTime?
   internalNotes String?                  @db.Text

@@ -378,3 +378,51 @@ export async function sendSubscriptionRenewalNotice(input: {
     html: '<div style="background:#f3f6fb;padding:32px 16px;font-family:Arial,sans-serif;color:#172033;line-height:1.6"><div style="max-width:560px;margin:auto;background:#fff;border-radius:14px;padding:28px"><div style="font-size:22px;font-weight:800;letter-spacing:2px">ROAM</div><h2>' + safe(content.heading) + '</h2><p>Hello ' + safe(input.tenantName) + ',</p><p>' + safe(content.message) + '</p><p style="margin:24px 0"><a href="' + safe(input.accountUrl) + '" style="display:inline-block;background:#087e9b;color:#fff;text-decoration:none;padding:13px 20px;border-radius:8px;font-weight:700">Open workspace payments</a></p><p style="font-size:13px;color:#66758a">ROAM does not automatically charge a payment method. All renewal payments are manually verified by an administrator.</p></div></div>',
   });
 }
+
+
+export async function sendMarketplaceHostReviewUpdate(input: {
+  recipient: string;
+  recipientName: string;
+  workspaceName: string;
+  targetLabel: string;
+  status: string;
+  message: string;
+  workspaceUrl: string;
+}) {
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  if (!from) throw new Error("Email sender is not configured.");
+  const safe = (value: string) => value.replace(/[&<>"']/g, character => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[character] || character);
+  const statusLabels: Record<string, string> = {
+    IN_REVIEW: "is being reviewed",
+    NEEDS_INFORMATION: "needs more information",
+    PREQUALIFIED: "has passed preliminary screening",
+    DECLINED: "cannot proceed at this time",
+    SUSPENDED: "has been suspended",
+  };
+  const subject = "ROAM Host update · " + input.targetLabel + " · " + input.status.replaceAll("_", " ");
+  const statusDescription = statusLabels[input.status] || "has been updated";
+  const message = input.message.trim();
+  await getTransport().sendMail({
+    from,
+    to: input.recipient,
+    subject,
+    text: [
+      "Hello " + input.recipientName + ",",
+      "",
+      "There is an update to your " + input.targetLabel.toLowerCase() + " for " + input.workspaceName + ".",
+      "Current review status: " + input.status.replaceAll("_", " "),
+      "Your " + input.targetLabel.toLowerCase() + " " + statusDescription + ".",
+      "",
+      message,
+      "",
+      "View the latest Host updates in your ROAM workspace: " + input.workspaceUrl,
+      "",
+      "A preliminary review or prequalification is not a certification of identity, ownership, registration, roadworthiness, insurance, or legal authority. No vehicle listing is public unless ROAM separately confirms that the marketplace has launched and the listing is approved for publication.",
+      "",
+      "ROAM",
+    ].join("\n"),
+    html: '<div style="background:#f3f6fb;padding:32px 16px;font-family:Arial,sans-serif;color:#172033;line-height:1.65"><div style="max-width:560px;margin:auto;background:#fff;border-radius:14px;padding:28px"><div style="font-size:22px;font-weight:800;letter-spacing:2px">ROAM</div><p style="color:#526176">Hello ' + safe(input.recipientName) + ',</p><h2 style="font-size:20px">Your Host review has an update</h2><p>There is an update to your <strong>' + safe(input.targetLabel.toLowerCase()) + '</strong> for <strong>' + safe(input.workspaceName) + '</strong>.</p><p style="padding:12px 14px;border-radius:9px;background:#eef7fa"><strong>Current status:</strong> ' + safe(input.status.replaceAll("_", " ")) + '</p><p style="white-space:pre-wrap;overflow-wrap:anywhere">' + safe(message) + '</p><p style="margin:24px 0"><a href="' + safe(input.workspaceUrl) + '" style="display:inline-block;background:#087e9b;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:700">View Host updates</a></p><p style="font-size:12px;color:#718196">Preliminary review or prequalification is not a certification of identity, ownership, registration, roadworthiness, insurance, or legal authority. No vehicle listing is public unless ROAM separately confirms that the marketplace has launched and the listing is approved for publication.</p></div></div>',
+  });
+}

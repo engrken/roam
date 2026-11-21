@@ -33,7 +33,7 @@ export function canEditMarketplaceStatus(status: string) {
 }
 
 export function canSubmitMarketplaceListing(hostStatus: string) {
-  return ["SUBMITTED", "IN_REVIEW", "NEEDS_INFORMATION", "PREQUALIFIED"].includes(hostStatus);
+  return ["SUBMITTED", "IN_REVIEW", "PREQUALIFIED"].includes(hostStatus);
 }
 
 export function isMarketplaceReviewStatus(status: string) {

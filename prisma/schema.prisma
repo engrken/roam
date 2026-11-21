@@ -142,8 +142,6 @@ model Tenant {
   marketplaceHostProfile MarketplaceHostProfile?
   marketplaceListings MarketplaceListing[]
   marketplaceHostNotifications MarketplaceHostNotification[]
-  marketplaceAvailabilityBlocks MarketplaceAvailabilityBlock[]
-  marketplaceBookingInquiries MarketplaceBookingInquiry[]
 }
 
 model User {
@@ -744,8 +742,7 @@ model MarketplaceAvailabilityBlock {
   label     String?  @db.VarChar(100)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  tenant    Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  listing   MarketplaceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listing   MarketplaceListing @relation(fields: [listingId, tenantId], references: [id, tenantId], onDelete: Cascade)
   @@index([tenantId, startAt, endAt])
   @@index([listingId, startAt, endAt])
 }
@@ -768,8 +765,7 @@ model MarketplaceBookingInquiry {
   reviewedAt           DateTime?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
-  tenant               Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  listing              MarketplaceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listing              MarketplaceListing @relation(fields: [listingId, tenantId], references: [id, tenantId], onDelete: Cascade)
   @@index([tenantId, status, createdAt])
   @@index([listingId, startAt, endAt])
   @@index([listingId, requesterEmail, createdAt])

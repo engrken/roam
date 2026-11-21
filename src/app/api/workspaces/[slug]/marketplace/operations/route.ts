@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { canManageFleet, getTenantAccess, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 import { recordWorkspaceAudit } from "@/lib/workspace-audit";
-import { isMarketplaceInquiryStatus, marketplaceAvailabilityBlockSchema, marketplaceAvailabilityRange } from "@/lib/marketplace-operations";
+import { canTransitionMarketplaceInquiryStatus, isMarketplaceInquiryStatus, marketplaceAvailabilityBlockSchema, marketplaceAvailabilityRange } from "@/lib/marketplace-operations";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -147,6 +147,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     select: { id: true, status: true, listingId: true },
   });
   if (!existing) return NextResponse.json({ error: "Renter inquiry not found." }, { status: 404 });
+  if (!canTransitionMarketplaceInquiryStatus(existing.status, status)) {
+    return NextResponse.json({
+      error: `An inquiry cannot move from ${existing.status.replaceAll("_", " ").toLowerCase()} to ${status.replaceAll("_", " ").toLowerCase()}.`,
+    }, { status: 409 });
+  }
   const updated = await prisma.$transaction(async (tx) => {
     const inquiry = await tx.marketplaceBookingInquiry.update({
       where: { id },

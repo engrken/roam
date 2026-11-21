@@ -11,7 +11,7 @@ type Quote = {
   id: string; version: number; status: string; currency: string; dailyRate: number;
   rentalDays: number; baseAmount: number; addOns: LineItem[]; discountAmount: number;
   fees: LineItem[]; totalAmount: number; validUntil: string; agreementReference: string | null;
-  agreementReviewedAt: string | null; approvedAt: string | null; createdAt: string;
+  agreementReviewedAt: string | null; approvedAt: string | null; renterAcceptedAt?: string | null; renterAcceptedName?: string | null; renterAcceptedEmail?: string | null; createdAt: string;
 };
 type Inquiry = {
   id: string; requesterName: string; requesterEmail: string; requesterPhone: string | null;
@@ -105,6 +105,18 @@ export default function MarketplaceQuotesPage() {
     finally { setSaving(false); }
   }
 
+  async function issueAcceptanceLink(quote: Quote) {
+    setSaving(true); setError(""); setNotice("");
+    try {
+      const response = await fetch(`/api/workspaces/${encodeURIComponent(slug)}/marketplace/quotes/${encodeURIComponent(quote.id)}/acceptance-link`, { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to create acceptance link.");
+      await navigator.clipboard.writeText(data.url);
+      setNotice("Single-use renter acceptance link copied. Share it directly with the inquiry email address.");
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to create acceptance link."); }
+    finally { setSaving(false); }
+  }
+
   async function approveQuote(event: FormEvent<HTMLFormElement>, quote: Quote) {
     event.preventDefault();
     const values = new FormData(event.currentTarget);
@@ -166,6 +178,7 @@ export default function MarketplaceQuotesPage() {
                 {(latest.fees || []).map((item, index) => <p key={`fee-${index}`}>Fee: {item.label} · {money(item.amount, latest.currency)}</p>)}
               </div>
               {latest.status === "APPROVED" && <p className="mt-3 rounded-lg bg-emerald-50 p-3 text-xs leading-5 text-emerald-900">Approved by staff on {date(latest.approvedAt || latest.createdAt)}. Agreement reviewed: {latest.agreementReference}. This is internal staff approval only, not renter acceptance.</p>}
+              {latest.renterAcceptedAt ? <p className="mt-3 rounded-lg bg-sky-50 p-3 text-xs text-sky-900">Renter acceptance recorded on {date(latest.renterAcceptedAt)} by {latest.renterAcceptedName} ({latest.renterAcceptedEmail}). This is still not a booking confirmation.</p> : latest.status === "APPROVED" && inquiry.status === "READY_FOR_MANUAL_BOOKING" && <button type="button" disabled={saving} onClick={() => void issueAcceptanceLink(latest)} className="mt-3 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-40">Create & copy renter acceptance link</button>}
               {latest.status === "DRAFT" && <form onSubmit={(event) => void approveQuote(event, latest)} className="mt-4 grid gap-3 rounded-lg bg-slate-50 p-3">
                 <p className="text-sm font-semibold text-slate-900">Review agreement and approve this quote</p>
                 <label className="grid gap-1 text-xs font-medium text-slate-700">Applicable agreement reference / version

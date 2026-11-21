@@ -62,6 +62,7 @@ export default function WorkspaceMarketplacePage() {
     } finally { setLoading(false); }
   }, [slug]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- load the workspace Host dashboard on entry.
   useEffect(() => { void load(); }, [load]);
 
   const profileEditable = role === "OWNER" || role === "ADMIN";

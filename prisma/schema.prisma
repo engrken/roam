@@ -727,6 +727,7 @@ model MarketplaceListing {
   availabilityBlocks MarketplaceAvailabilityBlock[]
   bookingInquiries MarketplaceBookingInquiry[]
   @@unique([vehicleId, tenantId])
+  @@unique([id, tenantId])
   @@index([tenantId, status, createdAt])
   @@index([status, submittedAt])
 }

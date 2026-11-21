@@ -57,7 +57,6 @@ export default function MarketplaceQuotesPage() {
   const { slug } = useParams<{ slug: string }>();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [currency, setCurrency] = useState("PHP");
-  const [role, setRole] = useState("STAFF");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");

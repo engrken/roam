@@ -43,6 +43,13 @@ SMTP delivery code, authentication emails, and transactional notification templa
 - Subscription limits enforced by backend services, not only by the UI.
 - GPS telemetry is a separate, access-controlled subsystem.
 
+### Marketplace development
+- Pre-launch Host and Renter interest capture with admin lead review.
+- Workspace Host profiles and private vehicle listing drafts, using existing fleet records.
+- Platform-admin preliminary screening with Host-facing feedback and audit history.
+- This workflow does not publish vehicle listings, accept marketplace bookings, collect renter payments, or verify legal identity, vehicle ownership, registration, safety, or insurance.
+- Marketplace profile/listing records use an additive Prisma migration. Apply it only through the approved release process after CI and release review.
+
 ### Legal pages
 The Privacy Policy and Terms of Service routes are pre-launch drafts. They must be reviewed and completed with the operator's legal identity, privacy contact, final data flows, retention schedules, commercial terms, and other required details before public launch.
 

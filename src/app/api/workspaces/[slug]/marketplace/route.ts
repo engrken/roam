@@ -12,7 +12,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace not found or access denied." }, { status: 404 });
 
-  const [profile, vehicles, workspace] = await Promise.all([
+  const [profile, vehicles, workspace, notifications] = await Promise.all([
     prisma.marketplaceHostProfile.findUnique({
       where: { tenantId: access.tenant.id },
       include: {
@@ -35,11 +35,18 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       include: { branch: { select: { name: true } }, marketplaceListing: { select: { id: true } } },
     }),
     prisma.tenant.findUnique({ where: { id: access.tenant.id }, select: { name: true, email: true, phone: true } }),
+    prisma.marketplaceHostNotification.findMany({
+      where: { tenantId: access.tenant.id },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+      select: { id: true, targetType: true, status: true, title: true, message: true, createdAt: true },
+    }),
   ]);
 
   return NextResponse.json({
     role: access.role,
     workspace: { name: workspace?.name || "", email: workspace?.email || "", phone: workspace?.phone || "" },
+    notifications,
     profile: profile ? {
       id: profile.id, providerType: profile.providerType, displayName: profile.displayName,
       description: profile.description, email: profile.email, phone: profile.phone,

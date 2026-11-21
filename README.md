@@ -2,12 +2,12 @@
 ## Rental Operations and Asset Management
 **Move More. Manage Smarter.**
 
-ROAM is a multi-tenant SaaS platform being built for private vehicle rental businesses of all sizes and vehicle types — motorcycles, scooters, cars, SUVs, MPVs, vans, pickups, buses, trucks, and more.
+ROAM is developing a vehicle rental marketplace and operating platform for renters, independent vehicle Hosts, and private rental businesses. The product is designed for motorcycles, scooters, cars, SUVs, MPVs, vans, pickups, buses, trucks, and more. Marketplace discovery and booking are pre-launch; rental businesses can use ROAM Workspace to organize fleet and rental operations.
 
 ### Product experience
 - Public marketing website with responsive mobile layouts and a light/dark theme.
 - Fleet, branch, customer, and booking management foundations.
-- Planned customer booking portal and rental operations workflows.
+- Customer booking portal and rental operations workflows.
 - Subscription-aware workspaces for independent operators and growing fleets.
 - Future GPS/IoT tracking as a separate, access-controlled module.
 
@@ -34,7 +34,7 @@ The `.env.example` file contains placeholders for Gmail SMTP. Before enabling ou
 3. Add the SMTP values to local environment variables and Vercel Production/Preview environments.
 4. Never commit the real App Password or share it in chat.
 
-SMTP delivery code, authentication emails, and transactional notification templates will be implemented and tested before being enabled in production.
+ROAM includes authentication, invitation, booking, subscription and Host review email templates. Host review updates are recorded in the workspace even when email delivery fails; authorized administrators can retry failed Host update emails. Configure and verify SMTP credentials before relying on outbound email in production.
 
 ### Product and security principles
 - Strict tenant data isolation on every tenant-owned record and query.
@@ -46,9 +46,10 @@ SMTP delivery code, authentication emails, and transactional notification templa
 ### Marketplace development
 - Pre-launch Host and Renter interest capture with admin lead review.
 - Workspace Host profiles and private vehicle listing drafts, using existing fleet records.
-- Platform-admin preliminary screening with Host-facing feedback and audit history.
-- This workflow does not publish vehicle listings, accept marketplace bookings, collect renter payments, or verify legal identity, vehicle ownership, registration, safety, or insurance.
-- Marketplace profile/listing records use an additive Prisma migration. Apply it only through the approved release process after CI and release review.
+- Platform-admin preliminary screening with Host-facing feedback, durable in-app notifications, transactional email attempts, retry controls and audit history.
+- Host profiles and review messages are disclosed in the Privacy Policy; updated legal text requires current Terms and Privacy acceptance.
+- This workflow does not publish vehicle listings, accept marketplace bookings, collect renter payments, or certify identity, vehicle ownership, registration, roadworthiness, insurance or legal authority.
+- Marketplace interest, Host onboarding and Host notification records use additive Prisma migrations. Apply them only through the approved release process after CI and release review.
 
 ### Legal pages
 The Privacy Policy and Terms of Service routes are pre-launch drafts. They must be reviewed and completed with the operator's legal identity, privacy contact, final data flows, retention schedules, commercial terms, and other required details before public launch.

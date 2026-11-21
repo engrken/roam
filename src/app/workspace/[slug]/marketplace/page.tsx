@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, CarFront, CheckCircle2, ClipboardCheck, Plus, RefreshCw, Store } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ClipboardCheck, Plus, RefreshCw, Store } from "lucide-react";
 import { WorkspaceNav } from "@/components/workspace-nav";
 
 type HostStatus = "DRAFT" | "SUBMITTED" | "IN_REVIEW" | "NEEDS_INFORMATION" | "PREQUALIFIED" | "DECLINED" | "SUSPENDED";

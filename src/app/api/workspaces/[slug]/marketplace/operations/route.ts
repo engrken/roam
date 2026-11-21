@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { canManageFleet, getTenantAccess, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 import { recordWorkspaceAudit } from "@/lib/workspace-audit";
-import { isMarketplaceInquiryStatus, marketplaceAvailabilityBlockSchema, marketplaceAvailabilityRange } from "@/lib/marketplace-operations";
+import { canTransitionMarketplaceInquiryStatus, isMarketplaceInquiryStatus, marketplaceAvailabilityBlockSchema, marketplaceAvailabilityRange } from "@/lib/marketplace-operations";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -147,18 +147,35 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     select: { id: true, status: true, listingId: true },
   });
   if (!existing) return NextResponse.json({ error: "Renter inquiry not found." }, { status: 404 });
-  const updated = await prisma.$transaction(async (tx) => {
-    const inquiry = await tx.marketplaceBookingInquiry.update({
-      where: { id },
-      data: { status, hostNote: hostNote || null, reviewedAt: new Date() },
-      select: { id: true, status: true, reviewedAt: true, hostNote: true },
+  if (!canTransitionMarketplaceInquiryStatus(existing.status, status)) {
+    return NextResponse.json({
+      error: `An inquiry cannot move from ${existing.status.replaceAll("_", " ").toLowerCase()} to ${status.replaceAll("_", " ").toLowerCase()}.`,
+    }, { status: 409 });
+  }
+  try {
+    const updated = await prisma.$transaction(async (tx) => {
+      const changed = await tx.marketplaceBookingInquiry.updateMany({
+        where: { id, tenantId: access.tenant.id, status: existing.status },
+        data: { status, hostNote: hostNote || null, reviewedAt: new Date() },
+      });
+      if (changed.count !== 1) throw new Error("INQUIRY_STATE_CHANGED");
+      const inquiry = await tx.marketplaceBookingInquiry.findFirst({
+        where: { id, tenantId: access.tenant.id },
+        select: { id: true, status: true, reviewedAt: true, hostNote: true },
+      });
+      await recordWorkspaceAudit(tx, {
+        tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
+        action: "marketplace.inquiry.updated", targetType: "marketplace_booking_inquiry",
+        targetId: id, details: { from: existing.status, to: status, listingId: existing.listingId },
+      });
+      return inquiry;
     });
-    await recordWorkspaceAudit(tx, {
-      tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
-      action: "marketplace.inquiry.updated", targetType: "marketplace_booking_inquiry",
-      targetId: id, details: { from: existing.status, to: status, listingId: existing.listingId },
-    });
-    return inquiry;
-  });
-  return NextResponse.json({ inquiry: updated });
+    if (!updated) return NextResponse.json({ error: "Renter inquiry not found." }, { status: 404 });
+    return NextResponse.json({ inquiry: updated });
+  } catch (error) {
+    if (error instanceof Error && error.message === "INQUIRY_STATE_CHANGED") {
+      return NextResponse.json({ error: "This inquiry was updated by another team member. Refresh and try again." }, { status: 409 });
+    }
+    throw error;
+  }
 }

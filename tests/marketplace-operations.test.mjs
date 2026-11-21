@@ -55,6 +55,20 @@ test("host inquiry workflow only accepts terminal follow-up statuses", () => {
   assert.equal(isMarketplaceInquiryStatus("CONTACTED"), true);
   assert.equal(isMarketplaceInquiryStatus("DECLINED"), true);
   assert.equal(isMarketplaceInquiryStatus("CLOSED"), true);
-  assert.equal(isMarketplaceInquiryStatus("NEW"), false);
+  assert.equal(isMarketplaceInquiryStatus("NEW"), true);
   assert.equal(isMarketplaceInquiryStatus("CONFIRMED"), false);
+});
+
+
+test("Marketplace inquiry handoff follows an explicit non-booking transition path", async () => {
+  const { canTransitionMarketplaceInquiryStatus, isMarketplaceInquiryStatus } = await import("../src/lib/marketplace-operations.ts");
+  assert.equal(isMarketplaceInquiryStatus("QUALIFIED"), true);
+  assert.equal(isMarketplaceInquiryStatus("READY_FOR_MANUAL_BOOKING"), true);
+  assert.equal(canTransitionMarketplaceInquiryStatus("NEW", "CONTACTED"), true);
+  assert.equal(canTransitionMarketplaceInquiryStatus("CONTACTED", "QUALIFIED"), true);
+  assert.equal(canTransitionMarketplaceInquiryStatus("QUALIFIED", "READY_FOR_MANUAL_BOOKING"), true);
+  assert.equal(canTransitionMarketplaceInquiryStatus("NEW", "READY_FOR_MANUAL_BOOKING"), false);
+  assert.equal(canTransitionMarketplaceInquiryStatus("CLOSED", "CONTACTED"), false);
+  assert.equal(canTransitionMarketplaceInquiryStatus("NEW", "NEW"), true);
+  assert.equal(canTransitionMarketplaceInquiryStatus("NEW", "CONFIRMED"), false);
 });

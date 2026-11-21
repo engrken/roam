@@ -48,6 +48,28 @@ export function marketplaceAvailabilityRange(startDate: string, inclusiveEndDate
   return marketplaceDateRange(startDate, endCheck.toISOString().slice(0, 10));
 }
 
-export function isMarketplaceInquiryStatus(status: string) {
-  return ["CONTACTED", "DECLINED", "CLOSED"].includes(status);
+export type MarketplaceInquiryStatus =
+  | "NEW"
+  | "CONTACTED"
+  | "QUALIFIED"
+  | "READY_FOR_MANUAL_BOOKING"
+  | "DECLINED"
+  | "CLOSED";
+
+const marketplaceInquiryTransitions: Record<MarketplaceInquiryStatus, MarketplaceInquiryStatus[]> = {
+  NEW: ["CONTACTED", "QUALIFIED", "DECLINED", "CLOSED"],
+  CONTACTED: ["QUALIFIED", "DECLINED", "CLOSED"],
+  QUALIFIED: ["CONTACTED", "READY_FOR_MANUAL_BOOKING", "DECLINED", "CLOSED"],
+  READY_FOR_MANUAL_BOOKING: ["DECLINED", "CLOSED"],
+  DECLINED: ["CLOSED"],
+  CLOSED: [],
+};
+
+export function isMarketplaceInquiryStatus(status: string): status is MarketplaceInquiryStatus {
+  return Object.prototype.hasOwnProperty.call(marketplaceInquiryTransitions, status);
+}
+
+export function canTransitionMarketplaceInquiryStatus(from: string, to: string) {
+  if (!isMarketplaceInquiryStatus(from) || !isMarketplaceInquiryStatus(to)) return false;
+  return from === to || marketplaceInquiryTransitions[from].includes(to);
 }

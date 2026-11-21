@@ -12,6 +12,15 @@ type Inquiry = { id: string; listingId: string; requesterName: string; requester
 
 const date = (value: string) => new Date(value).toLocaleDateString("en-PH", { timeZone: "Asia/Manila", dateStyle: "medium" });
 const statusLabel = (value: string) => value.replaceAll("_", " ");
+const nextInquiryStatuses: Record<string, string[]> = {
+  NEW: ["CONTACTED", "QUALIFIED", "DECLINED", "CLOSED"],
+  CONTACTED: ["QUALIFIED", "DECLINED", "CLOSED"],
+  QUALIFIED: ["CONTACTED", "READY_FOR_MANUAL_BOOKING", "DECLINED", "CLOSED"],
+  READY_FOR_MANUAL_BOOKING: ["DECLINED", "CLOSED"],
+  DECLINED: ["CLOSED"],
+  CLOSED: [],
+};
+const inquiryStatusOptions = (status: string) => [status, ...(nextInquiryStatuses[status] || [])];
 
 export default function MarketplaceOperationsPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -84,6 +93,8 @@ export default function MarketplaceOperationsPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to update inquiry.");
+      setStatuses((current) => { const next = { ...current }; delete next[inquiry.id]; return next; });
+      setNotes((current) => { const next = { ...current }; delete next[inquiry.id]; return next; });
       setNotice("Inquiry updated."); await load();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to update inquiry."); }
     finally { setSaving(false); }
@@ -111,13 +122,14 @@ export default function MarketplaceOperationsPage() {
           {listing.availabilityBlocks.length ? <div className="mt-3 grid gap-2">{listing.availabilityBlocks.map(block=><div key={block.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs"><span className="text-slate-700">{date(block.startAt)} – {date(new Date(new Date(block.endAt).getTime()-86400000).toISOString())}{block.label ? ` · ${block.label}` : ""}</span><button disabled={saving} onClick={()=>void deleteBlock(block.id)} className="inline-flex items-center gap-1 font-semibold text-rose-700"><Trash2 size={13}/> Remove</button></div>)}</div> : <p className="mt-2 text-xs text-slate-500">No unavailable dates recorded.</p>}</article>)}</div>
       </section>
       <section className="roam-panel mt-5">
-        <div className="roam-panel-heading"><div><span className="roam-eyebrow">RENTER INBOX</span><h2>Rental inquiries</h2><p className="roam-guide-description">View requested dates, contact details and status. This is not a booking or reservation management screen.</p></div><span className="roam-panel-total">{inquiries.length} inquiries</span></div>
+        <div className="roam-panel-heading"><div><span className="roam-eyebrow">RENTER INBOX</span><h2>Rental inquiries</h2><p className="roam-guide-description">Qualify the request and prepare a controlled handoff to your existing booking workflow. No booking is created here.</p></div><span className="roam-panel-total">{inquiries.length} inquiries</span></div>
+        <p className="mt-3 rounded-lg bg-slate-50 p-3 text-xs leading-5 text-slate-600">Workflow: New → Contacted → Qualified → Ready for manual booking. “Ready for manual booking” is only an internal handoff marker; staff must separately review terms and create any booking through the existing workspace booking process. This action never creates a booking, reserves a vehicle, changes vehicle status, contacts the renter, or collects payment.</p>
         {!inquiriesEnabled && <p className="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-600">The public inquiry form is disabled in production. This inbox is ready for the later launch-readiness step.</p>}
         {inquiries.length ? <div className="mt-4 grid gap-3">{inquiries.map(item=><article key={item.id} className="rounded-xl border border-slate-200 p-4">
           <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-semibold text-slate-900">{item.requesterName}</p><p className="mt-1 text-xs text-slate-500">{item.listing.vehicle.make} {item.listing.vehicle.model} · {item.listing.headline}</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold text-slate-600">{statusLabel(item.status)}</span></div>
           <div className="mt-3 grid gap-1 text-xs text-slate-600 sm:grid-cols-2"><p>{item.requesterEmail}</p><p>{item.requesterPhone || "No phone provided"}</p><p>{date(item.startAt)} – {date(item.endAt)}</p><p>Rate when requested: ₱{item.dailyRateSnapshot.toLocaleString("en-PH")} / day</p></div>
           {item.message && <p className="mt-3 whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{item.message}</p>}
-          <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_2fr_auto]"><select className="roam-input" value={statuses[item.id] || item.status} onChange={e=>setStatuses({...statuses,[item.id]:e.target.value})}><option value="NEW">New</option><option value="CONTACTED">Contacted</option><option value="DECLINED">Declined</option><option value="CLOSED">Closed</option></select><input className="roam-input" maxLength={1500} placeholder="Internal note (optional)" value={notes[item.id] ?? item.hostNote ?? ""} onChange={e=>setNotes({...notes,[item.id]:e.target.value})}/><button disabled={saving} onClick={()=>void updateInquiry(item)} className="rounded-lg bg-slate-950 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">Save</button></div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_2fr_auto]"><select className="roam-input" value={statuses[item.id] || item.status} onChange={e=>setStatuses({...statuses,[item.id]:e.target.value})}>{inquiryStatusOptions(item.status).map(value=><option key={value} value={value}>{statusLabel(value)}</option>)}</select><input className="roam-input" maxLength={1500} placeholder="Internal note (optional)" value={notes[item.id] ?? item.hostNote ?? ""} onChange={e=>setNotes({...notes,[item.id]:e.target.value})}/><button disabled={saving} onClick={()=>void updateInquiry(item)} className="rounded-lg bg-slate-950 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">Save</button></div>
         </article>)}</div> : <div className="mt-4 rounded-xl border border-dashed border-slate-200 p-8 text-center"><Inbox className="mx-auto text-slate-400"/><p className="mt-2 text-sm text-slate-600">No renter inquiries yet.</p></div>}
       </section>
     </main>

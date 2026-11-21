@@ -38,11 +38,11 @@ export default function MarketplaceOperationsPage() {
       if (!response.ok) throw new Error(data.error || "Unable to load Marketplace operations.");
       setListings(data.listings || []); setInquiries(data.inquiries || []);
       setInquiriesEnabled(data.inquiriesEnabled === true); setRole(data.role || "STAFF");
-      if (!listingId && data.listings?.[0]) setListingId(data.listings[0].id);
+      setListingId((current) => current || data.listings?.[0]?.id || "");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to load Marketplace operations.");
     } finally { setLoading(false); }
-  }, [slug, listingId]);
+  }, [slug]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -114,7 +114,7 @@ export default function MarketplaceOperationsPage() {
         {!inquiriesEnabled && <p className="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-600">The public inquiry form is disabled in production. This inbox is ready for the later launch-readiness step.</p>}
         {inquiries.length ? <div className="mt-4 grid gap-3">{inquiries.map(item=><article key={item.id} className="rounded-xl border border-slate-200 p-4">
           <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-semibold text-slate-900">{item.requesterName}</p><p className="mt-1 text-xs text-slate-500">{item.listing.vehicle.make} {item.listing.vehicle.model} · {item.listing.headline}</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold text-slate-600">{statusLabel(item.status)}</span></div>
-          <div className="mt-3 grid gap-1 text-xs text-slate-600 sm:grid-cols-2"><p>{item.requesterEmail}</p><p>{item.requesterPhone || "No phone provided"}</p><p>{date(item.startAt)} – {date(new Date(new Date(item.endAt).getTime()-86400000).toISOString())}</p><p>Rate when requested: ₱{item.dailyRateSnapshot.toLocaleString("en-PH")} / day</p></div>
+          <div className="mt-3 grid gap-1 text-xs text-slate-600 sm:grid-cols-2"><p>{item.requesterEmail}</p><p>{item.requesterPhone || "No phone provided"}</p><p>{date(item.startAt)} – {date(item.endAt)}</p><p>Rate when requested: ₱{item.dailyRateSnapshot.toLocaleString("en-PH")} / day</p></div>
           {item.message && <p className="mt-3 whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{item.message}</p>}
           <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_2fr_auto]"><select className="roam-input" value={statuses[item.id] || item.status} onChange={e=>setStatuses({...statuses,[item.id]:e.target.value})}><option value="NEW">New</option><option value="CONTACTED">Contacted</option><option value="DECLINED">Declined</option><option value="CLOSED">Closed</option></select><input className="roam-input" maxLength={1500} placeholder="Internal note (optional)" value={notes[item.id] ?? item.hostNote ?? ""} onChange={e=>setNotes({...notes,[item.id]:e.target.value})}/><button disabled={saving} onClick={()=>void updateInquiry(item)} className="rounded-lg bg-slate-950 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">Save</button></div>
         </article>)}</div> : <div className="mt-4 rounded-xl border border-dashed border-slate-200 p-8 text-center"><Inbox className="mx-auto text-slate-400"/><p className="mt-2 text-sm text-slate-600">No renter inquiries yet.</p></div>}

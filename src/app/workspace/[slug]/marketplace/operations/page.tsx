@@ -8,7 +8,7 @@ import { WorkspaceNav } from "@/components/workspace-nav";
 
 type Block = { id: string; startAt: string; endAt: string; label: string | null };
 type Listing = { id: string; headline: string; status: string; isPublished: boolean; vehicle: { make: string; model: string; year: number | null; dailyRate: number; status: string }; availabilityBlocks: Block[] };
-type Inquiry = { id: string; listingId: string; requesterName: string; requesterEmail: string; requesterPhone: string | null; startAt: string; endAt: string; dailyRateSnapshot: number; message: string | null; status: string; hostNote: string | null; createdAt: string; listing: { headline: string; vehicle: { make: string; model: string } } };
+type Inquiry = { id: string; listingId: string; requesterName: string; requesterEmail: string; requesterPhone: string | null; startAt: string; endAt: string; dailyRateSnapshot: number; message: string | null; status: string; hostNote: string | null; createdAt: string; contactConsentAt: string; consentVersion: string; listing: { headline: string; vehicle: { make: string; model: string } } };
 
 const date = (value: string) => new Date(value).toLocaleDateString("en-PH", { timeZone: "Asia/Manila", dateStyle: "medium" });
 const statusLabel = (value: string) => value.replaceAll("_", " ");
@@ -21,6 +21,33 @@ const nextInquiryStatuses: Record<string, string[]> = {
   CLOSED: [],
 };
 const inquiryStatusOptions = (status: string) => [status, ...(nextInquiryStatuses[status] || [])];
+const nights = (startAt: string, endAt: string) => Math.max(1, Math.round((new Date(endAt).getTime() - new Date(startAt).getTime()) / 86400000));
+const renterReplyDraft = (item: Inquiry, style: string) => {
+  const period = `${date(item.startAt)} to ${date(item.endAt)}`;
+  const greeting = `Hello ${item.requesterName},`;
+  const vehicle = `${item.listing.vehicle.make} ${item.listing.vehicle.model} — ${item.listing.headline}`;
+  const details = `Your requested rental period is ${period} (${nights(item.startAt, item.endAt)} day(s)). The rate shown when you enquired was ₱${item.dailyRateSnapshot.toLocaleString("en-PH")} per day.`;
+  const closing = "This is an enquiry only, not a reservation or booking confirmation. Availability, final pricing, any deposits or additional charges, pickup arrangements, and rental terms must be confirmed by our team before a booking can be made.";
+  if (style === "FOLLOW_UP") return [greeting, "", `Thank you for your interest in ${vehicle}. ${details}`, "", "Could you please confirm your preferred pickup location and approximate pickup time? We will check the dates and get back to you with the applicable terms and final price.", "", closing].join("\n");
+  if (style === "UNAVAILABLE") return [greeting, "", `Thank you for enquiring about ${vehicle} for ${period}. Unfortunately, we are unable to accommodate those dates.`, "", "If your plans are flexible, please share an alternative date range and we can check again.", "", closing].join("\n");
+  return [greeting, "", `Thank you for your enquiry about ${vehicle}. ${details}`, "", "We are checking the requested dates and will confirm availability, final pricing, pickup arrangements, and applicable rental terms with you before any reservation is accepted.", "", closing].join("\n");
+};
+const handoffSummary = (item: Inquiry) => [
+  "ROAM MARKETPLACE — MANUAL BOOKING HANDOFF",
+  `Inquiry ID: ${item.id}`,
+  `Listing: ${item.listing.vehicle.make} ${item.listing.vehicle.model} — ${item.listing.headline}`,
+  `Renter: ${item.requesterName}`,
+  `Email: ${item.requesterEmail}`,
+  `Phone: ${item.requesterPhone || "Not provided"}`,
+  `Requested dates: ${date(item.startAt)} to ${date(item.endAt)} (${nights(item.startAt, item.endAt)} day(s))`,
+  `Rate snapshot: PHP ${item.dailyRateSnapshot.toFixed(2)} per day (not a final quote)`,
+  `Contact consent: recorded ${new Date(item.contactConsentAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" })} · ${item.consentVersion}`,
+  `Renter message: ${item.message || "None"}`,
+  `Workflow status: ${statusLabel(item.status)}`,
+  "NEXT: Verify availability, vehicle condition, final price/fees, pickup arrangements, renter requirements and applicable terms. Only then use the existing workspace booking process.",
+  "This handoff does not create a booking, hold dates, allocate a vehicle, or collect payment.",
+].join("\n");
+
 
 export default function MarketplaceOperationsPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -34,6 +61,7 @@ export default function MarketplaceOperationsPage() {
   const [label, setLabel] = useState("");
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [statuses, setStatuses] = useState<Record<string, string>>({});
+  const [replyStyles, setReplyStyles] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -129,6 +157,13 @@ export default function MarketplaceOperationsPage() {
           <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-semibold text-slate-900">{item.requesterName}</p><p className="mt-1 text-xs text-slate-500">{item.listing.vehicle.make} {item.listing.vehicle.model} · {item.listing.headline}</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold text-slate-600">{statusLabel(item.status)}</span></div>
           <div className="mt-3 grid gap-1 text-xs text-slate-600 sm:grid-cols-2"><p>{item.requesterEmail}</p><p>{item.requesterPhone || "No phone provided"}</p><p>{date(item.startAt)} – {date(item.endAt)}</p><p>Rate when requested: ₱{item.dailyRateSnapshot.toLocaleString("en-PH")} / day</p></div>
           {item.message && <p className="mt-3 whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{item.message}</p>}
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold text-slate-900">Structured manual handoff</p><p className="mt-1 text-xs text-slate-600">Contact permission recorded {date(item.contactConsentAt)} · {item.consentVersion}</p></div><button type="button" onClick={() => { void navigator.clipboard.writeText(handoffSummary(item)).then(() => setNotice("Handoff summary copied."), () => setError("Clipboard access was unavailable. Select and copy the details manually.")); }} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700">Copy handoff summary</button></div>
+            <p className="mt-2 text-xs leading-5 text-slate-600">Use this summary when transferring the qualified request to your existing booking process. The rate is a historical snapshot, not a final quote.</p>
+            <div className="mt-4 flex flex-wrap items-center gap-2"><label className="text-xs font-medium text-slate-700" htmlFor={`reply-style-${item.id}`}>Renter reply draft</label><select id={`reply-style-${item.id}`} className="roam-input max-w-xs" value={replyStyles[item.id] || "CHECKING"} onChange={e=>setReplyStyles({...replyStyles,[item.id]:e.target.value})}><option value="CHECKING">Checking availability</option><option value="FOLLOW_UP">Ask for details</option><option value="UNAVAILABLE">Dates unavailable</option></select><button type="button" onClick={() => { void navigator.clipboard.writeText(renterReplyDraft(item, replyStyles[item.id] || "CHECKING")).then(() => setNotice("Renter response draft copied. Review it before sending."), () => setError("Clipboard access was unavailable. Select and copy the draft manually.")); }} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white">Copy response draft</button></div>
+            <pre className="mt-3 whitespace-pre-wrap rounded-lg border border-slate-200 bg-white p-3 text-xs leading-5 text-slate-700">{renterReplyDraft(item, replyStyles[item.id] || "CHECKING")}</pre>
+            <p className="mt-2 text-[11px] leading-5 text-amber-800">Draft only — ROAM does not send this message. Manually verify live availability, final price, fees, pickup details and current rental terms before sending. No reservation or payment is created here.</p>
+          </div>
           <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_2fr_auto]"><select className="roam-input" value={statuses[item.id] || item.status} onChange={e=>setStatuses({...statuses,[item.id]:e.target.value})}>{inquiryStatusOptions(item.status).map(value=><option key={value} value={value}>{statusLabel(value)}</option>)}</select><input className="roam-input" maxLength={1500} placeholder="Internal note (optional)" value={notes[item.id] ?? item.hostNote ?? ""} onChange={e=>setNotes({...notes,[item.id]:e.target.value})}/><button disabled={saving} onClick={()=>void updateInquiry(item)} className="rounded-lg bg-slate-950 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">Save</button></div>
         </article>)}</div> : <div className="mt-4 rounded-xl border border-dashed border-slate-200 p-8 text-center"><Inbox className="mx-auto text-slate-400"/><p className="mt-2 text-sm text-slate-600">No renter inquiries yet.</p></div>}
       </section>

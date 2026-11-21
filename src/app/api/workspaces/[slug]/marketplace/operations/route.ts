@@ -174,7 +174,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       await recordWorkspaceAudit(tx, {
         tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
         action: "marketplace.inquiry.updated", targetType: "marketplace_booking_inquiry",
-        targetId: id, details: { from: existing.status, to: status, listingId: existing.listingId, ...(verifiedHandoffChecks ? { handoffChecks: verifiedHandoffChecks, handoffChecklistCompletedAt: new Date().toISOString() } : {}) },
+        targetId: id, details: { from: existing.status, to: status, listingId: existing.listingId, ...(verifiedHandoffChecks ? { handoffAvailabilityRechecked: true, handoffFinalPriceAndFeesReviewed: true, handoffPickupAndReturnConfirmed: true, handoffRenterRequirementsReviewed: true, handoffRentalTermsReviewed: true, handoffChecklistCompletedAt: new Date().toISOString() } : {}) },
       });
       return inquiry;
     });

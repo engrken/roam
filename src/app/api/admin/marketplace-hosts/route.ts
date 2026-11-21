@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  return NextResponse.json({ profiles: profiles.map((profile) => ({
+  return NextResponse.json({ publicationEnabled: process.env.ROAM_MARKETPLACE_PUBLIC_ENABLED === "true", profiles: profiles.map((profile) => ({
     id: profile.id, tenantId: profile.tenantId, providerType: profile.providerType,
     displayName: profile.displayName, description: profile.description, email: profile.email,
     phone: profile.phone, city: profile.city, province: profile.province,
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     notifications: profile.tenant.marketplaceHostNotifications,
     listings: profile.listings.map((listing) => ({
       id: listing.id, headline: listing.headline, description: listing.description,
-      status: listing.status, submittedAt: listing.submittedAt, reviewedAt: listing.reviewedAt,
+      status: listing.status, isPublished: listing.isPublished, submittedAt: listing.submittedAt, reviewedAt: listing.reviewedAt,
       internalNotes: listing.internalNotes, hostMessage: listing.hostMessage,
       vehicle: {
         id: listing.vehicle.id, type: listing.vehicle.type, make: listing.vehicle.make,
@@ -93,6 +93,55 @@ export async function PATCH(request: NextRequest) {
   if (!admin) return NextResponse.json({ error: "Platform administrator access required." }, { status: 403 });
 
   const body = await request.json().catch(() => null);
+  if (body?.action === "PUBLISH_LISTING" || body?.action === "UNPUBLISH_LISTING") {
+    const id = typeof body.id === "string" ? body.id.trim() : "";
+    if (!id) return NextResponse.json({ error: "Listing ID is required." }, { status: 400 });
+    const publish = body.action === "PUBLISH_LISTING";
+    if (publish && process.env.ROAM_MARKETPLACE_PUBLIC_ENABLED !== "true") {
+      return NextResponse.json({ error: "Public marketplace publication is disabled until launch readiness is approved." }, { status: 403 });
+    }
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        const listing = await tx.marketplaceListing.findUnique({
+          where: { id },
+          select: {
+            id: true, isPublished: true, status: true,
+            hostProfile: { select: { status: true } },
+            vehicle: { select: { status: true } },
+            tenant: { select: { status: true } },
+          },
+        });
+        if (!listing) throw new Error("MARKETPLACE_RECORD_NOT_FOUND");
+        if (publish && (
+          listing.status !== "PREQUALIFIED"
+          || listing.hostProfile.status !== "PREQUALIFIED"
+          || listing.vehicle.status !== "AVAILABLE"
+          || !["ACTIVE", "TRIAL"].includes(listing.tenant.status)
+        )) throw new Error("LISTING_NOT_ELIGIBLE");
+        const updated = await tx.marketplaceListing.update({
+          where: { id },
+          data: { isPublished: publish },
+          select: { id: true, isPublished: true, status: true },
+        });
+        await tx.platformAuditLog.create({
+          data: {
+            actorUserId: admin.id, actorEmail: admin.email,
+            action: publish ? "marketplace.listing.published" : "marketplace.listing.unpublished",
+            entityType: "marketplace_listing", entityId: id,
+            details: { isPublished: publish, listingStatus: listing.status },
+          },
+        });
+        return updated;
+      });
+      return NextResponse.json({ listing: result });
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "";
+      if (code === "MARKETPLACE_RECORD_NOT_FOUND") return NextResponse.json({ error: "Marketplace listing not found." }, { status: 404 });
+      if (code === "LISTING_NOT_ELIGIBLE") return NextResponse.json({ error: "Only PREQUALIFIED listings from PREQUALIFIED Hosts, available vehicles, and active workspaces can be published." }, { status: 409 });
+      console.error("Marketplace listing publication update failed", error);
+      return NextResponse.json({ error: "Unable to update marketplace publication." }, { status: 500 });
+    }
+  }
   if (body?.action === "RETRY_NOTIFICATION") {
     const notificationId = typeof body.id === "string" ? body.id.trim() : "";
     if (!notificationId) return NextResponse.json({ error: "Notification ID is required." }, { status: 400 });
@@ -133,10 +182,16 @@ export async function PATCH(request: NextRequest) {
             tenant: { select: { slug: true } },
           },
         });
+        if (previous.status !== status) {
+          await tx.marketplaceListing.updateMany({
+            where: { tenantId: previous.tenantId, isPublished: true },
+            data: { isPublished: false },
+          });
+        }
         if (status === "DECLINED" || status === "SUSPENDED") {
           await tx.marketplaceListing.updateMany({
             where: { tenantId: previous.tenantId, status: { notIn: ["DECLINED", "SUSPENDED"] } },
-            data: { status, reviewedAt: new Date(), hostMessage: hostMessage || "Marketplace listing review is paused because the Host profile is not eligible to proceed." },
+            data: { status, isPublished: false, reviewedAt: new Date(), hostMessage: hostMessage || "Marketplace listing review is paused because the Host profile is not eligible to proceed." },
           });
         }
 
@@ -175,7 +230,7 @@ export async function PATCH(request: NextRequest) {
       const updated = await tx.marketplaceListing.update({
         where: { id },
         data: {
-          status, reviewedAt: status === "IN_REVIEW" ? null : new Date(),
+          status, isPublished: previous.status !== status ? false : undefined, reviewedAt: status === "IN_REVIEW" ? null : new Date(),
           ...(Object.prototype.hasOwnProperty.call(body, "internalNotes") ? { internalNotes: internalNotes || null } : {}),
           ...(hasHostMessage ? { hostMessage: hostMessage || null } : {}),
         },

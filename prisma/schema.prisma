@@ -819,6 +819,11 @@ model MarketplaceRentalQuote {
   agreementReviewedById String?
   approvedAt            DateTime?
   approvedById          String?
+  acceptanceTokenHash   String?  @unique
+  acceptanceLinkCreatedAt DateTime?
+  renterAcceptedAt      DateTime?
+  renterAcceptedName    String?  @db.VarChar(120)
+  renterAcceptedEmail   String?  @db.VarChar(254)
   createdById           String
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt

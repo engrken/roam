@@ -35,7 +35,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
           rentalDays: true, baseAmount: true, addOns: true, discountAmount: true,
           fees: true, totalAmount: true, validUntil: true, snapshot: true,
           agreementReference: true, agreementReviewedAt: true, agreementReviewedById: true,
-          approvedAt: true, approvedById: true, createdAt: true, createdById: true,
+          approvedAt: true, approvedById: true, renterAcceptedAt: true, renterAcceptedName: true, renterAcceptedEmail: true, createdAt: true, createdById: true,
         },
       },
     },

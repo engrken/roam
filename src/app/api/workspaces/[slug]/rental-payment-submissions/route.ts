@@ -14,10 +14,13 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const submissions = await prisma.rentalPaymentSubmission.findMany({
     where: { tenantId: access.tenant.id },
     orderBy: [{ status: "asc" }, { createdAt: "desc" }], take: 100,
-    include: { booking: { select: { reference: true, customer: { select: { name: true, phone: true } }, documents: { where: { kind: "PAYMENT_EVIDENCE" }, select: { id: true, pathname: true } } } }, paymentMethod: { select: { method: true } } },
+    include: { booking: { select: { reference: true, totalAmount: true, securityDeposit: true, payments: { select: { amount: true, kind: true } }, customer: { select: { name: true, phone: true } }, documents: { where: { kind: "PAYMENT_EVIDENCE" }, select: { id: true, pathname: true } } } }, paymentMethod: { select: { method: true } } },
   });
   return NextResponse.json({ submissions: submissions.map(row => ({
     id: row.id, bookingReference: row.booking.reference, customer: row.booking.customer.name,
+    rentalAmount: Number(row.booking.totalAmount), securityDeposit: Number(row.booking.securityDeposit || 0),
+    totalPayable: Number(row.booking.totalAmount) + Number(row.booking.securityDeposit || 0),
+    verifiedPaid: row.booking.payments.reduce((sum, p) => sum + (p.kind === "REFUND" ? -Number(p.amount) : Number(p.amount)), 0),
     customerPhone: row.booking.customer.phone, method: row.methodLabelSnapshot, methodKey: row.paymentMethod.method,
     accountName: row.accountNameSnapshot, accountNumber: row.accountNumberSnapshot, bankName: row.bankNameSnapshot,
     reference: row.reference, amount: Number(row.amount), paidAt: row.paidAt.toISOString(),

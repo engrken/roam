@@ -35,7 +35,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const bookingBalances = bookings.map((booking) => {
     const paid = booking.payments.reduce((sum, payment) => sum + (payment.kind === "REFUND" ? -Number(payment.amount) : Number(payment.amount)), 0);
     const total = Number(booking.totalAmount) + Number(booking.securityDeposit || 0);
-    return { reference: booking.reference, customer: booking.customer.name, status: booking.status, total, collected: paid, outstanding: Math.max(0, total - paid) };
+    return { reference: booking.reference, customer: booking.customer.name, status: booking.status, rentalTotal: Number(booking.totalAmount), total, collected: paid, outstanding: Math.max(0, total - paid) };
   });
   const collected = paymentTotals.reduce((sum, row) => {
     const amount = Number(row._sum.amount || 0);
@@ -45,7 +45,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const refundCount = paymentTotals.find((row) => row.kind === "REFUND")?._count._all || 0;
   const outstanding = bookingBalances.reduce((sum, booking) => sum + booking.outstanding, 0);
   const billableBalances = bookingBalances.filter(booking => ["CONFIRMED", "ACTIVE", "COMPLETED"].includes(booking.status));
-  const rentDue = billableBalances.reduce((sum, booking) => sum + booking.total, 0);
+  const rentDue = billableBalances.reduce((sum, booking) => sum + booking.rentalTotal, 0);
   const rentPaid = billableBalances.reduce((sum, booking) => sum + Math.max(0, booking.collected), 0);
   const balanceByReference = new Map(bookingBalances.map(booking => [booking.reference, booking]));
   const now = new Date();

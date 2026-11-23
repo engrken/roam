@@ -6,6 +6,7 @@ import { consumeRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 import { sendBookingRequestReceived } from "@/lib/email";
 import { isTenantTrialReadOnly } from "@/lib/tenant-access";
+import { notifyTenant } from "@/lib/web-push";
 import { blockingMaintenanceStatuses } from "@/lib/maintenance-availability";
 
 export const runtime = "nodejs";
@@ -223,6 +224,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: result.conflict }, { status: 409 });
     }
 
+    void notifyTenant(tenant.id, "New booking request", "A customer submitted booking request " + reference + ".", "/workspace/" + encodeURIComponent(slug) + "/bookings").catch(error => console.error("Booking request push notification failed", error));
     const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\/+$/, "");
     const bookingUrl = baseUrl + "/booking/" + encodeURIComponent(reference) + "?token=" + encodeURIComponent(token);
     let emailNotification: "attempted" | "failed" = "attempted";

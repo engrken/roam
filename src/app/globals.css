@@ -922,3 +922,26 @@
   .roam-sidebar-collapsed .roam-notification-button{width:44px;height:40px;min-height:40px;padding:0;overflow:hidden;font-size:0;white-space:nowrap}
   .roam-sidebar-collapsed .roam-notification-button::before{content:"🔔";font-size:17px;line-height:1}
 }
+
+
+/* Simple, explicit notification control: label plus live ON/OFF state. */
+.roam-sidebar-notifications{display:block!important;min-width:0;overflow:visible;margin:8px 0!important;padding:8px 0!important;border-top:1px solid #2b4940}
+.roam-sidebar-notifications .roam-notification-card{display:flex!important;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:5px 2px!important;border:0!important;border-radius:0!important;background:transparent!important;color:#edf5ee}
+.roam-sidebar-notifications .roam-notification-label{display:block!important;flex:1 1 auto;min-width:0;color:#edf5ee;font-size:11px;font-weight:700;white-space:nowrap}
+.roam-sidebar-notifications .roam-notification-button{display:inline-flex!important;flex:0 0 54px;align-items:center;justify-content:center;width:54px!important;min-width:54px;height:30px;min-height:30px;padding:4px 8px!important;border:1px solid #66816f;border-radius:7px;background:#374151;color:#f9fafb;font-size:11px!important;font-weight:800;line-height:1;cursor:pointer}
+.roam-sidebar-notifications .roam-notification-button.is-on{border-color:#4ade80;background:#166534;color:#fff}
+.roam-sidebar-notifications .roam-notification-button.is-off{border-color:#94a3b8;background:#374151;color:#fff}
+.roam-sidebar-notifications .roam-notification-button:disabled{opacity:.65;cursor:not-allowed}
+.roam-sidebar-notifications .roam-notification-feedback{display:block;flex:1 1 100%;min-width:0;color:#a9bdb1;font-size:9px;line-height:1.35}
+.roam-sidebar-notifications .roam-notification-card{flex-wrap:wrap}
+@media(min-width:761px){
+  .roam-sidebar-collapsed .roam-sidebar-notifications{display:block!important}
+  .roam-sidebar-collapsed .roam-notification-card{justify-content:center!important;gap:5px;padding:4px 0!important}
+  .roam-sidebar-collapsed .roam-notification-label{display:none!important}
+  .roam-sidebar-collapsed .roam-notification-feedback{display:none!important}
+  .roam-sidebar-collapsed .roam-notification-button{flex-basis:54px;width:54px!important;min-width:54px;height:30px;min-height:30px;padding:4px 8px!important;font-size:11px!important}
+}
+@media(max-width:760px){
+  .roam-sidebar .roam-side-nav .roam-sidebar-notifications{display:block!important}
+  .roam-sidebar .roam-side-nav .roam-notification-card{display:flex!important;flex-direction:row;align-items:center}
+}

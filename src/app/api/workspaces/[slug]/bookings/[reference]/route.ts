@@ -33,7 +33,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const booking = await prisma.booking.findFirst({
     where: { tenantId: access.tenant.id, reference },
     select: {
-      id: true, reference: true, status: true, startAt: true, endAt: true, totalAmount: true,
+      id: true, reference: true, status: true, startAt: true, endAt: true, totalAmount: true, securityDeposit: true,
       customer: { select: { name: true, email: true, phone: true } },
       items: {
         select: {
@@ -59,6 +59,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       startAt: booking.startAt,
       endAt: booking.endAt,
       totalAmount: Number(booking.totalAmount),
+      securityDeposit: Number(booking.securityDeposit || 0),
+      totalPayable: Number(booking.totalAmount) + Number(booking.securityDeposit || 0),
       customer: booking.customer,
       vehicles: booking.items.map((item) => item.vehicle),
       messages: booking.messages,
@@ -138,9 +140,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         };
       }
 
-      if (nextStatus === "CONFIRMED" && current.payments.reduce((sum, payment) => sum + (payment.kind === "REFUND" ? -Number(payment.amount) : Number(payment.amount)), 0) <= 0) {
-        return { error: "Before confirming, review any uploaded proof and record the verified deposit or payment in Financials.", status: 409 as const };
-      }
 
       if (nextStatus === "CONFIRMED" || nextStatus === "ACTIVE") {
         const vehicleIds = current.items.map((item) => item.vehicleId).sort();

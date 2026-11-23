@@ -895,3 +895,18 @@
   .roam-sidebar .roam-side-nav .roam-notification-card{padding:12px}
   .roam-sidebar .roam-side-nav .roam-notification-button{min-height:36px;font-size:11px}
 }
+
+
+/* Keep the complete workspace navigation in its own scroll area.
+   The version/copyright footer stays anchored and never covers menu items. */
+.roam-sidebar{height:100dvh;min-height:0;overflow:hidden}
+.roam-sidebar>.roam-side-nav{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;align-content:start;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#496253 transparent;padding:2px 3px 12px}
+.roam-sidebar>.roam-side-nav::-webkit-scrollbar{width:6px}
+.roam-sidebar>.roam-side-nav::-webkit-scrollbar-thumb{background:#496253;border-radius:8px}
+.roam-sidebar>.roam-sidebar-bottom{flex:0 0 auto;margin-top:0;background:#17243a;padding-top:12px;padding-bottom:5px}
+.roam-sidebar .roam-side-nav>a,.roam-sidebar .roam-side-nav>button{min-width:0}
+.roam-sidebar .roam-side-nav .roam-notification-card{margin-bottom:4px}
+@media(max-width:760px){
+  .roam-sidebar{height:auto;min-height:62px;overflow:visible}
+  .roam-sidebar>.roam-side-nav{flex:initial;min-height:0;max-height:min(72dvh,620px);overflow-y:auto;overscroll-behavior:contain}
+}

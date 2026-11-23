@@ -26,6 +26,14 @@ export function PushNotificationOptIn(props: Props) {
     } catch(error) {setMessage(error instanceof Error?error.message:"Unable to update notification settings.");}
     finally {setBusy(false);}
   }
-  if(!supported)return <p className="text-xs text-slate-500">Notifications are unavailable in this browser. Try a supported browser on HTTPS.</p>;
-  return <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 p-3"><div className="min-w-0 flex-1"><strong className="block text-sm">Browser notifications</strong><span className="text-xs text-slate-500">{message|| (permission==="granted"?"Notifications are on for this device.":"Get booking and payment updates on this device.")}</span></div><button type="button" className="roam-button roam-button-secondary" disabled={busy} onClick={()=>void toggle()}>{busy?"Please wait…":enabled?"Turn off notifications":"Enable notifications"}</button></div>;
+  const isOn = supported && enabled && permission === "granted";
+  const status = !supported ? "Unavailable" : permission === "denied" ? "Blocked" : isOn ? "On" : "Off";
+  return <div className="flex items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-2" aria-label={`Browser notifications ${status.toLowerCase()}`}>
+    <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${isOn ? "bg-emerald-500" : permission === "denied" ? "bg-rose-500" : "bg-slate-400"}`} />
+    <div className="min-w-0 flex-1"><strong className="block text-xs">Browser alerts</strong><span className="block text-[11px] text-slate-500">{message || (status === "Unavailable" ? "Not supported here" : status === "Blocked" ? "Allow in browser settings" : isOn ? "This device is enabled" : "This device is disabled")}</span></div>
+    <button type="button" role="switch" aria-checked={isOn} aria-label={isOn ? "Turn browser notifications off" : "Turn browser notifications on"} disabled={busy || !supported || permission === "denied"} onClick={()=>void toggle()} className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${isOn ? "bg-emerald-600" : "bg-slate-300"}`}>
+      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${isOn ? "translate-x-6" : "translate-x-1"}`} />
+    </button>
+    <span className="w-8 text-right text-[10px] font-semibold text-slate-500">{busy ? "…" : status}</span>
+  </div>;
 }

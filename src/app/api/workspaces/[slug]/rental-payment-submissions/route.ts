@@ -52,7 +52,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         return { status: "REJECTED" };
       }
       const paid = row.booking.payments.reduce((sum, payment) => sum + (payment.kind === "REFUND" ? -Number(payment.amount) : Number(payment.amount)), 0);
-      const remaining = Number(row.booking.totalAmount) - paid;
+      const remaining = Number(row.booking.totalAmount) + Number(row.booking.securityDeposit || 0) - paid;
       if (Number(row.amount) > remaining + 0.005) throw new Error("BALANCE_CHANGED");
       const payment = await tx.rentalPayment.create({ data: {
         tenantId: access.tenant.id, bookingId: row.bookingId, amount: row.amount,

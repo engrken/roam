@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard, CarFront, LogOut, ShieldCheck, CalendarDays, MapPin, Users, Store,
-  BookOpen, FileText, UserCog, MessageCircle, Wallet, Menu, X, LockKeyhole, Wrench, ClipboardList,
+  BookOpen, FileText, UserCog, MessageCircle, Wallet, Menu, X, LockKeyhole, CreditCard, ClipboardCheck, Wrench, ClipboardList,
   ArrowUpRight, ChevronLeft, ChevronRight,
 } from "lucide-react";
 
@@ -37,7 +37,7 @@ const lockedFeatures: Record<FeatureKey, FeatureInfo> = {
   },
 };
 
-export function WorkspaceNav({ slug, name, role, active }: { slug: string; name: string; role: string; active: "overview" | "fleet" | "marketplace" | "maintenance" | "calendar" | "bookings" | "messages" | "finance" | "branches" | "customers" | "help" | "rental-terms" | "team" | "settings" | "reports" | "account" | "audit" }) {
+export function WorkspaceNav({ slug, name, role, active }: { slug: string; name: string; role: string; active: "overview" | "fleet" | "marketplace" | "maintenance" | "calendar" | "bookings" | "messages" | "finance" | "payment-settings" | "payment-review" | "branches" | "customers" | "help" | "rental-terms" | "team" | "settings" | "reports" | "account" | "audit" }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
@@ -95,6 +95,7 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
         <Link title="Bookings" className={active === "bookings" ? "active" : ""} href={`/workspace/${slug}/bookings`}><CalendarDays size={18}/><span className="roam-nav-label">Bookings</span></Link>
         <Link title="Customer messages" className={active === "messages" ? "active" : ""} href={`/workspace/${slug}/messages`}><MessageCircle size={18}/><span className="roam-nav-label">Customer messages</span></Link>
         <Link title="Financials" className={active === "finance" ? "active" : ""} href={`/workspace/${slug}/finance`}><Wallet size={18}/><span className="roam-nav-label">Financials</span></Link>
+        <Link title="Payment verification" className={active === "payment-review" ? "active" : ""} href={`/workspace/${slug}/payment-review`}><ClipboardCheck size={18}/><span className="roam-nav-label">Payment verification</span></Link>
       </>}
       {lockedItem("branches", "Branches", <MapPin size={18}/>)}
 {effectiveRole !== "STAFF" && <Link title="Customers" className={active === "customers" ? "active" : ""} href={`/workspace/${slug}/customers`}><Users size={18}/><span className="roam-nav-label">Customers</span></Link>}
@@ -102,6 +103,7 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
       {lockedItem("team", "Team & access", <UserCog size={18}/>)}
       {(effectiveRole === "OWNER" || effectiveRole === "ADMIN") && <Link title="Audit history" className={active === "audit" ? "active" : ""} href={`/workspace/${slug}/audit`}><ClipboardList size={18}/><span className="roam-nav-label">Audit history</span></Link>}
       <Link title="Business settings" className={active === "settings" ? "active" : ""} href={`/workspace/${slug}/settings`}><UserCog size={18}/><span className="roam-nav-label">Business settings</span></Link>
+      {(effectiveRole === "OWNER" || effectiveRole === "ADMIN") && <Link title="Rental payment methods" className={active === "payment-settings" ? "active" : ""} href={`/workspace/${slug}/payment-settings`}><CreditCard size={18}/><span className="roam-nav-label">Rental payment methods</span></Link>}
       {effectiveRole === "OWNER" && <Link title="Account & subscription" className={active === "account" ? "active" : ""} href={`/workspace/${slug}/account`}><ShieldCheck size={18}/><span className="roam-nav-label">Account & subscription</span></Link>}
       {effectiveRole !== "STAFF" && lockedItem("reports", "Reports", <UserCog size={18}/>)}
       <Link title="How-to guides" className={active === "help" ? "active" : ""} href={`/workspace/${slug}/help`}><BookOpen size={18}/><span className="roam-nav-label">How-to guides</span></Link>

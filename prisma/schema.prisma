@@ -134,6 +134,8 @@ model Tenant {
   referralReceived Referral? @relation("ReferralReferredTenant")
   referredUsers User[] @relation("UserReferredByTenant")
   rentalPayments RentalPayment[]
+  tenantPaymentMethods TenantPaymentMethod[]
+  rentalPaymentSubmissions RentalPaymentSubmission[]
   vehicleMaintenances VehicleMaintenance[]
   vehicleServiceRecords VehicleServiceRecord[]
   operatingExpenses OperatingExpense[]
@@ -294,6 +296,7 @@ model Booking {
   items       BookingItem[]
   messages    BookingMessage[]
   payments    RentalPayment[]
+  rentalPaymentSubmissions RentalPaymentSubmission[]
   automationNotices BookingAutomationNotice[]
   documents   BookingDocument[]
   inspections VehicleInspection[]
@@ -584,10 +587,63 @@ model RentalPayment {
   notes     String?  @db.Text
   receivedAt DateTime @default(now())
   createdAt DateTime @default(now())
+  submission RentalPaymentSubmission?
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   @@index([tenantId, receivedAt])
   @@index([bookingId, receivedAt])
+}
+
+model TenantPaymentMethod {
+  id             String   @id @default(cuid())
+  tenantId       String
+  method         String
+  label          String
+  accountName    String?
+  accountNumber  String?
+  bankName       String?
+  instructions   String?  @db.Text
+  qrImageData    String?  @db.Text
+  qrContentType  String?
+  enabled        Boolean  @default(false)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  submissions    RentalPaymentSubmission[]
+  @@unique([tenantId, method])
+  @@index([tenantId, enabled, sortOrder])
+}
+
+model RentalPaymentSubmission {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  bookingId           String
+  paymentMethodId     String
+  methodLabelSnapshot String
+  accountNameSnapshot String?
+  accountNumberSnapshot String?
+  bankNameSnapshot    String?
+  reference           String
+  amount              Decimal  @db.Decimal(12, 2)
+  currency            String   @default("PHP")
+  paidAt              DateTime
+  proofPathname       String?
+  customerNote        String?  @db.Text
+  status              String   @default("PENDING")
+  reviewedById        String?
+  reviewedAt          DateTime?
+  rejectionReason     String?  @db.Text
+  rentalPaymentId     String?  @unique
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking             Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  paymentMethod       TenantPaymentMethod @relation(fields: [paymentMethodId], references: [id], onDelete: Restrict)
+  rentalPayment       RentalPayment? @relation(fields: [rentalPaymentId], references: [id], onDelete: SetNull)
+  @@unique([paymentMethodId, reference])
+  @@index([tenantId, status, createdAt])
+  @@index([bookingId, createdAt])
 }
 
 model BookingAutomationNotice {

@@ -145,6 +145,7 @@ model Tenant {
   marketplaceListings MarketplaceListing[]
   marketplaceRentalQuotes MarketplaceRentalQuote[]
   marketplaceHostNotifications MarketplaceHostNotification[]
+  webPushSubscriptions WebPushSubscription[]
 }
 
 model User {
@@ -284,6 +285,7 @@ model Booking {
   startAt     DateTime
   endAt       DateTime
   totalAmount Decimal       @db.Decimal(12, 2)
+  securityDeposit Decimal   @default(0) @db.Decimal(12, 2)
   notes       String?
   rentalTermsSnapshot String? @db.Text
   rentalTermsVersion String?
@@ -298,6 +300,7 @@ model Booking {
   payments    RentalPayment[]
   rentalPaymentSubmissions RentalPaymentSubmission[]
   automationNotices BookingAutomationNotice[]
+  webPushSubscriptions WebPushSubscription[]
   documents   BookingDocument[]
   inspections VehicleInspection[]
   publicTokenHash String? @unique
@@ -888,4 +891,20 @@ model MarketplaceRentalQuote {
   @@unique([inquiryId, tenantId, version])
   @@unique([id, tenantId])
   @@index([tenantId, status, createdAt])
+}
+
+
+model WebPushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique @db.Text
+  p256dh    String
+  auth      String
+  tenantId  String?
+  bookingId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  @@index([tenantId])
+  @@index([bookingId])
 }

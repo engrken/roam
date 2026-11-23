@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { APP_VERSION } from "@/lib/app-meta";
+import { PushNotificationOptIn } from "@/components/push-notification-opt-in";
 import {
   LayoutDashboard, CarFront, LogOut, ShieldCheck, CalendarDays, MapPin, Users, Store,
   BookOpen, FileText, UserCog, MessageCircle, Wallet, Menu, X, LockKeyhole, CreditCard, ClipboardCheck, Wrench, ClipboardList,
@@ -81,6 +82,7 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
     <button className="roam-desktop-sidebar-toggle" type="button" aria-label={desktopCollapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!desktopCollapsed} onClick={() => setDesktopCollapsed(value => !value)} title={desktopCollapsed ? "Expand sidebar" : "Collapse sidebar"}>{desktopCollapsed ? <ChevronRight size={18}/> : <ChevronLeft size={18}/>}<span>{desktopCollapsed ? "Expand" : "Collapse"}</span></button>
     <div className="roam-side-label">WORKSPACE</div>
     <div className="roam-workspace-name">{name}</div>
+    <div style={{padding:"8px 12px"}}><PushNotificationOptIn slug={slug}/></div>
     {trial && <div role="status" style={{margin:"10px 12px",padding:"10px 12px",borderRadius:10,border:trial.readOnly?"1px solid #f59e0b":"1px solid #0891b2",background:trial.readOnly?"#fff7ed":"#ecfeff",color:"#164e63",fontSize:12,lineHeight:1.5}}>
       <strong style={{display:"block",color:trial.readOnly?"#9a3412":"#155e75"}}>{trial.readOnly?"Read-only · trial grace ended":"Starter trial"}</strong>
       <span>{trial.readOnly?"Existing records are available.":"Trial ends "+(trial.endsAt?new Date(trial.endsAt).toLocaleDateString("en-PH",{month:"short",day:"numeric"}):"soon")+". A 7-day grace period follows."}</span>

@@ -5,6 +5,7 @@ import { consumeRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 import { sendBookingMessageNotification } from "@/lib/email";
 import { isTenantTrialReadOnly } from "@/lib/tenant-access";
+import { notifyTenant } from "@/lib/web-push";
 export const runtime="nodejs";
 const hash=(v:string)=>createHash("sha256").update(v).digest("hex");
 export async function GET(request:NextRequest,{params}:{params:Promise<{reference:string}>}){
@@ -14,7 +15,9 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{referenc
  if(!booking)return NextResponse.json({error:"Booking not found."},{status:404});
  const paidAmount=booking.payments.reduce((sum,payment)=>sum+(payment.kind==="REFUND"?-Number(payment.amount):Number(payment.amount)),0);
  const totalAmount=Number(booking.totalAmount);
- return NextResponse.json({booking:{reference:booking.reference,status:booking.status,startAt:booking.startAt,endAt:booking.endAt,totalAmount,paidAmount:Math.max(0,paidAmount),balanceDue:Math.max(0,totalAmount-paidAmount),rentalTermsSnapshot:booking.rentalTermsSnapshot,rentalTermsAcceptedAt:booking.rentalTermsAcceptedAt,business:booking.tenant,customer:booking.customer,vehicles:booking.items.map(i=>({rate:Number(i.rate),...i.vehicle})),payments:booking.payments.map(payment=>({...payment,amount:Number(payment.amount)})),messages:booking.messages,documents:booking.documents}});
+ const securityDeposit=Number(booking.securityDeposit || 0);
+ const totalPayable=totalAmount+securityDeposit;
+ return NextResponse.json({booking:{reference:booking.reference,status:booking.status,startAt:booking.startAt,endAt:booking.endAt,totalAmount,securityDeposit,totalPayable,paidAmount:Math.max(0,paidAmount),balanceDue:Math.max(0,totalPayable-paidAmount),rentalTermsSnapshot:booking.rentalTermsSnapshot,rentalTermsAcceptedAt:booking.rentalTermsAcceptedAt,business:booking.tenant,customer:booking.customer,vehicles:booking.items.map(i=>({rate:Number(i.rate),...i.vehicle})),payments:booking.payments.map(payment=>({...payment,amount:Number(payment.amount)})),messages:booking.messages,documents:booking.documents}});
 }
 export async function POST(request:NextRequest,{params}:{params:Promise<{reference:string}>}){
  const {reference}=await params;const body=await request.json().catch(()=>null);const token=typeof body?.token==="string"?body.token:"";const message=typeof body?.message==="string"?body.message.trim():"";
@@ -30,6 +33,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{referen
  if(!bookingAllowed||!ipAllowed)return NextResponse.json({error:"Too many messages. Please try again later."},{status:429});
  if(await isTenantTrialReadOnly(booking.tenantId))return NextResponse.json({error:"Messaging is temporarily unavailable because this rental workspace is in read-only mode."},{status:423});
  await prisma.bookingMessage.create({data:{bookingId:booking.id,sender:"CUSTOMER",body:message}});
+ void notifyTenant(booking.tenantId, "New customer message", "A customer sent a message about booking " + reference + ".", "/workspace/" + encodeURIComponent(booking.tenant.slug) + "/bookings").catch(error => console.error("Customer message push notification failed", error));
  try {
   await sendBookingMessageNotification({recipient:booking.tenant.email,tenantName:booking.tenant.name,bookingReference:reference,senderLabel:"Customer",message,workspaceUrl:(process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app")+"/workspace/"+encodeURIComponent(booking.tenant.slug)+"/bookings"});
  } catch (error) { console.error("Customer message email notification failed", error); }

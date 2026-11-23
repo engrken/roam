@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 import { recordWorkspaceAudit } from "@/lib/workspace-audit";
+import { notifyBooking } from "@/lib/web-push";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,10 +15,13 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const submissions = await prisma.rentalPaymentSubmission.findMany({
     where: { tenantId: access.tenant.id },
     orderBy: [{ status: "asc" }, { createdAt: "desc" }], take: 100,
-    include: { booking: { select: { reference: true, customer: { select: { name: true, phone: true } }, documents: { where: { kind: "PAYMENT_EVIDENCE" }, select: { id: true, pathname: true } } } }, paymentMethod: { select: { method: true } } },
+    include: { booking: { select: { reference: true, totalAmount: true, securityDeposit: true, payments: { select: { amount: true, kind: true } }, customer: { select: { name: true, phone: true } }, documents: { where: { kind: "PAYMENT_EVIDENCE" }, select: { id: true, pathname: true } } } }, paymentMethod: { select: { method: true } } },
   });
   return NextResponse.json({ submissions: submissions.map(row => ({
     id: row.id, bookingReference: row.booking.reference, customer: row.booking.customer.name,
+    rentalAmount: Number(row.booking.totalAmount), securityDeposit: Number(row.booking.securityDeposit || 0),
+    totalPayable: Number(row.booking.totalAmount) + Number(row.booking.securityDeposit || 0),
+    verifiedPaid: row.booking.payments.reduce((sum, p) => sum + (p.kind === "REFUND" ? -Number(p.amount) : Number(p.amount)), 0),
     customerPhone: row.booking.customer.phone, method: row.methodLabelSnapshot, methodKey: row.paymentMethod.method,
     accountName: row.accountNameSnapshot, accountNumber: row.accountNumberSnapshot, bankName: row.bankNameSnapshot,
     reference: row.reference, amount: Number(row.amount), paidAt: row.paidAt.toISOString(),
@@ -49,10 +53,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       if (action === "REJECT") {
         await tx.rentalPaymentSubmission.update({ where: { id: row.id }, data: { status: "REJECTED", reviewedById: access.user.id, reviewedAt: new Date(), rejectionReason } });
         await recordWorkspaceAudit(tx, { tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email, action: "rental_payment.rejected", targetType: "rentalPaymentSubmission", targetId: row.id, details: { bookingReference: row.booking.reference, reference: row.reference, amount: Number(row.amount) } });
-        return { status: "REJECTED" };
+        return { status: "REJECTED", bookingId: row.bookingId, bookingReference: row.booking.reference };
       }
       const paid = row.booking.payments.reduce((sum, payment) => sum + (payment.kind === "REFUND" ? -Number(payment.amount) : Number(payment.amount)), 0);
-      const remaining = Number(row.booking.totalAmount) - paid;
+      const remaining = Number(row.booking.totalAmount) + Number(row.booking.securityDeposit || 0) - paid;
       if (Number(row.amount) > remaining + 0.005) throw new Error("BALANCE_CHANGED");
       const payment = await tx.rentalPayment.create({ data: {
         tenantId: access.tenant.id, bookingId: row.bookingId, amount: row.amount,
@@ -62,8 +66,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       } });
       await tx.rentalPaymentSubmission.update({ where: { id: row.id }, data: { status: "APPROVED", reviewedById: access.user.id, reviewedAt: new Date(), rentalPaymentId: payment.id } });
       await recordWorkspaceAudit(tx, { tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email, action: "rental_payment.approved", targetType: "rentalPayment", targetId: payment.id, details: { submissionId: row.id, bookingReference: row.booking.reference, amount: Number(row.amount), method: row.paymentMethod.method } });
-      return { status: "APPROVED", paymentId: payment.id };
+      return { status: "APPROVED", paymentId: payment.id, bookingId: row.bookingId, bookingReference: row.booking.reference };
     });
+    void notifyBooking(result.bookingId, result.status === "APPROVED" ? "Payment verified" : "Payment proof rejected", result.status === "APPROVED" ? "Your payment for booking " + result.bookingReference + " was approved." : "Your payment proof for booking " + result.bookingReference + " was rejected. Open your booking page for details.", "/").catch(error => console.error("Payment review push notification failed", error));
     return NextResponse.json({ reviewed: true, ...result });
   } catch (error) {
     const code = error instanceof Error ? error.message : "";

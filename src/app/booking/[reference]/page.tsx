@@ -5,13 +5,14 @@ import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { upload } from "@vercel/blob/client";
 import "../../[slug]/book/booking-experience.css";
+import { PushNotificationOptIn } from "@/components/push-notification-opt-in";
 
 type Message = { id: string; sender: string; body: string; createdAt: string };
 type Document = { id: string; kind: string; fileName: string; reviewStatus: string; createdAt?: string };
 type Payment = { amount: number; kind: string; method: string; reference: string | null; receivedAt: string };
 type Vehicle = { make: string; model: string; year: number | null; type: string; transmission: string | null; seats: number | null; rate: number; branch: { name: string; address: string | null } | null };
 type Data = {
-  reference: string; status: string; startAt: string; endAt: string; totalAmount: number; paidAmount: number; balanceDue: number; rentalTermsSnapshot?: string | null; rentalTermsAcceptedAt?: string | null;
+  reference: string; status: string; startAt: string; endAt: string; totalAmount: number; securityDeposit: number; totalPayable: number; paidAmount: number; balanceDue: number; rentalTermsSnapshot?: string | null; rentalTermsAcceptedAt?: string | null;
   business: { name: string; phone: string | null; currency?: string; timezone?: string }; customer?: { name: string };
   vehicles: Vehicle[]; payments: Payment[]; messages: Message[]; documents: Document[];
 };
@@ -42,6 +43,24 @@ export default function CustomerBookingPage() {
     if (!response.ok) throw new Error(body.error || "Unable to load booking.");
     setData(body.booking);
   },[reference,token]);
+
+  // Low-frequency polling keeps the private booking portal synchronized without a WebSocket service.
+  useEffect(() => {
+    if (!token) return;
+    let active = true;
+    let inFlight = false;
+    const sync = async () => {
+      if (!active || document.visibilityState !== "visible" || inFlight) return;
+      inFlight = true;
+      try { await refresh(); } catch { /* Keep the last known booking state during transient network errors. */ }
+      finally { inFlight = false; }
+    };
+    const timer = window.setInterval(() => { void sync(); }, 10000);
+    const onVisible = () => { if (document.visibilityState === "visible") void sync(); };
+    window.addEventListener("focus", onVisible);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { active = false; window.clearInterval(timer); window.removeEventListener("focus", onVisible); document.removeEventListener("visibilitychange", onVisible); };
+  }, [refresh, token]);
 
   useEffect(() => {
     let active = true;
@@ -108,27 +127,31 @@ export default function CustomerBookingPage() {
   return <main className="client-page">
     <header className="client-topbar"><Link href="/" className="client-brand"><span>R</span> ROAM</Link><span>PRIVATE BOOKING PORTAL</span></header>
     <div className="client-container">
-      <div className="client-portal-heading"><div><div className="client-eyebrow">{data.business.name}</div><h1>Your booking</h1><p>Reference <b>{data.reference}</b></p></div><div className="client-top-actions" style={{display:"flex",gap:8,flexWrap:"wrap"}}><Link className="client-refresh" href={"/booking/"+encodeURIComponent(reference)+"/payment?token="+encodeURIComponent(token)}>Pay balance</Link><button className="client-refresh" onClick={copyReference}>Copy reference</button><button className="client-refresh" onClick={copyBookingLink}>{linkCopied?"Copied link":"Copy booking link"}</button><button className="client-refresh" onClick={reload} disabled={refreshing}>{refreshing?"Refreshing…":"↻ Refresh status"}</button></div></div>
+      <div className="client-portal-heading"><div><div className="client-eyebrow">{data.business.name}</div><h1>Your booking</h1><p>Reference <b>{data.reference}</b></p></div><div className="client-top-actions" style={{display:"flex",gap:8,flexWrap:"wrap"}}>{["CONFIRMED","ACTIVE","COMPLETED"].includes(data.status) && data.balanceDue > 0 && <Link className="client-primary" href={"/booking/"+encodeURIComponent(reference)+"/payment?token="+encodeURIComponent(token)}>Pay balance <span>→</span></Link>}<button className="client-refresh" onClick={copyReference}>Copy reference</button><button className="client-refresh" onClick={copyBookingLink}>{linkCopied?"Copied link":"Copy booking link"}</button><button className="client-refresh" onClick={reload} disabled={refreshing}>{refreshing?"Refreshing…":"↻ Refresh status"}</button></div></div>
       {error && <div className="client-alert" role="alert">{error}</div>}{notice && <div className="client-notice" role="status">{notice}</div>}
+      <PushNotificationOptIn reference={reference} token={token}/>
       <section className="client-status-card"><div className="client-status-top"><div><span className="client-eyebrow">CURRENT STATUS</span><h2>{statusLabel}</h2></div><span className={"client-status-pill "+(cancelled?"is-muted":data.status==="COMPLETED"?"is-done":"")}>{data.status.replaceAll("_"," ")}</span></div>
         {cancelled ? <p className="client-status-note">Please contact the rental team if you need clarification or would like to discuss another date.</p> :
         <div className="client-progress">{timeline.map((step,index)=><div key={step} className={"client-progress-step "+(currentIndex>=index?"is-reached":"")}><span>{currentIndex>index?"✓":index+1}</span><small>{step==="ACTIVE"?"Active · pending return":statusText[step]}</small></div>)}</div>}
       </section>
+      <section className="client-panel" aria-live="polite"><span className="client-eyebrow">WHAT HAPPENS NEXT</span><h2>{data.status==="PENDING"?"Your request is awaiting review":data.status==="CONFIRMED"?"Your booking is confirmed":data.status==="ACTIVE"?"Your rental is in progress":data.status==="COMPLETED"?"Your rental is complete": "Booking update"}</h2><p>{data.status==="PENDING"?"The rental team will check availability and review your request. You do not need to pay yet. Watch this page for the confirmation and payment button.":data.status==="CONFIRMED"?"Your booking is confirmed. Review the amount due below and use the Pay balance button when you are ready to submit payment details.":data.status==="ACTIVE"?"Your rental is active. You can still pay any remaining balance using the Pay balance button.":data.status==="COMPLETED"?"Your rental is complete. Any remaining amount can be settled here; contact the business about your security deposit return.":"Contact the rental team if you need help with this booking."}</p>{data.status==="PENDING"&&<ol className="list-decimal pl-5 text-sm"><li>Wait for the rental team to confirm.</li><li>Return to this private booking page.</li><li>When confirmed, select Pay balance to view payment instructions.</li></ol>}{["CONFIRMED","ACTIVE","COMPLETED"].includes(data.status)&&data.balanceDue>0&&<Link className="client-primary" href={"/booking/"+encodeURIComponent(reference)+"/payment?token="+encodeURIComponent(token)}>Continue to payment <span>→</span></Link>}</section>
       <div className="client-portal-grid">
         <div className="client-portal-main">
           <section className="client-panel"><div className="client-panel-heading"><div><span className="client-eyebrow">YOUR RENTAL</span><h2>Booking details</h2></div><span className="client-reference-mini">{data.reference}</span></div>
-            <div className="client-detail-grid"><div><small>PICKUP</small><strong>{dateTime(data.startAt,data.business.timezone)}</strong></div><div><small>RETURN</small><strong>{dateTime(data.endAt,data.business.timezone)}</strong></div><div><small>RENTAL TOTAL</small><strong>{money(data.totalAmount,data.business.currency)}</strong></div><div><small>BOOKED UNDER</small><strong>{data.customer?.name || "Customer"}</strong></div></div>
+            <div className="client-detail-grid"><div><small>PICKUP</small><strong>{dateTime(data.startAt,data.business.timezone)}</strong></div><div><small>RETURN</small><strong>{dateTime(data.endAt,data.business.timezone)}</strong></div><div><small>RENTAL TOTAL</small><strong>{money(data.totalAmount,data.business.currency)}</strong></div><div><small>SECURITY DEPOSIT</small><strong>{money(data.securityDeposit||0,data.business.currency)}</strong></div><div><small>BOOKED UNDER</small><strong>{data.customer?.name || "Customer"}</strong></div></div>
           </section>
           <section className="client-panel roam-customer-summary-panel">
             <div className="client-panel-heading"><div><span className="client-eyebrow">VEHICLE & PAYMENT</span><h2>Your rental summary</h2></div></div>
             {data.vehicles?.length ? <div className="roam-customer-vehicle-list">{data.vehicles.map((vehicle,index)=><div key={index}><span className="roam-customer-vehicle-icon">🚘</span><span><b>{vehicle.year ? vehicle.year+" " : ""}{vehicle.make} {vehicle.model}</b><small>{[vehicle.type.replaceAll("_"," "),vehicle.transmission,vehicle.seats ? vehicle.seats+" seats" : null].filter(Boolean).join(" · ")}</small><small>{vehicle.branch?.name || "Pickup location to be confirmed"}{vehicle.branch?.address ? " · "+vehicle.branch.address : ""}</small></span><strong>{money(vehicle.rate,data.business.currency)}<small>/day</small></strong></div>)}</div> : <p className="client-panel-copy">Vehicle details will appear here.</p>}
             <div className="roam-customer-payment-summary">
-              <div><small>RENTAL TOTAL</small><b>{money(data.totalAmount,data.business.currency)}</b></div>
+              <div><small>RENTAL FEE</small><b>{money(data.totalAmount,data.business.currency)}</b></div>
+              <div><small>REFUNDABLE SECURITY DEPOSIT</small><b>{money(data.securityDeposit||0,data.business.currency)}</b></div>
+              <div><small>TOTAL BOOKING AMOUNT</small><b>{money(data.totalPayable??(data.totalAmount+(data.securityDeposit||0)),data.business.currency)}</b></div>
               <div><small>PAYMENTS RECORDED</small><b>{money(data.paidAmount || 0,data.business.currency)}</b></div>
               <div><small>{["CANCELLED","REJECTED"].includes(data.status) ? "BALANCE STATUS" : "REMAINING BALANCE"}</small><b>{["CANCELLED","REJECTED"].includes(data.status) ? "Contact business" : money(data.balanceDue ?? data.totalAmount,data.business.currency)}</b></div>
             </div>
             {data.payments?.length ? <div className="roam-customer-payment-list">{data.payments.map((payment,index)=><div key={index}><span><b>{payment.kind.replaceAll("_"," ")}</b><small>{payment.method.replaceAll("_"," ")} · {dateTime(payment.receivedAt,data.business.timezone)}{payment.reference ? " · "+payment.reference : ""}</small></span><strong>{payment.kind==="REFUND"?"−":""}{money(payment.amount,data.business.currency)}</strong></div>)}</div> : <p className="client-panel-copy">No payment has been recorded by the rental team yet. Payment instructions and arrangements will be confirmed directly by the business.</p>}
-            <p className="roam-customer-finance-note">Payment figures reflect transactions recorded by the rental business. Uploading proof of payment does not itself count as a recorded payment.{["CANCELLED","REJECTED"].includes(data.status) ? " Any cancellation charges, refunds, or remaining amount should be confirmed directly with the business." : ""}</p>
+            <p className="roam-customer-finance-note">The security deposit is refundable subject to the rental agreement and vehicle return inspection. It is shown separately from rental income. Payment figures reflect transactions recorded by the rental business. Uploading proof of payment does not itself count as a recorded payment.{["CANCELLED","REJECTED"].includes(data.status) ? " Any cancellation charges, refunds, or remaining amount should be confirmed directly with the business." : ""}</p>
           </section>
           {data.rentalTermsSnapshot && <section className="client-panel"><div className="client-panel-heading"><div><span className="client-eyebrow">RENTAL AGREEMENT</span><h2>Terms you accepted</h2></div></div><div className="client-rental-terms-copy">{data.rentalTermsSnapshot}</div>{data.rentalTermsAcceptedAt && <p className="client-panel-copy">Accepted on {new Date(data.rentalTermsAcceptedAt).toLocaleString("en-PH",{dateStyle:"medium",timeStyle:"short"})}.</p>}</section>}
           <section className="client-panel"><div className="client-panel-heading"><div><span className="client-eyebrow">DOCUMENT CHECKLIST</span><h2>Your documents</h2></div><span className="client-count">{data.documents.length} uploaded</span></div>

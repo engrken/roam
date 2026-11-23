@@ -6,6 +6,7 @@ import { sendBookingMessageNotification, sendBookingStatusNotification, sendBook
 import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { isWithinPickupReminderWindow } from "@/lib/booking-reminder";
+import { notifyBooking, notifyTenant } from "@/lib/web-push";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const booking = await prisma.booking.findFirst({
     where: { tenantId: access.tenant.id, reference },
     select: {
-      id: true, reference: true, status: true, startAt: true, endAt: true, totalAmount: true,
+      id: true, reference: true, status: true, startAt: true, endAt: true, totalAmount: true, securityDeposit: true,
       customer: { select: { name: true, email: true, phone: true } },
       items: {
         select: {
@@ -59,6 +60,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       startAt: booking.startAt,
       endAt: booking.endAt,
       totalAmount: Number(booking.totalAmount),
+      securityDeposit: Number(booking.securityDeposit || 0),
+      totalPayable: Number(booking.totalAmount) + Number(booking.securityDeposit || 0),
       customer: booking.customer,
       vehicles: booking.items.map((item) => item.vehicle),
       messages: booking.messages,
@@ -114,6 +117,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     await prisma.bookingMessage.create({
       data: { bookingId: booking.id, sender: "OWNER", body: message },
     });
+    void notifyBooking(booking.id, "New message from the rental team", "You have a new message about booking " + reference + ".", "/").catch(error => console.error("Message push notification failed", error));
     if (booking.customer.email) {
       try {
         await sendBookingMessageNotification({ recipient: booking.customer.email, tenantName: access.tenant.name, bookingReference: reference, senderLabel: "Rental team", message });
@@ -138,9 +142,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         };
       }
 
-      if (nextStatus === "CONFIRMED" && current.payments.reduce((sum, payment) => sum + (payment.kind === "REFUND" ? -Number(payment.amount) : Number(payment.amount)), 0) <= 0) {
-        return { error: "Before confirming, review any uploaded proof and record the verified deposit or payment in Financials.", status: 409 as const };
-      }
 
       if (nextStatus === "CONFIRMED" || nextStatus === "ACTIVE") {
         const vehicleIds = current.items.map((item) => item.vehicleId).sort();
@@ -222,6 +223,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     });
 
     if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
+    void notifyBooking(booking.id, "Booking status updated", "Your booking " + reference + " is now " + result.nextStatus.toLowerCase() + ".", "/").catch(error => console.error("Booking push notification failed", error));
     let notification: "attempted" | "no_customer_email" | "failed" = booking.customer.email ? "attempted" : "no_customer_email";
     if (booking.customer.email) {
       try {

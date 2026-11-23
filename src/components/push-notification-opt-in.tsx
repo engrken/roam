@@ -27,17 +27,12 @@ export function PushNotificationOptIn(props: Props) {
     finally {setBusy(false);}
   }
   const isOn = supported && enabled && permission === "granted";
-  const status = !supported ? "Unavailable" : permission === "denied" ? "Blocked" : isOn ? "On" : "Off";
+  const unavailable = !supported || permission === "denied";
   return <section className="roam-notification-card" aria-label="Browser notification settings">
-    <div className="roam-notification-copy">
-      <span className={`roam-notification-dot ${isOn ? "is-on" : permission === "denied" ? "is-blocked" : ""}`} aria-hidden="true"/>
-      <div className="roam-notification-text"><strong>Browser notifications</strong><span>{message || (status === "Unavailable" ? "Not supported in this browser" : status === "Blocked" ? "Blocked in browser settings" : isOn ? "This device can receive alerts" : "Get booking and payment alerts on this device")}</span></div>
-    </div>
-    <div className="roam-notification-actions">
-      <span className={`roam-notification-status ${isOn ? "is-on" : ""}`}>{busy ? "Please wait…" : status}</span>
-      <button type="button" disabled={busy || !supported || permission === "denied"} onClick={()=>void toggle()} className="roam-notification-button">
-        {busy ? "Updating…" : isOn ? "Disable notifications" : permission === "denied" ? "Blocked" : "Enable notifications"}
-      </button>
-    </div>
+    <span className="roam-notification-label">Notification:</span>
+    <button type="button" disabled={busy || unavailable} aria-pressed={isOn} aria-label={`Notifications ${isOn ? "on" : "off"}. ${busy ? "Updating." : message}`} title={message || (permission === "denied" ? "Allow notifications in your browser site settings." : "Toggle browser notifications")} onClick={()=>void toggle()} className={`roam-notification-button ${isOn ? "is-on" : "is-off"}`}>
+      {busy ? "…" : isOn ? "ON" : "OFF"}
+    </button>
+    <span className="roam-notification-feedback" role="status" aria-live="polite">{message || (permission === "denied" ? "Blocked in browser settings" : !supported ? "Unavailable in this browser" : "")}</span>
   </section>;
 }

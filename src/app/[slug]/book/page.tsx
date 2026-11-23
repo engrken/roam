@@ -223,11 +223,11 @@ export default function PublicBookPage() {
       {error && <div className="client-alert" role="alert">{error}</div>}
       {booking ? <section className="client-success roam-booking-success">
         <div className="client-success-icon">✓</div><div className="client-eyebrow">REQUEST RECEIVED</div><h2>Your booking request is on its way.</h2>
-        <p>Keep your booking reference safe. Your private booking page lets you follow updates, message the rental team, and upload documents.</p>
+        <p>Keep your booking reference safe. Your private booking page shows every next step, lets you message the rental team, upload documents, and pay once your request is confirmed.</p>
         <div className="client-reference"><span>BOOKING REFERENCE</span><strong>{booking.reference}</strong></div>
         <Link className="client-primary" href={"/booking/" + encodeURIComponent(booking.reference) + "?token=" + encodeURIComponent(booking.accessToken)}>Open my booking <span>→</span></Link>
         {booking.emailNotification === "failed" && <small className="client-help">We could not send the email confirmation. Please open your private booking page now and save its link.</small>}
-        <small className="client-help">This is a request, not a confirmed reservation. The rental team will review availability and reply.</small>
+        <div className="roam-booking-next-steps"><b>What happens next?</b><ol><li><strong>Request received</strong><span>Your request has been sent to the rental team.</span></li><li><strong>Wait for confirmation</strong><span>The business will review availability and update your booking status.</span></li><li><strong>Pay after approval</strong><span>Open your private booking page. A Pay balance button will appear after confirmation.</span></li><li><strong>Payment verification</strong><span>Submit your transfer details and proof. The business will verify it before marking it paid.</span></li></ol></div>
       </section> : <div className="roam-booking-layout">
         <section className="client-form-card roam-booking-card">
           <div className="roam-booking-stepper" aria-label="Booking progress">

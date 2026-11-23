@@ -91,7 +91,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     prisma.booking.count({ where: { tenantId, status: "ACTIVE", endAt: { lt: now } } }),
     prisma.booking.findMany({
       where: { tenantId, status: { in: ["CONFIRMED", "ACTIVE"] } },
-      select: { totalAmount: true, payments: { select: { amount: true, kind: true } } },
+      select: { totalAmount: true, status: true, endAt: true, payments: { select: { amount: true, kind: true } } },
     }),
     prisma.rentalPayment.groupBy({
       by: ["kind"], where: { tenantId, receivedAt: { gte: thirtyDaysAgo } },
@@ -118,6 +118,15 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     return sum + Math.max(0, Number(booking.totalAmount) - netPaid);
   }, 0);
 
+  const rentDue = openBookings.reduce((sum, booking) => sum + Number(booking.totalAmount), 0);
+  const rentPaid = openBookings.reduce((sum, booking) => sum + booking.payments.reduce(
+    (paid, payment) => paid + (payment.kind === "REFUND" ? -Number(payment.amount) : Number(payment.amount)), 0,
+  ), 0);
+  const overdueRentBalance = openBookings.filter(booking => booking.status === "ACTIVE" && booking.endAt < now).reduce((sum, booking) => {
+    const netPaid = booking.payments.reduce((paid, payment) => paid + (payment.kind === "REFUND" ? -Number(payment.amount) : Number(payment.amount)), 0);
+    return sum + Math.max(0, Number(booking.totalAmount) - netPaid);
+  }, 0);
+
   const actionItem = (booking: { id: string; reference: string; startAt: Date; endAt: Date; customer: { name: string }; totalAmount?: unknown }) => ({
     id: booking.id, reference: booking.reference, customer: booking.customer.name,
     startAt: booking.startAt.toISOString(), endAt: booking.endAt.toISOString(),
@@ -135,6 +144,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
       completedValue30d: canViewFinancials ? Number(completedValue._sum.totalAmount || 0) : null,
       collected30d: canViewFinancials ? collected30d : null,
       outstandingBalance: canViewFinancials ? outstandingBalance : null,
+      rentDue: canViewFinancials ? rentDue : null,
+      rentPaid: canViewFinancials ? rentPaid : null,
+      overdueRentBalance: canViewFinancials ? overdueRentBalance : null,
       bookings7d: recent.length,
     },
     actionCenter: {

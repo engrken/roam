@@ -792,3 +792,5 @@
   .home-pathway-icon{margin-bottom:15px}
   .home-pathway-card>a{padding-top:16px}
 }
+
+.roam-sidebar-app-meta{display:grid;gap:3px;padding-top:9px;border-top:1px solid #2a473e;color:#81978b;font-size:9px;line-height:1.45}.roam-sidebar-app-meta span:first-child{color:#c8d8ce;font-weight:750;letter-spacing:.35px}.roam-sidebar-collapsed .roam-sidebar-app-meta{display:none}

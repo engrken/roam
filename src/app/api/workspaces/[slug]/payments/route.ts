@@ -44,9 +44,16 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const paymentCount = paymentTotals.find((row) => row.kind === "PAYMENT")?._count._all || 0;
   const refundCount = paymentTotals.find((row) => row.kind === "REFUND")?._count._all || 0;
   const outstanding = bookingBalances.reduce((sum, booking) => sum + booking.outstanding, 0);
+  const billableBalances = bookingBalances.filter(booking => ["CONFIRMED", "ACTIVE", "COMPLETED"].includes(booking.status));
+  const rentDue = billableBalances.reduce((sum, booking) => sum + booking.total, 0);
+  const rentPaid = billableBalances.reduce((sum, booking) => sum + Math.max(0, booking.collected), 0);
+  const balanceByReference = new Map(bookingBalances.map(booking => [booking.reference, booking]));
+  const now = new Date();
+  const overdueBookings = bookings.filter(booking => booking.status === "ACTIVE" && booking.endAt < now && (balanceByReference.get(booking.reference)?.outstanding || 0) > 0);
+  const overdueRent = overdueBookings.reduce((sum, booking) => sum + (balanceByReference.get(booking.reference)?.outstanding || 0), 0);
 
   return NextResponse.json({
-    summary: { collected, outstanding, payments: paymentCount, refunds: refundCount },
+    summary: { collected, outstanding, rentDue, rentPaid, overdueRent, overdueBookings: overdueBookings.length, payments: paymentCount, refunds: refundCount },
     payments: payments.map((payment) => ({
       id: payment.id, amount: Number(payment.amount), currency: payment.currency, method: payment.method, kind: payment.kind,
       reference: payment.reference, notes: payment.notes, receivedAt: payment.receivedAt,

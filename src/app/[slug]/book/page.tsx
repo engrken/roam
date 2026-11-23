@@ -75,6 +75,25 @@ export default function PublicBookPage() {
   const [booking, setBooking] = useState<BookingResult | null>(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
+  const [returningLookupBusy, setReturningLookupBusy] = useState(false);
+  const [returningLookupNotice, setReturningLookupNotice] = useState("");
+
+  async function findReturningCustomer() {
+    if (!email.trim() || !phone.trim()) { setReturningLookupNotice("Enter your email address and mobile number first."); return; }
+    setReturningLookupBusy(true); setReturningLookupNotice("");
+    try {
+      const response = await fetch("/api/public/" + encodeURIComponent(slug) + "/customers/returning", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, phone }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Unable to check customer details.");
+      if (body.found && typeof body.customer?.name === "string") {
+        setName(body.customer.name);
+        setReturningLookupNotice("Welcome back. Your name has been filled in. Please review your details before continuing.");
+      } else setReturningLookupNotice("We couldn't match those details. You can continue by entering your name below.");
+    } catch (reason) { setReturningLookupNotice(reason instanceof Error ? reason.message : "Unable to check customer details."); }
+    finally { setReturningLookupBusy(false); }
+  }
 
   useEffect(() => {
     let active = true;
@@ -241,6 +260,11 @@ export default function PublicBookPage() {
             <label>Full name<input required minLength={2} maxLength={100} autoComplete="name" value={name} onChange={event => setName(event.target.value)} placeholder="Your full name"/></label>
             <label>Email address<input required type="email" maxLength={254} autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="you@example.com"/></label>
             <label>Mobile number<input required type="tel" minLength={7} maxLength={30} autoComplete="tel" value={phone} onChange={event => setPhone(event.target.value)} placeholder="+63 9XX XXX XXXX"/></label>
+            <div className="roam-booking-hint" style={{display:"grid",gap:8}}>
+              <p><strong>Returning customer?</strong> Use the same email address and mobile number from your previous booking to fill your saved name.</p>
+              <button type="button" className="client-refresh" onClick={findReturningCustomer} disabled={returningLookupBusy || !email.trim() || !phone.trim()}>{returningLookupBusy ? "Checking details…" : "Quick fill my details"}</button>
+              {returningLookupNotice && <p role="status" aria-live="polite">{returningLookupNotice}</p>}
+            </div>
             <div className="roam-booking-hint"><span>🔒</span><p>Your contact details are shared with this rental business only to process this booking request.</p></div>
             <div className="roam-booking-actions"><button type="button" className="client-refresh" onClick={() => setStep(2)}>← Back</button><button type="submit" className="client-primary">Review booking <span>→</span></button></div>
           </form>}

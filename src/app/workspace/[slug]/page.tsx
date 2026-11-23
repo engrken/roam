@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowUpRight, CalendarDays, CarFront, CircleDollarSign, Gauge, Users, MapPin, Clock3, Share2, Copy, Check } from "lucide-react";
+import { ArrowUpRight, CalendarDays, CarFront, CircleDollarSign, Gauge, Wallet as WalletIcon, Users, MapPin, Clock3, Share2, Copy, Check } from "lucide-react";
 import { WorkspaceNav } from "@/components/workspace-nav";
 
 type Overview = {
   workspace: { name: string; slug: string; role: string; currency: string; trial: null | { endsAt: string | null; graceEndsAt: string | null; readOnly: boolean } };
-  metrics: { totalVehicles:number; availableVehicles:number; rentedVehicles:number; reservedVehicles:number; maintenanceVehicles:number; activeBookings:number; pendingBookings:number; completedBookings:number; customers:number; branches:number; utilization:number; completedValue30d:number | null; collected30d:number | null; outstandingBalance:number | null; bookings7d:number };
+  metrics: { totalVehicles:number; availableVehicles:number; rentedVehicles:number; reservedVehicles:number; maintenanceVehicles:number; activeBookings:number; pendingBookings:number; completedBookings:number; customers:number; branches:number; utilization:number; completedValue30d:number | null; collected30d:number | null; outstandingBalance:number | null; rentDue:number | null; rentPaid:number | null; overdueRentBalance:number | null; bookings7d:number };
   actionCenter: {
     pendingCount:number;
     pickupCount:number;
@@ -69,8 +69,11 @@ export default function WorkspaceOverviewPage() {
           <button className="roam-guide-step" onClick={()=>router.push(`/workspace/${slug}/rental-terms`)}>
             <span className="roam-guide-number">03</span><span><b>Review your rental terms</b><small>Set the conditions customers must accept when requesting a booking.</small></span><ArrowUpRight size={17}/>
           </button>
-          <button className="roam-guide-step" onClick={()=>router.push(`/workspace/${slug}/help#getting-started`)}>
-            <span className="roam-guide-number">04</span><span><b>Read the complete setup guide</b><small>See step-by-step instructions for bookings, inspections and team access.</small></span><ArrowUpRight size={17}/>
+          <button className="roam-guide-step" onClick={()=>router.push(`/workspace/${slug}/payment-settings`)}>
+            <span className="roam-guide-number">04</span><span><b>Set up your payment methods</b><small>Add and verify your own GCash, Maya, QR Ph, bank or cash details.</small></span><ArrowUpRight size={17}/>
+          </button>
+          <button className="roam-guide-step" onClick={()=>router.push(`/workspace/${slug}/help#onboarding`)}>
+            <span className="roam-guide-number">05</span><span><b>Read the complete onboarding guide</b><small>Learn booking, payment verification, analytics, customer returns and team access.</small></span><ArrowUpRight size={17}/>
           </button>
         </div>
         <div className="roam-guide-footer"><span>{metrics.totalVehicles > 0 ? "Your fleet has been started." : "Tip: add at least one available vehicle before sharing your booking page."}</span><button className="roam-link-btn" onClick={()=>router.push(`/workspace/${slug}/bookings`)}>Go to bookings <ArrowUpRight size={14}/></button></div>
@@ -79,6 +82,9 @@ export default function WorkspaceOverviewPage() {
         <article className="roam-metric-card"><div className="roam-metric-icon"><CarFront/></div><span>Total fleet</span><strong>{metrics.totalVehicles}</strong><small>{metrics.availableVehicles} available now</small></article>
         <article className="roam-metric-card"><div className="roam-metric-icon"><CalendarDays/></div><span>Active bookings</span><strong>{metrics.activeBookings}</strong><small>{metrics.pendingBookings} pending confirmation</small></article>
         {workspace.role !== "STAFF" && <article className="roam-metric-card"><div className="roam-metric-icon"><CircleDollarSign/></div><span>Completed booking value · 30 days</span><strong>{money(metrics.completedValue30d || 0,workspace.currency)}</strong><small>Completed rental value, not cash collected</small></article>}
+        {workspace.role !== "STAFF" && <article className="roam-metric-card"><div className="roam-metric-icon"><CircleDollarSign/></div><span>Rent due · active bookings</span><strong>{money(metrics.rentDue || 0,workspace.currency)}</strong><small>Total value of confirmed and active rentals</small></article>}
+        {workspace.role !== "STAFF" && <article className="roam-metric-card"><div className="roam-metric-icon"><WalletIcon/></div><span>Rent paid · active bookings</span><strong>{money(metrics.rentPaid || 0,workspace.currency)}</strong><small>Verified payments less refunds</small></article>}
+        {workspace.role !== "STAFF" && <article className="roam-metric-card"><div className="roam-metric-icon"><CircleDollarSign/></div><span>Overdue rent</span><strong>{money(metrics.overdueRentBalance || 0,workspace.currency)}</strong><small>Unpaid balance on rentals past return time</small></article>}
         <article className="roam-metric-card"><div className="roam-metric-icon"><Gauge/></div><span>Fleet utilization</span><strong>{metrics.utilization}%</strong><small>Rented or reserved vehicles</small></article>
       </section>
       {workspace.role !== "STAFF" && <section className="roam-panel roam-action-center">

@@ -7,7 +7,10 @@ ROAM is developing a vehicle rental marketplace and operating platform for rente
 ### Product experience
 - Public marketing website with responsive mobile layouts and a light/dark theme.
 - Fleet, branch, customer, and booking management foundations.
-- Customer booking portal and rental operations workflows.
+- Customer booking portal and rental operations workflows, including returning-customer quick-fill.
+- Tenant-owned manual rental payment methods (GCash, Maya, QR Ph, bank transfer and cash), private proof submission, and tenant verification before verified ledger posting.
+- Tenant financial analytics for rent due, verified rent paid, outstanding balances and overdue rent; Pro operational reports provide date and branch analysis.
+- In-workspace onboarding and help guides, plus app version and copyright footer.
 - Subscription-aware workspaces for independent operators and growing fleets.
 - Future GPS/IoT tracking as a separate, access-controlled module.
 
@@ -16,6 +19,14 @@ ROAM is developing a vehicle rental marketplace and operating platform for rente
 - PostgreSQL (Neon) + Prisma
 - Vercel hosting
 - Asia/Manila timezone; PHP (₱) display defaults
+
+### Tenant onboarding guide
+See [`docs/tenant-onboarding.md`](docs/tenant-onboarding.md) for the current tenant setup, payment verification, financial analytics and returning-customer workflow.
+
+### Tenant payment workflow
+- Rental payment destinations are configured independently by each tenant. Customers pay the tenant directly; ROAM does not pool rental funds.
+- Payment proofs remain pending until a tenant-authorized reviewer verifies receipt. Only approved submissions are posted to the rental payment ledger.
+- RoamPH subscription billing is separate from tenant rental payments. Automated payment-gateway processing is not part of the current manual-verification workflow.
 
 ### Development
 ```bash

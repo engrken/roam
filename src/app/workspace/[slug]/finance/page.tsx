@@ -7,7 +7,7 @@ import { WorkspaceNav } from "@/components/workspace-nav";
 
 type BookingBalance = { reference: string; customer: string; status: string; total: number; collected: number; outstanding: number };
 type Payment = { id: string; amount: number; currency: string; method: string; kind: string; reference: string | null; notes: string | null; receivedAt: string; bookingReference: string; customer: string };
-type FinanceData = { summary: { collected: number; outstanding: number; payments: number; refunds: number }; payments: Payment[]; bookings: BookingBalance[]; openBookings: BookingBalance[] };
+type FinanceData = { summary: { collected: number; outstanding: number; rentDue: number; rentPaid: number; overdueRent: number; overdueBookings: number; payments: number; refunds: number }; payments: Payment[]; bookings: BookingBalance[]; openBookings: BookingBalance[] };
 
 const money = (amount: number, currency = "PHP") => new Intl.NumberFormat("en-PH", { style: "currency", currency, maximumFractionDigits: 2 }).format(amount);
 
@@ -69,8 +69,10 @@ export default function FinancePage() {
       {error && <p className="roam-error" role="alert">{error}</p>}
       {notice && <p className="roam-success" role="status">{notice}</p>}
       <section className="roam-finance-metrics">
-        <article className="roam-metric-card"><div className="roam-metric-icon"><Wallet/></div><span>Net recorded collections</span><strong>{money(data?.summary.collected || 0)}</strong><small>Payments less recorded refunds</small></article>
-        <article className="roam-metric-card"><div className="roam-metric-icon"><PlusCircle/></div><span>Outstanding booking balances</span><strong>{money(data?.summary.outstanding || 0)}</strong><small>Open balances across eligible bookings</small></article>
+        <article className="roam-metric-card"><div className="roam-metric-icon"><PlusCircle/></div><span>Total rent due</span><strong>{money(data?.summary.rentDue || 0)}</strong><small>Confirmed, active and completed booking value</small></article>
+        <article className="roam-metric-card"><div className="roam-metric-icon"><Wallet/></div><span>Rent paid</span><strong>{money(data?.summary.rentPaid || 0)}</strong><small>Verified payments less refunds</small></article>
+        <article className="roam-metric-card"><div className="roam-metric-icon"><PlusCircle/></div><span>Outstanding rent</span><strong>{money(data?.summary.outstanding || 0)}</strong><small>Remaining unpaid booking balances</small></article>
+        <article className="roam-metric-card"><div className="roam-metric-icon"><RotateCcw/></div><span>Overdue rent</span><strong>{money(data?.summary.overdueRent || 0)}</strong><small>{data?.summary.overdueBookings || 0} active rentals past return time</small></article>
         <article className="roam-metric-card"><div className="roam-metric-icon"><RotateCcw/></div><span>Transactions recorded</span><strong>{data?.summary.payments || 0} / {data?.summary.refunds || 0}</strong><small>Payments / refunds</small></article>
       </section>
 
@@ -101,7 +103,7 @@ export default function FinancePage() {
       </section>
     </main>
     <style jsx>{`
-      .roam-finance-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:20px 0}
+      .roam-finance-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin:20px 0}
       .roam-finance-grid{display:grid;grid-template-columns:minmax(280px,.9fr) minmax(0,1.1fr);gap:16px}
       .roam-finance-form{display:grid;gap:12px}.roam-finance-form label{display:grid;gap:6px;font-size:12px;font-weight:650}.roam-finance-form input,.roam-finance-form select,.roam-finance-form textarea{width:100%;border:1px solid var(--roam-border,#d1d5db);border-radius:9px;padding:10px;background:var(--roam-card,#fff);color:inherit;font:inherit;font-size:13px}
       .roam-finance-disclaimer{font-size:11px;line-height:1.5;color:var(--roam-muted,#6b7280);margin:14px 0 0}

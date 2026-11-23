@@ -156,7 +156,6 @@ model User {
   updatedAt   DateTime     @updatedAt
   memberships Membership[]
   sessions    Session[]
-  webPushSubscriptions WebPushSubscription[]
   legalAcceptances LegalAcceptance[]
   referredByTenantId String?
   referredByTenant Tenant? @relation("UserReferredByTenant", fields: [referredByTenantId], references: [id], onDelete: SetNull)

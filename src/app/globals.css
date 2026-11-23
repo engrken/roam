@@ -801,7 +801,7 @@
   .roam-sidebar{height:100dvh;min-height:0;overflow:hidden}
   .roam-side-nav{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:2px 2px 12px;scrollbar-width:thin;scrollbar-color:#496253 transparent}
   .roam-side-nav a,.roam-side-nav button{width:100%;min-width:0;box-sizing:border-box}
-  .roam-side-nav button.roam-nav-locked{display:flex;align-items:center;gap:12px;padding:12px 11px;border:0;border-radius:9px;background:transparent;color:#a9bdb1;text-align:left;font:600 12px inherit;cursor:pointer}
+  .roam-side-nav button.roam-nav-locked{display:flex;align-items:center;gap:12px;padding:12px 11px;border:0;border-radius:9px;background:transparent;color:#a9bdb1;text-align:left;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer}
   .roam-side-nav button.roam-nav-locked:hover{background:#24463d;color:#e1f6bf}
   .roam-nav-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .roam-nav-lock-label{margin-left:auto;color:#d3f58b;font-size:9px;font-weight:800}
@@ -847,7 +847,7 @@
   .roam-sidebar .roam-side-nav{display:none;position:absolute;top:62px;left:0;right:0;max-height:calc(100dvh - 62px);overflow-y:auto;overscroll-behavior:contain;margin:0;padding:12px 14px 18px;background:#17243a;box-shadow:0 14px 22px #0b172538;grid-template-columns:1fr;gap:5px}
   .roam-sidebar.roam-sidebar-open .roam-side-nav{display:grid}
   .roam-sidebar .roam-side-nav a,
-  .roam-sidebar .roam-side-nav button.roam-nav-locked{display:flex;align-items:center;gap:12px;width:100%;min-height:44px;box-sizing:border-box;padding:11px 12px;border:0;border-radius:9px;background:transparent;color:#b8c9bf;text-align:left;text-decoration:none;font:600 13px inherit}
+  .roam-sidebar .roam-side-nav button.roam-nav-locked{display:flex;align-items:center;gap:12px;width:100%;min-height:44px;box-sizing:border-box;padding:11px 12px;border:0;border-radius:9px;background:transparent;color:#b8c9bf;text-align:left;text-decoration:none;font-size:13px;font-weight:600;font-family:inherit}
   .roam-sidebar .roam-side-nav a:hover,
   .roam-sidebar .roam-side-nav a.active,
   .roam-sidebar .roam-side-nav button.roam-nav-locked:hover{background:#24463d;color:#e1f6bf}

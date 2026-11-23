@@ -21,8 +21,10 @@ export async function consumeRateLimit(
       "SELECT pg_advisory_xact_lock(hashtext($1)) IS NULL AS locked",
       "rate-limit:" + scope + ":" + digest,
     );
+    // OTPs and rate-limit buckets are both short-lived. Remove all expired
+    // rows so the shared table cannot grow indefinitely.
     await tx.emailOtp.deleteMany({
-      where: { codeHash: "RATE_LIMIT", expiresAt: { lt: now } },
+      where: { expiresAt: { lt: now } },
     });
     const count = await tx.emailOtp.count({
       where: { email: bucket, createdAt: { gt: windowStart } },

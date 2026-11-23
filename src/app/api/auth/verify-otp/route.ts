@@ -2,6 +2,8 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypt
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { consumeRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 
 export const runtime = "nodejs";
 
@@ -18,6 +20,12 @@ export async function POST(request: NextRequest) {
     const code = typeof body?.code === "string" ? body.code.trim() : "";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !/^\d{6}$/.test(code)) {
       return NextResponse.json({ error: "Enter your email and the six-digit code." }, { status: 400 });
+    }
+
+    const emailAllowed = await consumeRateLimit("otp-verify-email", email, 20, 15 * 60 * 1000);
+    const ipAllowed = await consumeRateLimit("otp-verify-ip", getClientIp(request.headers), 60, 15 * 60 * 1000);
+    if (!emailAllowed || !ipAllowed) {
+      return NextResponse.json({ error: "Too many verification attempts. Request a new code later." }, { status: 429 });
     }
 
     const otp = await prisma.emailOtp.findFirst({
@@ -38,7 +46,12 @@ export async function POST(request: NextRequest) {
 
     if (!matches) {
       const attempt = await prisma.emailOtp.updateMany({
-        where: { id: otp.id, consumedAt: null, expiresAt: { gt: new Date() }, attempts: { lt: 5 } },
+        where: {
+          id: otp.id,
+          consumedAt: null,
+          expiresAt: { gt: new Date() },
+          attempts: otp.attempts,
+        },
         data: { attempts: { increment: 1 } },
       });
       return NextResponse.json(

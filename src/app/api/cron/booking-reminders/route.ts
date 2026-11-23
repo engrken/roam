@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendBookingReminder } from "@/lib/email";
+import { getBookingReminderNoticeKey } from "@/lib/booking-reminder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,30 +20,25 @@ export async function GET(request: NextRequest) {
   const [pickups, returns, overdue] = await Promise.all([
     prisma.booking.findMany({
       where: { status: "CONFIRMED", startAt: { gte: windowStart, lt: windowEnd }, customer: { email: { not: null } } },
+      orderBy: { startAt: "asc" },
       select: { id: true, reference: true, startAt: true, endAt: true, tenant: { select: { name: true, timezone: true } }, customer: { select: { email: true } } },
       take: 200,
     }),
     prisma.booking.findMany({
       where: { status: "ACTIVE", endAt: { gte: windowStart, lt: windowEnd }, customer: { email: { not: null } } },
+      orderBy: { endAt: "asc" },
       select: { id: true, reference: true, startAt: true, endAt: true, tenant: { select: { name: true, timezone: true } }, customer: { select: { email: true } } },
       take: 200,
     }),
     prisma.booking.findMany({
-      where: {
-        status: "ACTIVE", endAt: { lte: now }, customer: { email: { not: null } },
-        automationNotices: { none: { noticeType: "OVERDUE", status: "SENT" } },
-      },
+      // Do not filter out bookings with a previous OVERDUE notice: overdue
+      // reminders are intentionally recurring, once per tenant-local day.
+      where: { status: "ACTIVE", endAt: { lte: now }, customer: { email: { not: null } } },
       orderBy: { endAt: "asc" },
       select: { id: true, reference: true, startAt: true, endAt: true, tenant: { select: { name: true, timezone: true } }, customer: { select: { email: true } } },
       take: 200,
     }),
   ]);
-
-  const localDateKey = (value: Date, timeZone: string) => {
-    const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(value);
-    const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
-    return `${values.year}-${values.month}-${values.day}`;
-  };
 
   const candidates = [
     ...pickups.map((booking) => ({ ...booking, type: "PICKUP" as const, scheduledFor: booking.startAt })),
@@ -55,9 +51,13 @@ export async function GET(request: NextRequest) {
   let failed = 0;
   for (const booking of candidates) {
     const timeZone = booking.tenant.timezone || "Asia/Manila";
-    // Pickup/return notices are keyed to the scheduled local date. Overdue reminders recur once per local calendar day.
-    const dayKey = localDateKey(booking.scheduledFor, timeZone);
-    const noticeKey = booking.type === "OVERDUE" ? `OVERDUE:${booking.id}:DUE` : `${booking.type}:${booking.id}:${dayKey}`;
+    const noticeKey = getBookingReminderNoticeKey(
+      booking.type,
+      booking.id,
+      booking.scheduledFor,
+      now,
+      timeZone,
+    );
     await prisma.bookingAutomationNotice.createMany({
       data: [{ bookingId: booking.id, noticeKey, noticeType: booking.type, scheduledFor: booking.scheduledFor }],
       skipDuplicates: true,

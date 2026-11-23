@@ -49,7 +49,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (token.length < 20 || !paymentMethodId || paymentReference.length < 3 || !Number.isFinite(amount) || amount <= 0 || amount > 100000000 || !Number.isFinite(paidAt.getTime()) || paidAt > new Date(Date.now() + 5 * 60 * 1000) || paidAt < new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)) {
     return NextResponse.json({ error: "Enter a valid payment method, amount, reference and payment date." }, { status: 400 });
   }
-  const booking = await prisma.booking.findFirst({ where: { reference, publicTokenHash: hash(token) }, select: { id: true, tenantId: true, totalAmount: true, securityDeposit: true, status: true, payments: { select: { amount: true, kind: true } } } });
+  const booking = await prisma.booking.findFirst({ where: { reference, publicTokenHash: hash(token) }, select: { id: true, tenantId: true, tenant: { select: { slug: true } }, totalAmount: true, securityDeposit: true, status: true, payments: { select: { amount: true, kind: true } } } });
   if (!booking) return NextResponse.json({ error: "Booking not found." }, { status: 404 });
   if (!["CONFIRMED","ACTIVE","COMPLETED"].includes(booking.status)) return NextResponse.json({ error: "Payment will be available after the rental business confirms your booking." }, { status: 409 });
   const clientIp = getClientIp(request.headers);
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }, select: { id: true, amount: true, status: true, reference: true } });
       return created;
     });
-    void notifyTenant(booking.tenantId, "New payment submitted", "A customer submitted payment proof for booking " + reference + ".", "/workspace").catch(error => console.error("Payment push notification failed", error));
+    void notifyTenant(booking.tenantId, "New payment submitted", "A customer submitted payment proof for booking " + reference + ".", "/workspace/" + encodeURIComponent(booking.tenant.slug) + "/payment-review").catch(error => console.error("Payment push notification failed", error));
     return NextResponse.json({ submitted: true, submission: { ...submission, amount: Number(submission.amount) } }, { status: 201 });
   } catch (error) {
     const code = error instanceof Error ? error.message : "";

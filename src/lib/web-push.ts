@@ -1,4 +1,4 @@
-import { createECDH, createHmac, createPrivateKey, randomBytes, sign } from "node:crypto";
+import { createCipheriv, createECDH, createHmac, createPrivateKey, randomBytes, sign } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 
 const b64u = (value: Buffer) => value.toString("base64url");
@@ -39,7 +39,7 @@ function encryptPayload(subscription: { p256dh: string; auth: string }, payload:
   const prk = hmac(salt, ikm);
   const cek = hkdfExpand(prk, "Content-Encoding: aes128gcm\0", 16);
   const nonce = hkdfExpand(prk, "Content-Encoding: nonce\0", 12);
-  const cipher = require("node:crypto").createCipheriv("aes-128-gcm", cek, nonce);
+  const cipher = createCipheriv("aes-128-gcm", cek, nonce);
   const plaintext = Buffer.concat([Buffer.from(payload), Buffer.from([2])]);
   const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final(), cipher.getAuthTag()]);
   const header = Buffer.alloc(21);

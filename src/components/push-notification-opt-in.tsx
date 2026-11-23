@@ -28,12 +28,16 @@ export function PushNotificationOptIn(props: Props) {
   }
   const isOn = supported && enabled && permission === "granted";
   const status = !supported ? "Unavailable" : permission === "denied" ? "Blocked" : isOn ? "On" : "Off";
-  return <div className="flex items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-2" aria-label={`Browser notifications ${status.toLowerCase()}`}>
-    <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${isOn ? "bg-emerald-500" : permission === "denied" ? "bg-rose-500" : "bg-slate-400"}`} />
-    <div className="min-w-0 flex-1"><strong className="block text-xs">Browser alerts</strong><span className="block text-[11px] text-slate-500">{message || (status === "Unavailable" ? "Not supported here" : status === "Blocked" ? "Allow in browser settings" : isOn ? "This device is enabled" : "This device is disabled")}</span></div>
-    <button type="button" role="switch" aria-checked={isOn} aria-label={isOn ? "Turn browser notifications off" : "Turn browser notifications on"} disabled={busy || !supported || permission === "denied"} onClick={()=>void toggle()} className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${isOn ? "bg-emerald-600" : "bg-slate-300"}`}>
-      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${isOn ? "translate-x-6" : "translate-x-1"}`} />
-    </button>
-    <span className="w-8 text-right text-[10px] font-semibold text-slate-500">{busy ? "…" : status}</span>
-  </div>;
+  return <section className="roam-notification-card" aria-label="Browser notification settings">
+    <div className="roam-notification-copy">
+      <span className={`roam-notification-dot ${isOn ? "is-on" : permission === "denied" ? "is-blocked" : ""}`} aria-hidden="true"/>
+      <div className="roam-notification-text"><strong>Browser notifications</strong><span>{message || (status === "Unavailable" ? "Not supported in this browser" : status === "Blocked" ? "Blocked in browser settings" : isOn ? "This device can receive alerts" : "Get booking and payment alerts on this device")}</span></div>
+    </div>
+    <div className="roam-notification-actions">
+      <span className={`roam-notification-status ${isOn ? "is-on" : ""}`}>{busy ? "Please wait…" : status}</span>
+      <button type="button" disabled={busy || !supported || permission === "denied"} onClick={()=>void toggle()} className="roam-notification-button">
+        {busy ? "Updating…" : isOn ? "Disable notifications" : permission === "denied" ? "Blocked" : "Enable notifications"}
+      </button>
+    </div>
+  </section>;
 }

@@ -91,7 +91,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     prisma.booking.count({ where: { tenantId, status: "ACTIVE", endAt: { lt: now } } }),
     prisma.booking.findMany({
       where: { tenantId, status: { in: ["CONFIRMED", "ACTIVE"] } },
-      select: { totalAmount: true, status: true, endAt: true, payments: { select: { amount: true, kind: true } } },
+      select: { totalAmount: true, securityDeposit: true, status: true, endAt: true, payments: { select: { amount: true, kind: true } } },
     }),
     prisma.rentalPayment.groupBy({
       by: ["kind"], where: { tenantId, receivedAt: { gte: thirtyDaysAgo } },
@@ -115,7 +115,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   }, 0);
   const outstandingBalance = openBookings.reduce((sum, booking) => {
     const netPaid = booking.payments.reduce((paid, payment) => paid + (payment.kind === "REFUND" ? -Number(payment.amount) : Number(payment.amount)), 0);
-    return sum + Math.max(0, Number(booking.totalAmount) - netPaid);
+    return sum + Math.max(0, Number(booking.totalAmount) + Number(booking.securityDeposit || 0) - netPaid);
   }, 0);
 
   const rentDue = openBookings.reduce((sum, booking) => sum + Number(booking.totalAmount), 0);
@@ -160,7 +160,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
       overdueReturns: canViewFinancials ? overdueItems.map(actionItem) : [],
       outstandingCount: canViewFinancials ? openBookings.filter((booking) => {
         const netPaid = booking.payments.reduce((paid, payment) => paid + (payment.kind === "REFUND" ? -Number(payment.amount) : Number(payment.amount)), 0);
-        return Number(booking.totalAmount) - netPaid > 0.005;
+        return Number(booking.totalAmount) + Number(booking.securityDeposit || 0) - netPaid > 0.005;
       }).length : null,
     },
     bookingTrend: days,

@@ -910,3 +910,15 @@
   .roam-sidebar{height:auto;min-height:62px;overflow:visible}
   .roam-sidebar>.roam-side-nav{flex:initial;min-height:0;max-height:min(72dvh,620px);overflow-y:auto;overscroll-behavior:contain}
 }
+
+
+/* Keep notification controls reachable in the collapsed desktop sidebar. */
+@media (min-width:761px){
+  .roam-sidebar-collapsed .roam-sidebar-notifications{display:block;margin:8px 0;padding:0;border:0}
+  .roam-sidebar-collapsed .roam-notification-card{display:flex;justify-content:center;min-height:44px;padding:4px;border:0;background:transparent}
+  .roam-sidebar-collapsed .roam-notification-copy,
+  .roam-sidebar-collapsed .roam-notification-status{display:none}
+  .roam-sidebar-collapsed .roam-notification-actions{justify-content:center}
+  .roam-sidebar-collapsed .roam-notification-button{width:44px;height:40px;min-height:40px;padding:0;overflow:hidden;font-size:0;white-space:nowrap}
+  .roam-sidebar-collapsed .roam-notification-button::before{content:"🔔";font-size:17px;line-height:1}
+}

@@ -2,7 +2,8 @@ name: ROAM Production Health Monitor
 
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    # Keep the Neon Free compute from waking every 30 minutes just for monitoring.
+    - cron: "0 */4 * * *"
   workflow_dispatch:
 
 permissions:

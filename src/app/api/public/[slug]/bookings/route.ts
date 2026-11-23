@@ -153,7 +153,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
       const vehicle = await tx.vehicle.findFirst({
         where: { id: vehicleId, tenantId: tenant.id, status: { in: ["AVAILABLE", "RESERVED"] } },
-        select: { id: true, branchId: true, dailyRate: true },
+        select: { id: true, branchId: true, dailyRate: true, securityDeposit: true },
       });
       if (!vehicle) return { conflict: "This vehicle is not currently available." as const };
 
@@ -200,6 +200,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           startAt,
           endAt,
           totalAmount: vehicle.dailyRate.mul(days),
+          securityDeposit: vehicle.securityDeposit,
           rentalTermsSnapshot: rentalTerms,
           rentalTermsVersion,
           rentalTermsAcceptedAt: new Date(),

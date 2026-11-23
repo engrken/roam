@@ -13,7 +13,7 @@ self.addEventListener("push", event => {
 self.addEventListener("notificationclick", event => {
   event.notification.close();
   const target = new URL(event.notification.data?.url || "/", self.location.origin).href;
-  event.waitUntil(clients.matchAll({ type: "window", includeUncontrolled: true }).then(windows => {
+  event.waitUntil(clients.matchAll({ type: "window", includeUncontrolled: true }).then(async windows => {
     const existing = windows.find(client => client.url.startsWith(self.location.origin));
     if (existing) { if (new URL(target).pathname !== "/" && new URL(existing.url).pathname !== new URL(target).pathname) await existing.navigate(target); return existing.focus(); }
     return clients.openWindow(target);

@@ -14,7 +14,9 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{referenc
  if(!booking)return NextResponse.json({error:"Booking not found."},{status:404});
  const paidAmount=booking.payments.reduce((sum,payment)=>sum+(payment.kind==="REFUND"?-Number(payment.amount):Number(payment.amount)),0);
  const totalAmount=Number(booking.totalAmount);
- return NextResponse.json({booking:{reference:booking.reference,status:booking.status,startAt:booking.startAt,endAt:booking.endAt,totalAmount,paidAmount:Math.max(0,paidAmount),balanceDue:Math.max(0,totalAmount-paidAmount),rentalTermsSnapshot:booking.rentalTermsSnapshot,rentalTermsAcceptedAt:booking.rentalTermsAcceptedAt,business:booking.tenant,customer:booking.customer,vehicles:booking.items.map(i=>({rate:Number(i.rate),...i.vehicle})),payments:booking.payments.map(payment=>({...payment,amount:Number(payment.amount)})),messages:booking.messages,documents:booking.documents}});
+ const securityDeposit=Number(booking.securityDeposit || 0);
+ const totalPayable=totalAmount+securityDeposit;
+ return NextResponse.json({booking:{reference:booking.reference,status:booking.status,startAt:booking.startAt,endAt:booking.endAt,totalAmount,securityDeposit,totalPayable,paidAmount:Math.max(0,paidAmount),balanceDue:Math.max(0,totalPayable-paidAmount),rentalTermsSnapshot:booking.rentalTermsSnapshot,rentalTermsAcceptedAt:booking.rentalTermsAcceptedAt,business:booking.tenant,customer:booking.customer,vehicles:booking.items.map(i=>({rate:Number(i.rate),...i.vehicle})),payments:booking.payments.map(payment=>({...payment,amount:Number(payment.amount)})),messages:booking.messages,documents:booking.documents}});
 }
 export async function POST(request:NextRequest,{params}:{params:Promise<{reference:string}>}){
  const {reference}=await params;const body=await request.json().catch(()=>null);const token=typeof body?.token==="string"?body.token:"";const message=typeof body?.message==="string"?body.message.trim():"";

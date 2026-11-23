@@ -111,6 +111,7 @@ export default function FinancePage() {
           </article>
         </div>
         <p className="finance-footnote">Rent due is booking value, not profit. Only verified transactions are included in rent paid.</p>
+        <aside className="finance-verification-note" aria-label="Security deposit refund procedure"><CircleAlert size={16}/><p><strong>Security deposit refunds:</strong> Complete and save the return inspection first. Compare the vehicle condition with the handover record, list any supported deductions (such as documented damage or missing items), and tell the customer the calculation. Refund only the remaining deposit actually due, using the original payment channel where practical. Record the refund here with the transfer reference and an itemized note. ROAM records the refund; it does not send money or decide whether a deduction is lawful.</p></aside>
       </section>
 
       <section className="roam-finance-grid finance-workspace">
@@ -145,10 +146,10 @@ export default function FinancePage() {
             <label>Transaction reference <span className="finance-optional">Optional</span>
               <input value={reference} onChange={(e) => setReference(e.target.value)} maxLength={120} placeholder="Receipt number or transaction ID"/>
             </label>
-            <label>Notes <span className="finance-optional">Optional</span>
-              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={1000} rows={2} placeholder="Add a short note for your records"/>
+            <label>Notes {kind === "REFUND" ? <span className="finance-optional">Required · explain refund or deposit deductions</span> : <span className="finance-optional">Optional</span>}
+              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={1000} rows={2} required={kind === "REFUND"} placeholder={kind === "REFUND" ? "e.g. Security deposit returned after inspection; ₱___ deducted for documented ___" : "Add a short note for your records"}/>
             </label>
-            <button className="roam-button finance-submit" type="submit" disabled={saving || !bookingReference || !amount || Number(amount) <= 0}>
+            <button className="roam-button finance-submit" type="submit" disabled={saving || !bookingReference || !amount || Number(amount) <= 0 || (kind === "REFUND" && !notes.trim())}>
               {saving ? "Saving transaction…" : kind === "PAYMENT" ? "Record customer payment" : "Record customer refund"}
             </button>
           </form>

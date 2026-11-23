@@ -82,7 +82,6 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
     <button className="roam-desktop-sidebar-toggle" type="button" aria-label={desktopCollapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!desktopCollapsed} onClick={() => setDesktopCollapsed(value => !value)} title={desktopCollapsed ? "Expand sidebar" : "Collapse sidebar"}>{desktopCollapsed ? <ChevronRight size={18}/> : <ChevronLeft size={18}/>}<span>{desktopCollapsed ? "Expand" : "Collapse"}</span></button>
     <div className="roam-side-label">WORKSPACE</div>
     <div className="roam-workspace-name">{name}</div>
-    <div style={{padding:"8px 12px"}}><PushNotificationOptIn slug={slug}/></div>
     {trial && <div role="status" style={{margin:"10px 12px",padding:"10px 12px",borderRadius:10,border:trial.readOnly?"1px solid #f59e0b":"1px solid #0891b2",background:trial.readOnly?"#fff7ed":"#ecfeff",color:"#164e63",fontSize:12,lineHeight:1.5}}>
       <strong style={{display:"block",color:trial.readOnly?"#9a3412":"#155e75"}}>{trial.readOnly?"Read-only · trial grace ended":"Starter trial"}</strong>
       <span>{trial.readOnly?"Existing records are available.":"Trial ends "+(trial.endsAt?new Date(trial.endsAt).toLocaleDateString("en-PH",{month:"short",day:"numeric"}):"soon")+". A 7-day grace period follows."}</span>
@@ -111,6 +110,7 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
       {effectiveRole !== "STAFF" && lockedItem("reports", "Reports", <UserCog size={18}/>)}
       <Link title="How-to guides" className={active === "help" ? "active" : ""} href={`/workspace/${slug}/help`}><BookOpen size={18}/><span className="roam-nav-label">How-to guides</span></Link>
       <Link href="/admin" title="Platform admin" className="roam-admin-link"><ShieldCheck size={18}/><span className="roam-nav-label">Platform admin</span></Link>
+      <div className="roam-sidebar-notifications" onClick={event => event.stopPropagation()}><PushNotificationOptIn slug={slug}/></div>
     </nav>
     <div className="roam-sidebar-bottom"><span className="roam-role">{effectiveRole}</span><button type="button" aria-label="Sign out" onClick={signOut}><LogOut size={16}/><span>Sign out</span></button><div className="roam-sidebar-app-meta"><span>ROAM v{APP_VERSION}</span><span>© {new Date().getFullYear()} ROAM. All rights reserved.</span></div></div>
 

@@ -869,3 +869,29 @@
 .roam-sidebar-notifications span{display:block;color:#a9bdb1;font-size:10px;line-height:1.45}
 .roam-sidebar-notifications button{flex:0 0 auto;max-width:100%;padding:7px 9px;border:1px solid #496253;border-radius:7px;background:#24463d;color:#e1f6bf;font-size:10px;font-weight:700}
 .roam-sidebar-collapsed .roam-sidebar-notifications{display:none}
+
+
+/* Notification settings: compact, readable action button in the workspace sidebar. */
+.roam-sidebar-notifications{min-width:0;overflow:hidden}
+.roam-sidebar-notifications .roam-notification-card{display:grid;gap:10px;min-width:0;padding:10px;border:1px solid #344b43;border-radius:10px;background:#1b302b;color:#edf5ee}
+.roam-sidebar-notifications .roam-notification-copy{display:flex;align-items:flex-start;gap:9px;min-width:0}
+.roam-sidebar-notifications .roam-notification-dot{width:8px;height:8px;flex:0 0 8px;margin-top:4px;border-radius:50%;background:#94a3b8}
+.roam-sidebar-notifications .roam-notification-dot.is-on{background:#4ade80}
+.roam-sidebar-notifications .roam-notification-dot.is-blocked{background:#fb7185}
+.roam-sidebar-notifications .roam-notification-text{display:grid;gap:3px;min-width:0}
+.roam-sidebar-notifications .roam-notification-text strong{font-size:11px;line-height:1.35;color:#edf5ee}
+.roam-sidebar-notifications .roam-notification-text span{display:block;overflow-wrap:anywhere;color:#a9bdb1;font-size:10px;line-height:1.45}
+.roam-sidebar-notifications .roam-notification-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.roam-sidebar-notifications .roam-notification-status{color:#a9bdb1;font-size:10px;font-weight:700}
+.roam-sidebar-notifications .roam-notification-status.is-on{color:#86efac}
+.roam-sidebar-notifications .roam-notification-button{width:auto;min-width:0;max-width:100%;min-height:32px;padding:7px 10px;border:1px solid #66816f;border-radius:7px;background:#d3f58b;color:#183522;font-size:10px;font-weight:800;line-height:1.2;white-space:normal;cursor:pointer}
+.roam-sidebar-notifications .roam-notification-button:hover:not(:disabled){background:#e1ffad}
+.roam-sidebar-notifications .roam-notification-button:disabled{opacity:.6;cursor:not-allowed}
+@media(min-width:761px){
+  .roam-sidebar-notifications{margin-left:0;margin-right:0;padding-left:0;padding-right:0}
+}
+@media(max-width:760px){
+  .roam-sidebar .roam-side-nav .roam-sidebar-notifications{display:block;margin:8px 0 0;padding:12px 0 0;border-top:1px solid #2b4940}
+  .roam-sidebar .roam-side-nav .roam-notification-card{padding:12px}
+  .roam-sidebar .roam-side-nav .roam-notification-button{min-height:36px;font-size:11px}
+}

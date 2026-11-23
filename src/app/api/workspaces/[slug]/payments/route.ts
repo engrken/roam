@@ -34,7 +34,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   const bookingBalances = bookings.map((booking) => {
     const paid = booking.payments.reduce((sum, payment) => sum + (payment.kind === "REFUND" ? -Number(payment.amount) : Number(payment.amount)), 0);
-    const total = Number(booking.totalAmount);
+    const total = Number(booking.totalAmount) + Number(booking.securityDeposit || 0);
     return { reference: booking.reference, customer: booking.customer.name, status: booking.status, total, collected: paid, outstanding: Math.max(0, total - paid) };
   });
   const collected = paymentTotals.reduce((sum, row) => {
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       });
       if (!booking) throw new Error("BOOKING_NOT_FOUND");
       const netPaid = booking.payments.reduce((sum, row) => sum + (row.kind === "REFUND" ? -Number(row.amount) : Number(row.amount)), 0);
-      const total = Number(booking.totalAmount);
+      const total = Number(booking.totalAmount) + Number(booking.securityDeposit || 0);
       if (kind === "PAYMENT" && amount > total - netPaid + 0.005) throw new Error("PAYMENT_EXCEEDS_BALANCE");
       if (kind === "REFUND" && amount > netPaid + 0.005) throw new Error("REFUND_EXCEEDS_COLLECTED");
       const created = await tx.rentalPayment.create({

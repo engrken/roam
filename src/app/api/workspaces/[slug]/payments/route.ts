@@ -77,9 +77,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const amount = Number(body?.amount);
   const kind = body?.kind === "REFUND" ? "REFUND" : "PAYMENT";
   const method = typeof body?.method === "string" ? body.method : "CASH";
+  const notes = typeof body?.notes === "string" ? body.notes.trim().slice(0, 1000) : "";
   const allowedMethods = ["CASH", "BANK_TRANSFER", "CARD", "E_WALLET", "OTHER"];
-  if (!bookingReference || !Number.isFinite(amount) || amount <= 0 || amount > 100000000 || !allowedMethods.includes(method)) {
-    return NextResponse.json({ error: "Enter a valid booking, amount, and payment method." }, { status: 400 });
+  if (!bookingReference || !Number.isFinite(amount) || amount <= 0 || amount > 100000000 || !allowedMethods.includes(method) || (kind === "REFUND" && notes.length < 5)) {
+    return NextResponse.json({ error: kind === "REFUND" && notes.length < 5 ? "Add a short refund reason and, where applicable, itemized security-deposit deductions." : "Enter a valid booking, amount, and payment method." }, { status: 400 });
   }
 
   try {
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           tenantId: access.tenant.id, bookingId: booking.id, amount, kind, method,
           currency: access.tenant.currency || "PHP",
           reference: typeof body.reference === "string" ? body.reference.trim().slice(0, 120) || null : null,
-          notes: typeof body.notes === "string" ? body.notes.trim().slice(0, 1000) || null : null,
+          notes: notes || null,
         },
       });
       await recordWorkspaceAudit(tx, {

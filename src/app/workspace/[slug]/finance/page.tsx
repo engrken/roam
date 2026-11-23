@@ -65,6 +65,7 @@ export default function FinancePage() {
   const availableBookings = kind === "PAYMENT"
     ? data?.openBookings || []
     : data?.bookings.filter((booking) => booking.collected > 0) || [];
+  const selectedBooking = availableBookings.find((booking) => booking.reference === bookingReference);
 
   return <div className="roam-app-shell">
     <WorkspaceNav slug={slug} name="Financial reporting" role="Workspace team" active="finance" />
@@ -143,17 +144,17 @@ export default function FinancePage() {
                 </select>
               </label>
             </div>
-            <label>Transaction reference <span className="finance-optional">Optional</span>
+            <label>{kind === "PAYMENT" ? "Receipt / transaction reference" : "Refund transaction reference"} <span className="finance-optional">Optional, but recommended</span>
               <input value={reference} onChange={(e) => setReference(e.target.value)} maxLength={120} placeholder="Receipt number or transaction ID"/>
             </label>
-            <label>Notes {kind === "REFUND" ? <span className="finance-optional">Required · explain refund or deposit deductions</span> : <span className="finance-optional">Optional</span>}
-              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={1000} rows={2} required={kind === "REFUND"} placeholder={kind === "REFUND" ? "e.g. Security deposit returned after inspection; ₱___ deducted for documented ___" : "Add a short note for your records"}/>
+            <label>{kind === "REFUND" ? "Refund reason" : "Additional notes"} {kind === "REFUND" ? <span className="finance-optional">Required</span> : <span className="finance-optional">Optional</span>}
+              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={1000} rows={2} required={kind === "REFUND"} placeholder={kind === "REFUND" ? "Explain why the refund was issued. For deposits, list each deduction and its amount." : "Add any useful details for your records"}/>
             </label>
             <button className="roam-button finance-submit" type="submit" disabled={saving || !bookingReference || !amount || Number(amount) <= 0 || (kind === "REFUND" && !notes.trim())}>
-              {saving ? "Saving transaction…" : kind === "PAYMENT" ? "Record customer payment" : "Record customer refund"}
+              {saving ? "Saving transaction…" : kind === "PAYMENT" ? "Save payment record" : "Save refund record"}
             </button>
           </form>
-          <div className="finance-verification-note"><CircleAlert size={16}/><p><strong>Important:</strong> This records a transaction; ROAM does not process the payment. Verify the amount against your actual cash, bank, or e-wallet records before saving.</p></div>
+          <div className="finance-verification-note"><CircleAlert size={16}/><p><strong>Before you save:</strong> ROAM only records the transaction. Confirm the money was actually received or sent. For deposit refunds, record the amount returned and explain any deductions.</p></div>
         </article>
 
         <article className="roam-panel finance-balances-panel">
@@ -212,6 +213,21 @@ export default function FinancePage() {
       .finance-panel-heading p{margin:0;color:var(--roam-muted,#64748b);font-size:11px;line-height:1.5}
       .finance-panel-icon{display:grid;place-items:center;width:35px;height:35px;border-radius:10px;background:#eaf5f7;color:#08758a;flex:0 0 auto}
       .finance-form{gap:14px}
+      .finance-kind-field{min-width:0;margin:0;padding:0;border:0}
+      .finance-kind-field legend{margin-bottom:8px;color:var(--roam-ink,#243449);font-size:11px;font-weight:750}
+      .finance-kind-options{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+      .finance-kind-option{display:flex;align-items:center;gap:10px;min-width:0;min-height:66px;padding:11px;border:1px solid var(--roam-border,#d8e1eb);border-radius:10px;background:var(--roam-card,#fff);color:var(--roam-ink,#243449);text-align:left;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s}
+      .finance-kind-option>svg{flex:0 0 auto;color:var(--roam-muted,#64748b)}
+      .finance-kind-option span{display:grid;gap:4px;min-width:0}
+      .finance-kind-option strong{font-size:11px}
+      .finance-kind-option small{font-size:9px;line-height:1.4;color:var(--roam-muted,#64748b)}
+      .finance-kind-option.is-selected{border-color:#16889b;background:#eff9fa;box-shadow:0 0 0 2px rgba(22,136,155,.1)}
+      .finance-kind-option.is-selected>svg{color:#08758a}
+      .finance-selected-booking{display:grid;gap:5px;padding:12px 13px;border:1px solid #cde7e8;border-radius:10px;background:#f1faf9}
+      .finance-selected-booking>div{display:flex;align-items:center;justify-content:space-between;gap:10px}
+      .finance-selected-booking span{font-size:10px;color:#526b73}
+      .finance-selected-booking strong{font-size:16px;color:#0b6572}
+      .finance-selected-booking>small{font-size:9px;color:#647989}
       .finance-form label{gap:7px;color:var(--roam-ink,#243449);font-size:11px;font-weight:700}
       .finance-form label small{color:var(--roam-muted,#64748b);font-size:10px;font-weight:400;line-height:1.45}
       .finance-form input,.finance-form select,.finance-form textarea{min-height:42px;border:1px solid var(--roam-border,#d8e1eb);border-radius:9px;padding:10px 12px;background:var(--roam-card,#fff);color:var(--roam-ink,#17243a);font:500 12px inherit;outline:none;transition:border-color .15s,box-shadow .15s}

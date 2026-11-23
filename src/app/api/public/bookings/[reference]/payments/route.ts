@@ -28,9 +28,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     select: { id: true, method: true, label: true, accountName: true, accountNumber: true, bankName: true, instructions: true, qrImageData: true, qrContentType: true },
   });
   return NextResponse.json({
-    businessName: booking.tenant.name, currency: booking.tenant.currency || "PHP",
+    businessName: booking.tenant.name, currency: booking.tenant.currency || "PHP", status: booking.status, canPay: ["CONFIRMED","ACTIVE","COMPLETED"].includes(booking.status),
     rentalAmount: Number(booking.totalAmount), securityDeposit: Number(booking.securityDeposit || 0), totalPayable: Number(booking.totalAmount) + Number(booking.securityDeposit || 0),
-    balanceDue: balanceOf(booking), methods,
+    balanceDue: balanceOf(booking), methods: ["CONFIRMED","ACTIVE","COMPLETED"].includes(booking.status) ? methods : [],
     submissions: booking.rentalPaymentSubmissions.map(row => ({ ...row, amount: Number(row.amount), createdAt: row.createdAt.toISOString() })),
   });
 }

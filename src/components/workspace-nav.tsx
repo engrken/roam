@@ -109,8 +109,8 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
       {effectiveRole === "OWNER" && <Link title="Account & subscription" className={active === "account" ? "active" : ""} href={`/workspace/${slug}/account`}><ShieldCheck size={18}/><span className="roam-nav-label">Account & subscription</span></Link>}
       {effectiveRole !== "STAFF" && lockedItem("reports", "Reports", <UserCog size={18}/>)}
       <Link title="How-to guides" className={active === "help" ? "active" : ""} href={`/workspace/${slug}/help`}><BookOpen size={18}/><span className="roam-nav-label">How-to guides</span></Link>
-      <Link href="/admin" title="Platform admin" className="roam-admin-link"><ShieldCheck size={18}/><span className="roam-nav-label">Platform admin</span></Link>
       <div className="roam-sidebar-notifications" onClick={event => event.stopPropagation()}><PushNotificationOptIn slug={slug}/></div>
+      <Link href="/admin" title="Platform admin" className="roam-admin-link"><ShieldCheck size={18}/><span className="roam-nav-label">Platform admin</span></Link>
     </nav>
     <div className="roam-sidebar-bottom"><span className="roam-role">{effectiveRole}</span><button type="button" aria-label="Sign out" onClick={signOut}><LogOut size={16}/><span>Sign out</span></button><div className="roam-sidebar-app-meta"><span>ROAM v{APP_VERSION}</span><span>© {new Date().getFullYear()} ROAM. All rights reserved.</span></div></div>
 

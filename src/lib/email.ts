@@ -426,3 +426,59 @@ export async function sendMarketplaceHostReviewUpdate(input: {
     html: '<div style="background:#f3f6fb;padding:32px 16px;font-family:Arial,sans-serif;color:#172033;line-height:1.65"><div style="max-width:560px;margin:auto;background:#fff;border-radius:14px;padding:28px"><div style="font-size:22px;font-weight:800;letter-spacing:2px">ROAM</div><p style="color:#526176">Hello ' + safe(input.recipientName) + ',</p><h2 style="font-size:20px">Your Host review has an update</h2><p>There is an update to your <strong>' + safe(input.targetLabel.toLowerCase()) + '</strong> for <strong>' + safe(input.workspaceName) + '</strong>.</p><p style="padding:12px 14px;border-radius:9px;background:#eef7fa"><strong>Current status:</strong> ' + safe(input.status.replaceAll("_", " ")) + '</p><p style="white-space:pre-wrap;overflow-wrap:anywhere">' + safe(message) + '</p><p style="margin:24px 0"><a href="' + safe(input.workspaceUrl) + '" style="display:inline-block;background:#087e9b;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:700">View Host updates</a></p><p style="font-size:12px;color:#718196">Preliminary review or prequalification is not a certification of identity, ownership, registration, roadworthiness, insurance, or legal authority. No vehicle listing is public unless ROAM separately confirms that the marketplace has launched and the listing is approved for publication.</p></div></div>',
   });
 }
+
+
+export async function sendRentalCompletionReceipt(input: {
+  recipient: string;
+  customerName: string;
+  tenantName: string;
+  bookingReference: string;
+  currency: string;
+  rentalAmount: number;
+  securityDeposit: number;
+  pickupAt: Date;
+  returnedAt: Date;
+  vehicles: string[];
+  transactions: { amount: number; kind: string; method: string; reference: string | null; notes: string | null; receivedAt: Date }[];
+}) {
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+  if (!from) throw new Error("Email sender is not configured.");
+  const safe = (value: string) => value.replace(/[&<>"']/g, character => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[character] || character);
+  const money = (amount: number) => new Intl.NumberFormat("en-PH", {
+    style: "currency", currency: input.currency || "PHP", maximumFractionDigits: 2,
+  }).format(amount);
+  const date = (value: Date) => value.toLocaleString("en-PH", {
+    timeZone: "Asia/Manila", dateStyle: "medium", timeStyle: "short",
+  });
+  const transactions = input.transactions.map(row => ({ ...row, amount: Number(row.amount) }));
+  const paid = transactions.reduce((sum, row) => sum + (row.kind === "REFUND" ? -row.amount : row.amount), 0);
+  const refunds = transactions.filter(row => row.kind === "REFUND").reduce((sum, row) => sum + row.amount, 0);
+  const vehicleList = input.vehicles.join(", ");
+  const rows = transactions.map(row => '<tr><td style="padding:9px;border-bottom:1px solid #e5eaf0">' + safe(date(row.receivedAt)) + '</td><td style="padding:9px;border-bottom:1px solid #e5eaf0">' + safe(row.kind) + ' · ' + safe(row.method.replaceAll("_", " ")) + '</td><td style="padding:9px;border-bottom:1px solid #e5eaf0">' + safe(row.reference || "—") + '</td><td style="padding:9px;text-align:right;border-bottom:1px solid #e5eaf0">' + (row.kind === "REFUND" ? "−" : "") + safe(money(row.amount)) + '</td></tr>').join("");
+  const subject = "Rental completion and payment acknowledgement · " + input.bookingReference;
+  const text = [
+    "Hello " + input.customerName + ",",
+    "Your vehicle return has been recorded by " + input.tenantName + ". This email is your rental completion and payment acknowledgement.",
+    "Booking: " + input.bookingReference,
+    "Vehicle(s): " + vehicleList,
+    "Pickup: " + date(input.pickupAt),
+    "Returned: " + date(input.returnedAt),
+    "Rental charge: " + money(input.rentalAmount),
+    "Security deposit held: " + money(input.securityDeposit),
+    "Net amount received (payments less recorded refunds): " + money(paid),
+    "Refunds recorded: " + money(refunds),
+    "",
+    "Transaction details:",
+    ...transactions.map(row => date(row.receivedAt) + " | " + row.kind + " | " + row.method + " | " + money(row.amount) + " | " + (row.reference || "No reference") + (row.notes ? " | " + row.notes : "")),
+    "",
+    "This acknowledgement reflects transactions recorded by the rental business. It is not proof of a bank transfer or a confirmation that any unrecorded security-deposit refund has been paid.",
+    "Thank you, " + input.tenantName,
+    "ROAM",
+  ].join("\n");
+  await getTransport().sendMail({
+    from, to: input.recipient, subject, text,
+    html: '<div style="font-family:Arial,sans-serif;max-width:680px;margin:24px auto;padding:24px;color:#172033;line-height:1.55"><div style="font-size:22px;font-weight:800;letter-spacing:2px">ROAM</div><h2>Rental completion & payment acknowledgement</h2><p>Hello ' + safe(input.customerName) + ', your vehicle return has been recorded by <strong>' + safe(input.tenantName) + '</strong>. Keep this email as your acknowledgement copy.</p><div style="padding:16px;background:#f3f6fb;border-radius:10px"><strong>Booking ' + safe(input.bookingReference) + '</strong><br/>Vehicle(s): ' + safe(vehicleList) + '<br/>Pickup: ' + safe(date(input.pickupAt)) + '<br/>Returned: ' + safe(date(input.returnedAt)) + '</div><h3>Booking summary</h3><p>Rental charge: <strong>' + safe(money(input.rentalAmount)) + '</strong><br/>Security deposit held: <strong>' + safe(money(input.securityDeposit)) + '</strong><br/>Net amount received (less recorded refunds): <strong>' + safe(money(paid)) + '</strong><br/>Refunds recorded: <strong>' + safe(money(refunds)) + '</strong></p><h3>Transaction details</h3><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th align="left">Date</th><th align="left">Type / method</th><th align="left">Reference</th><th align="right">Amount</th></tr></thead><tbody>' + (rows || '<tr><td colspan="4">No transactions have been recorded.</td></tr>') + '</tbody></table><p style="margin-top:20px;font-size:12px;color:#64748b">This acknowledgement reflects transactions recorded by the rental business. It is not proof of a bank transfer or confirmation that any unrecorded security-deposit refund has been paid. Any deposit refund should appear as a separate recorded refund transaction.</p><p>Thank you,<br/><strong>' + safe(input.tenantName) + '</strong></p></div>',
+  });
+}

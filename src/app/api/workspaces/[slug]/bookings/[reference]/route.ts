@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "node:crypto";
 import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
-import { sendBookingMessageNotification, sendBookingStatusNotification, sendBookingReminder } from "@/lib/email";
+import { sendBookingMessageNotification, sendBookingStatusNotification, sendBookingReminder, sendRentalCompletionReceipt } from "@/lib/email";
 import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { isWithinPickupReminderWindow } from "@/lib/booking-reminder";
@@ -277,7 +277,59 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         }
       }
     }
-    return NextResponse.json({ updated: true, notification });
+    let receipt: "sent" | "no_customer_email" | "failed" | "not_applicable" = "not_applicable";
+    if (result.nextStatus === "COMPLETED") {
+      const noticeKey = "COMPLETION_RECEIPT:" + booking.id;
+      await prisma.bookingAutomationNotice.createMany({
+        data: [{ bookingId: booking.id, noticeKey, noticeType: "COMPLETION_RECEIPT", scheduledFor: new Date() }],
+        skipDuplicates: true,
+      });
+      const claim = await prisma.bookingAutomationNotice.updateMany({
+        where: { noticeKey, status: { in: ["PENDING", "FAILED"] } },
+        data: { status: "PROCESSING", lastError: null },
+      });
+      if (claim.count) {
+        try {
+          if (!booking.customer.email) {
+            receipt = "no_customer_email";
+            throw new Error("Customer email address is missing.");
+          }
+          const receiptData = await prisma.booking.findFirst({
+            where: { id: booking.id, tenantId: access.tenant.id },
+            select: {
+              totalAmount: true, securityDeposit: true,
+              items: { select: { vehicle: { select: { make: true, model: true, plateNumber: true } } } },
+              payments: { orderBy: { receivedAt: "asc" }, select: { amount: true, kind: true, method: true, reference: true, notes: true, receivedAt: true } },
+            },
+          });
+          if (!receiptData) throw new Error("Booking receipt details could not be loaded.");
+          await sendRentalCompletionReceipt({
+            recipient: booking.customer.email,
+            customerName: booking.customer.name,
+            tenantName: access.tenant.name,
+            bookingReference: reference,
+            currency: access.tenant.currency || "PHP",
+            rentalAmount: Number(receiptData.totalAmount),
+            securityDeposit: Number(receiptData.securityDeposit || 0),
+            pickupAt: result.startAt,
+            returnedAt: new Date(),
+            vehicles: receiptData.items.map(item => item.vehicle.make + " " + item.vehicle.model + " · " + item.vehicle.plateNumber),
+            transactions: receiptData.payments.map(payment => ({
+              amount: Number(payment.amount), kind: payment.kind, method: payment.method,
+              reference: payment.reference, notes: payment.notes, receivedAt: payment.receivedAt,
+            })),
+          });
+          await prisma.bookingAutomationNotice.update({ where: { noticeKey }, data: { status: "SENT", sentAt: new Date() } });
+          receipt = "sent";
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Receipt email delivery failed.";
+          await prisma.bookingAutomationNotice.update({ where: { noticeKey }, data: { status: "FAILED", lastError: message.slice(0, 1000) } });
+          if (receipt !== "no_customer_email") receipt = "failed";
+          console.error("Rental completion receipt email failed", { reference, error });
+        }
+      }
+    }
+    return NextResponse.json({ updated: true, notification, receipt });
   }
 
   if (typeof body?.documentId === "string" && ["APPROVED", "REJECTED"].includes(body.reviewStatus)) {

@@ -13,7 +13,13 @@ export async function POST(request: NextRequest) {
   const endpoint = typeof sub?.endpoint === "string" ? sub.endpoint : "";
   const p256dh = typeof sub?.keys?.p256dh === "string" ? sub.keys.p256dh : "";
   const auth = typeof sub?.keys?.auth === "string" ? sub.keys.auth : "";
-  let endpointUrl: URL;\n  try { endpointUrl = new URL(endpoint); } catch { return NextResponse.json({ error: "Invalid browser push subscription." }, { status: 400 }); }\n  const host = endpointUrl.hostname.toLowerCase();\n  const allowedHost = host === "fcm.googleapis.com" || host === "updates.push.services.mozilla.com" || host.endsWith(".push.services.mozilla.com") || host.endsWith(".push.apple.com") || host.endsWith(".notify.windows.com");\n  if (endpointUrl.protocol !== "https:" || endpointUrl.username || endpointUrl.password || !allowedHost || endpoint.length > 2048 || p256dh.length < 40 || auth.length < 16) return NextResponse.json({ error: "Invalid browser push subscription." }, { status: 400 });\n  const allowed = await consumeRateLimit("push-subscription-ip", getClientIp(request.headers), 30, 60 * 60 * 1000);\n  if (!allowed) return NextResponse.json({ error: "Too many notification setting changes. Please try again later." }, { status: 429 });
+  let endpointUrl: URL;
+  try { endpointUrl = new URL(endpoint); } catch { return NextResponse.json({ error: "Invalid browser push subscription." }, { status: 400 }); }
+  const host = endpointUrl.hostname.toLowerCase();
+  const allowedHost = host === "fcm.googleapis.com" || host === "updates.push.services.mozilla.com" || host.endsWith(".push.services.mozilla.com") || host.endsWith(".push.apple.com") || host.endsWith(".notify.windows.com");
+  if (endpointUrl.protocol !== "https:" || endpointUrl.username || endpointUrl.password || !allowedHost || endpoint.length > 2048 || p256dh.length < 40 || auth.length < 16) return NextResponse.json({ error: "Invalid browser push subscription." }, { status: 400 });
+  const allowed = await consumeRateLimit("push-subscription-ip", getClientIp(request.headers), 30, 60 * 60 * 1000);
+  if (!allowed) return NextResponse.json({ error: "Too many notification setting changes. Please try again later." }, { status: 429 });
   let tenantId: string | null = null; let bookingId: string | null = null;
   if (typeof body?.slug === "string") {
     const access = await getTenantAccess(body.slug);

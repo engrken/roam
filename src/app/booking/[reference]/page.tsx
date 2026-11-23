@@ -43,6 +43,24 @@ export default function CustomerBookingPage() {
     setData(body.booking);
   },[reference,token]);
 
+  // Low-frequency polling keeps the private booking portal synchronized without a WebSocket service.
+  useEffect(() => {
+    if (!token) return;
+    let active = true;
+    let inFlight = false;
+    const sync = async () => {
+      if (!active || document.visibilityState !== "visible" || inFlight) return;
+      inFlight = true;
+      try { await refresh(); } catch { /* Keep the last known booking state during transient network errors. */ }
+      finally { inFlight = false; }
+    };
+    const timer = window.setInterval(() => { void sync(); }, 10000);
+    const onVisible = () => { if (document.visibilityState === "visible") void sync(); };
+    window.addEventListener("focus", onVisible);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { active = false; window.clearInterval(timer); window.removeEventListener("focus", onVisible); document.removeEventListener("visibilitychange", onVisible); };
+  }, [refresh, token]);
+
   useEffect(() => {
     let active = true;
     if (!token) return () => { active = false; };

@@ -1,8 +1,8 @@
 self.addEventListener("push", event => {
   let data = {};
-  try { data = event.data ? event.data.json() : {}; } catch { data = { title: "ROAM update", body: event.data?.text() || "You have a new update." }; }
-  event.waitUntil(self.registration.showNotification(data.title || "ROAM update", {
-    body: data.body || "You have a new booking update.",
+  try { data = event.data ? event.data.json() : {}; } catch { data = { title: "ROAM", body: event.data?.text() || "You have a new ROAM update." }; }
+  event.waitUntil(self.registration.showNotification(data.title || "ROAM", {
+    body: data.body || "You have a new ROAM update.",
     icon: data.icon || "/favicon.svg",
     badge: data.badge || "/favicon.svg",
     data: { url: data.url || "/" },

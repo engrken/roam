@@ -50,9 +50,8 @@ export async function POST(request: NextRequest) {
       await tx.$queryRawUnsafe("SELECT pg_advisory_xact_lock(hashtext($1)) IS NULL AS locked", "email:" + email);
       await tx.$queryRawUnsafe("SELECT pg_advisory_xact_lock(hashtext($1)) IS NULL AS locked", "ip:" + ipHash);
 
-      await tx.emailOtp.deleteMany({
-        where: { codeHash: "RATE_LIMIT", expiresAt: { lt: now } },
-      });
+      // Expired OTPs and rate-limit buckets are no longer usable.
+      await tx.emailOtp.deleteMany({ where: { expiresAt: { lt: now } } });
 
       const [emailRequests, ipRequests] = await Promise.all([
         tx.emailOtp.count({ where: { email, createdAt: { gt: windowStart } } }),

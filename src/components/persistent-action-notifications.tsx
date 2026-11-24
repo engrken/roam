@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Bell, ArrowUpRight, History, Clock3, CheckCircle2, AlertCircle } from "lucide-react";
 
 type NotificationItem = {
@@ -71,6 +71,16 @@ export function PersistentActionNotifications({ endpoint, token }: Props) {
   );
   const history = useMemo(() => [...items].sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [items]);
   const current = pending[0];
+  const actionHref = current
+    ? token
+      ? (() => {
+          const hashIndex = current.actionUrl.indexOf("#");
+          const path = hashIndex >= 0 ? current.actionUrl.slice(0, hashIndex) : current.actionUrl;
+          const hash = hashIndex >= 0 ? current.actionUrl.slice(hashIndex) : "";
+          return path + (path.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(token) + hash;
+        })()
+      : current.actionUrl
+    : "#";
 
   async function openNotification(item: NotificationItem) {
     if (working) return;
@@ -103,22 +113,22 @@ export function PersistentActionNotifications({ endpoint, token }: Props) {
     }
   }
 
-  const controlStyle: React.CSSProperties = {
+  const controlStyle: CSSProperties = {
     position: "fixed", right: 18, bottom: 18, zIndex: 9000, display: "flex", alignItems: "center",
     gap: 8, border: "1px solid #d7e0e8", borderRadius: 999, padding: "11px 15px",
     background: "#fff", color: "#172b3a", boxShadow: "0 8px 28px rgba(15,23,42,.16)",
     fontWeight: 700, cursor: "pointer",
   };
-  const overlayStyle: React.CSSProperties = {
+  const overlayStyle: CSSProperties = {
     position: "fixed", inset: 0, zIndex: 10000, display: "grid", placeItems: "center",
     padding: 16, background: "rgba(9, 20, 31, .72)",
   };
-  const dialogStyle: React.CSSProperties = {
+  const dialogStyle: CSSProperties = {
     width: "min(560px, calc(100vw - 32px))", maxHeight: "min(85vh, 760px)", overflowY: "auto",
     borderRadius: 22, background: "#fff", color: "#172b3a", boxShadow: "0 24px 90px rgba(0,0,0,.32)",
     padding: "clamp(22px, 5vw, 34px)",
   };
-  const actionStyle: React.CSSProperties = {
+  const actionStyle: CSSProperties = {
     display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9,
     minHeight: 48, border: 0, borderRadius: 12, padding: "12px 18px", background: "#0f6678",
     color: "#fff", fontWeight: 800, cursor: working ? "wait" : "pointer", opacity: working ? .7 : 1,
@@ -180,9 +190,10 @@ export function PersistentActionNotifications({ endpoint, token }: Props) {
               This prompt stays on screen until you open the linked item. It will remain here after refreshing or signing back in.
             </p>
             {error && <p role="alert" style={{ display: "flex", alignItems: "center", gap: 7, margin: "0 0 14px", color: "#b42318", fontSize: 13 }}><AlertCircle size={15}/>{error}</p>}
-            <button type="button" style={actionStyle} onClick={() => void openNotification(current)} disabled={working}>
+            <a href={actionHref} style={{ ...actionStyle, textDecoration: "none" }}
+              aria-disabled={working} onClick={event => { event.preventDefault(); if (!working) void openNotification(current); }}>
               {working ? "Opening…" : "Open linked item"} <ArrowUpRight size={17}/>
-            </button>
+            </a>
             {pending.length > 1 && <p style={{ margin: "14px 0 0", color: "#718096", fontSize: 12 }}>{pending.length - 1} more action-required notification{pending.length - 1 === 1 ? "" : "s"} will follow.</p>}
           </section>
         </div>

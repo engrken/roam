@@ -2,11 +2,11 @@
 
 import { useState, type FormEvent } from "react";
 
-export function MarketplaceInquiryForm({ listingId }: { listingId: string }) {
+export function MarketplaceInquiryForm({ listingId, selfDriveEnabled, withDriverEnabled }: { listingId: string; selfDriveEnabled: boolean; withDriverEnabled: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [form, setForm] = useState({ requesterName: "", requesterEmail: "", requesterPhone: "", startDate: "", endDate: "", message: "", contactConsent: false });
+  const [form, setForm] = useState({ requesterName: "", requesterEmail: "", requesterPhone: "", startDate: "", endDate: "", rentalMode: selfDriveEnabled ? "SELF_DRIVE" : "WITH_DRIVER", message: "", contactConsent: false });
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError(""); setSuccess("");
@@ -33,7 +33,7 @@ export function MarketplaceInquiryForm({ listingId }: { listingId: string }) {
     <label className="block text-xs font-medium text-slate-700">Your name<input required minLength={2} maxLength={120} autoComplete="name" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm" value={form.requesterName} onChange={e=>setForm({...form,requesterName:e.target.value})}/></label>
     <label className="block text-xs font-medium text-slate-700">Email<input required type="email" maxLength={254} autoComplete="email" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm" value={form.requesterEmail} onChange={e=>setForm({...form,requesterEmail:e.target.value})}/></label>
     <label className="block text-xs font-medium text-slate-700">Phone (optional)<input type="tel" maxLength={40} autoComplete="tel" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm" value={form.requesterPhone} onChange={e=>setForm({...form,requesterPhone:e.target.value})}/></label>
-    <div className="grid grid-cols-2 gap-3">
+    <label className="block text-xs font-medium text-slate-700">Rental option<select required className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm" value={form.rentalMode} onChange={e=>setForm({...form,rentalMode:e.target.value})}>{selfDriveEnabled && <option value="SELF_DRIVE">Self-drive</option>}{withDriverEnabled && <option value="WITH_DRIVER">With driver</option>}</select></label>\n    <div className="grid grid-cols-2 gap-3">
       <label className="block text-xs font-medium text-slate-700">Pickup date<input required type="date" min={new Date().toLocaleDateString("en-CA")} className="mt-1 w-full min-w-0 rounded-lg border border-slate-200 px-2 py-2.5 text-sm" value={form.startDate} onChange={e=>setForm({...form,startDate:e.target.value})}/></label>
       <label className="block text-xs font-medium text-slate-700">Return date<input required type="date" min={minReturnDate} className="mt-1 w-full min-w-0 rounded-lg border border-slate-200 px-2 py-2.5 text-sm" value={form.endDate} onChange={e=>setForm({...form,endDate:e.target.value})}/></label>
     </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
+import { createAppNotification } from "@/lib/app-notifications";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 
@@ -79,6 +80,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         reference: paymentReference, amount, currency: "PHP", paidAt, proofPathname, customerNote,
       }, select: { id: true, amount: true, status: true, reference: true } });
       return created;
+    });
+    await createAppNotification({
+      tenantId: booking.tenantId, bookingId: booking.id, audience: "TENANT",
+      type: "PAYMENT_SUBMITTED", title: "New payment proof submitted",
+      message: "A customer submitted payment details for booking " + reference + ".",
+      actionUrl: "/workspace/" + encodeURIComponent(booking.tenant.slug) + "/payment-review",
+      dedupeKey: "payment-submission:" + submission.id,
     });
     return NextResponse.json({ submitted: true, submission: { ...submission, amount: Number(submission.amount) } }, { status: 201 });
   } catch (error) {

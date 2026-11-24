@@ -25,5 +25,6 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     select: { acknowledgedAt: true },
   });
   if (!existing) return NextResponse.json({ error: "Notification not found." }, { status: 404 });
+  if (!existing.acknowledgedAt) return NextResponse.json({ error: "Notification acknowledgement could not be saved. Please try again." }, { status: 409 });
   return NextResponse.json({ acknowledged: true, alreadyAcknowledged: true });
 }

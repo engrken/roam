@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 
 type AppNotificationInput = {
@@ -20,6 +21,7 @@ export async function createAppNotification(input: AppNotificationInput) {
   try {
     await prisma.appNotification.createMany({
       data: [{
+        id: randomUUID(),
         tenantId: input.tenantId,
         bookingId: input.bookingId ?? null,
         audience: input.audience,

@@ -1,8 +1,7 @@
-import { after, NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
 import { recordWorkspaceAudit } from "@/lib/workspace-audit";
-import { notifyBooking } from "@/lib/web-push";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,7 +67,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       await recordWorkspaceAudit(tx, { tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email, action: "rental_payment.approved", targetType: "rentalPayment", targetId: payment.id, details: { submissionId: row.id, bookingReference: row.booking.reference, amount: Number(row.amount), method: row.paymentMethod.method } });
       return { status: "APPROVED", paymentId: payment.id, bookingId: row.bookingId, bookingReference: row.booking.reference };
     });
-    after(() => notifyBooking(result.bookingId, result.status === "APPROVED" ? "Payment verified" : "Payment proof rejected", result.status === "APPROVED" ? "Your payment for booking " + result.bookingReference + " was approved." : "Your payment proof for booking " + result.bookingReference + " was rejected. Open your booking page for details.", "/").catch(error => console.error("Payment review push notification failed", error)));
     return NextResponse.json({ reviewed: true, ...result });
   } catch (error) {
     const code = error instanceof Error ? error.message : "";

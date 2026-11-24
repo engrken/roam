@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { BrowserPushCleanup } from "@/components/browser-push-cleanup";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://roamph.vercel.app"),
@@ -15,5 +16,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>;
+  return <html lang="en"><body><BrowserPushCleanup />{children}</body></html>;
 }

@@ -863,39 +863,6 @@
   .roam-sidebar,.roam-main{transition:width .18s ease,margin-left .18s ease}
 }
 
-.roam-sidebar-notifications{margin:12px 2px 2px;padding:12px 2px 2px;border-top:1px solid #2b4940}
-.roam-sidebar-notifications>div{display:flex;align-items:flex-start;gap:9px;padding:0;border:0;background:transparent;color:#edf5ee}
-.roam-sidebar-notifications strong{font-size:11px;color:#edf5ee}
-.roam-sidebar-notifications span{display:block;color:#a9bdb1;font-size:10px;line-height:1.45}
-.roam-sidebar-notifications button{flex:0 0 auto;max-width:100%;padding:7px 9px;border:1px solid #496253;border-radius:7px;background:#24463d;color:#e1f6bf;font-size:10px;font-weight:700}
-.roam-sidebar-collapsed .roam-sidebar-notifications{display:none}
-
-
-/* Notification settings: compact, readable action button in the workspace sidebar. */
-.roam-sidebar-notifications{min-width:0;overflow:hidden}
-.roam-sidebar-notifications .roam-notification-card{display:grid;gap:10px;min-width:0;padding:10px;border:1px solid #344b43;border-radius:10px;background:#1b302b;color:#edf5ee}
-.roam-sidebar-notifications .roam-notification-copy{display:flex;align-items:flex-start;gap:9px;min-width:0}
-.roam-sidebar-notifications .roam-notification-dot{width:8px;height:8px;flex:0 0 8px;margin-top:4px;border-radius:50%;background:#94a3b8}
-.roam-sidebar-notifications .roam-notification-dot.is-on{background:#4ade80}
-.roam-sidebar-notifications .roam-notification-dot.is-blocked{background:#fb7185}
-.roam-sidebar-notifications .roam-notification-text{display:grid;gap:3px;min-width:0}
-.roam-sidebar-notifications .roam-notification-text strong{font-size:11px;line-height:1.35;color:#edf5ee}
-.roam-sidebar-notifications .roam-notification-text span{display:block;overflow-wrap:anywhere;color:#a9bdb1;font-size:10px;line-height:1.45}
-.roam-sidebar-notifications .roam-notification-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
-.roam-sidebar-notifications .roam-notification-status{color:#a9bdb1;font-size:10px;font-weight:700}
-.roam-sidebar-notifications .roam-notification-status.is-on{color:#86efac}
-.roam-sidebar-notifications .roam-notification-button{width:auto;min-width:0;max-width:100%;min-height:32px;padding:7px 10px;border:1px solid #66816f;border-radius:7px;background:#d3f58b;color:#183522;font-size:10px;font-weight:800;line-height:1.2;white-space:normal;cursor:pointer}
-.roam-sidebar-notifications .roam-notification-button:hover:not(:disabled){background:#e1ffad}
-.roam-sidebar-notifications .roam-notification-button:disabled{opacity:.6;cursor:not-allowed}
-@media(min-width:761px){
-  .roam-sidebar-notifications{margin-left:0;margin-right:0;padding-left:0;padding-right:0}
-}
-@media(max-width:760px){
-  .roam-sidebar .roam-side-nav .roam-sidebar-notifications{display:block;margin:8px 0 0;padding:12px 0 0;border-top:1px solid #2b4940}
-  .roam-sidebar .roam-side-nav .roam-notification-card{padding:12px}
-  .roam-sidebar .roam-side-nav .roam-notification-button{min-height:36px;font-size:11px}
-}
-
 
 /* Keep the complete workspace navigation in its own scroll area.
    The version/copyright footer stays anchored and never covers menu items. */
@@ -905,59 +872,7 @@
 .roam-sidebar>.roam-side-nav::-webkit-scrollbar-thumb{background:#496253;border-radius:8px}
 .roam-sidebar>.roam-sidebar-bottom{flex:0 0 auto;margin-top:0;background:#17243a;padding-top:12px;padding-bottom:5px}
 .roam-sidebar .roam-side-nav>a,.roam-sidebar .roam-side-nav>button{min-width:0}
-.roam-sidebar .roam-side-nav .roam-notification-card{margin-bottom:4px}
 @media(max-width:760px){
   .roam-sidebar{height:auto;min-height:62px;overflow:visible}
   .roam-sidebar>.roam-side-nav{flex:initial;min-height:0;max-height:min(72dvh,620px);overflow-y:auto;overscroll-behavior:contain}
-}
-
-
-/* Keep notification controls reachable in the collapsed desktop sidebar. */
-@media (min-width:761px){
-  .roam-sidebar-collapsed .roam-sidebar-notifications{display:block;margin:8px 0;padding:0;border:0}
-  .roam-sidebar-collapsed .roam-notification-card{display:flex;justify-content:center;min-height:44px;padding:4px;border:0;background:transparent}
-  .roam-sidebar-collapsed .roam-notification-copy,
-  .roam-sidebar-collapsed .roam-notification-status{display:none}
-  .roam-sidebar-collapsed .roam-notification-actions{justify-content:center}
-  .roam-sidebar-collapsed .roam-notification-button{width:44px;height:40px;min-height:40px;padding:0;overflow:hidden;font-size:0;white-space:nowrap}
-  .roam-sidebar-collapsed .roam-notification-button::before{content:"🔔";font-size:17px;line-height:1}
-}
-
-
-/* Simple, explicit notification control: label plus live ON/OFF state. */
-.roam-sidebar-notifications{display:block!important;min-width:0;overflow:visible;margin:8px 0!important;padding:8px 0!important;border-top:1px solid #2b4940}
-.roam-sidebar-notifications .roam-notification-card{display:flex!important;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:5px 2px!important;border:0!important;border-radius:0!important;background:transparent!important;color:#edf5ee}
-.roam-sidebar-notifications .roam-notification-label{display:block!important;flex:1 1 auto;min-width:0;color:#edf5ee;font-size:11px;font-weight:700;white-space:nowrap}
-.roam-sidebar-notifications .roam-notification-button{display:inline-flex!important;flex:0 0 54px;align-items:center;justify-content:center;width:54px!important;min-width:54px;height:30px;min-height:30px;padding:4px 8px!important;border:1px solid #66816f;border-radius:7px;background:#374151;color:#f9fafb;font-size:11px!important;font-weight:800;line-height:1;cursor:pointer}
-.roam-sidebar-notifications .roam-notification-button.is-on{border-color:#4ade80;background:#166534;color:#fff}
-.roam-sidebar-notifications .roam-notification-button.is-off{border-color:#94a3b8;background:#374151;color:#fff}
-.roam-sidebar-notifications .roam-notification-button:disabled{opacity:.65;cursor:not-allowed}
-.roam-sidebar-notifications .roam-notification-feedback{display:block;flex:1 1 100%;min-width:0;color:#a9bdb1;font-size:9px;line-height:1.35}
-.roam-sidebar-notifications .roam-notification-card{flex-wrap:wrap}
-@media(min-width:761px){
-  .roam-sidebar-collapsed .roam-sidebar-notifications{display:block!important}
-  .roam-sidebar-collapsed .roam-notification-card{justify-content:center!important;gap:5px;padding:4px 0!important}
-  .roam-sidebar-collapsed .roam-notification-label{display:none!important}
-  .roam-sidebar-collapsed .roam-notification-feedback{display:none!important}
-  .roam-sidebar-collapsed .roam-notification-button{flex-basis:54px;width:54px!important;min-width:54px;height:30px;min-height:30px;padding:4px 8px!important;font-size:11px!important}
-}
-@media(max-width:760px){
-  .roam-sidebar .roam-side-nav .roam-sidebar-notifications{display:block!important}
-  .roam-sidebar .roam-side-nav .roam-notification-card{display:flex!important;flex-direction:row;align-items:center}
-}
-
-
-/* Browser push control accessibility and recovery state. */
-.roam-sidebar-notifications .roam-notification-button:focus-visible {
-  outline: 2px solid #d3f58b;
-  outline-offset: 3px;
-}
-.roam-sidebar-notifications .roam-notification-button.is-error {
-  border-color: #fb7185;
-  background: #7f1d1d;
-  color: #fff;
-}
-.roam-sidebar-notifications .roam-notification-feedback {
-  min-width: 0;
-  overflow-wrap: anywhere;
 }

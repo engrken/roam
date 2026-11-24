@@ -1,11 +1,10 @@
-import { after, NextRequest,NextResponse } from "next/server";
+import { NextRequest,NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 import { sendBookingMessageNotification } from "@/lib/email";
 import { isTenantTrialReadOnly } from "@/lib/tenant-access";
-import { notifyTenant } from "@/lib/web-push";
 export const runtime="nodejs";
 const hash=(v:string)=>createHash("sha256").update(v).digest("hex");
 export async function GET(request:NextRequest,{params}:{params:Promise<{reference:string}>}){
@@ -33,7 +32,6 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{referen
  if(!bookingAllowed||!ipAllowed)return NextResponse.json({error:"Too many messages. Please try again later."},{status:429});
  if(await isTenantTrialReadOnly(booking.tenantId))return NextResponse.json({error:"Messaging is temporarily unavailable because this rental workspace is in read-only mode."},{status:423});
  await prisma.bookingMessage.create({data:{bookingId:booking.id,sender:"CUSTOMER",body:message}});
- after(() => notifyTenant(booking.tenantId, "New customer message", "A customer sent a message about booking " + reference + ".", "/workspace/" + encodeURIComponent(booking.tenant.slug) + "/bookings").catch(error => console.error("Customer message push notification failed", error)));
  try {
   await sendBookingMessageNotification({recipient:booking.tenant.email,tenantName:booking.tenant.name,bookingReference:reference,senderLabel:"Customer",message,workspaceUrl:(process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app")+"/workspace/"+encodeURIComponent(booking.tenant.slug)+"/bookings"});
  } catch (error) { console.error("Customer message email notification failed", error); }

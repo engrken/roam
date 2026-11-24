@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { APP_VERSION } from "@/lib/app-meta";
-import { PushNotificationOptIn } from "@/components/push-notification-opt-in";
 import {
   LayoutDashboard, CarFront, LogOut, ShieldCheck, CalendarDays, MapPin, Users, Store,
   BookOpen, FileText, UserCog, MessageCircle, Wallet, Menu, X, LockKeyhole, CreditCard, ClipboardCheck, Wrench, ClipboardList,
@@ -109,7 +108,6 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
       {effectiveRole === "OWNER" && <Link title="Account & subscription" className={active === "account" ? "active" : ""} href={`/workspace/${slug}/account`}><ShieldCheck size={18}/><span className="roam-nav-label">Account & subscription</span></Link>}
       {effectiveRole !== "STAFF" && lockedItem("reports", "Reports", <UserCog size={18}/>)}
       <Link title="How-to guides" className={active === "help" ? "active" : ""} href={`/workspace/${slug}/help`}><BookOpen size={18}/><span className="roam-nav-label">How-to guides</span></Link>
-      <div className="roam-sidebar-notifications" onClick={event => event.stopPropagation()}><PushNotificationOptIn slug={slug}/></div>
       <Link href="/admin" title="Platform admin" className="roam-admin-link"><ShieldCheck size={18}/><span className="roam-nav-label">Platform admin</span></Link>
     </nav>
     <div className="roam-sidebar-bottom"><span className="roam-role">{effectiveRole}</span><button type="button" aria-label="Sign out" onClick={signOut}><LogOut size={16}/><span>Sign out</span></button><div className="roam-sidebar-app-meta"><span>ROAM v{APP_VERSION}</span><span>© {new Date().getFullYear()} ROAM. All rights reserved.</span></div></div>

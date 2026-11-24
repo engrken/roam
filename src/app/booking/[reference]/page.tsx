@@ -5,7 +5,6 @@ import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { upload } from "@vercel/blob/client";
 import "../../[slug]/book/booking-experience.css";
-import { PushNotificationOptIn } from "@/components/push-notification-opt-in";
 
 type Message = { id: string; sender: string; body: string; createdAt: string };
 type Document = { id: string; kind: string; fileName: string; reviewStatus: string; createdAt?: string };
@@ -129,7 +128,6 @@ export default function CustomerBookingPage() {
     <div className="client-container">
       <div className="client-portal-heading"><div><div className="client-eyebrow">{data.business.name}</div><h1>Your booking</h1><p>Reference <b>{data.reference}</b></p></div><div className="client-top-actions" style={{display:"flex",gap:8,flexWrap:"wrap"}}>{["CONFIRMED","ACTIVE","COMPLETED"].includes(data.status) && data.balanceDue > 0 && <Link className="client-primary" href={"/booking/"+encodeURIComponent(reference)+"/payment?token="+encodeURIComponent(token)}>Pay balance <span>→</span></Link>}<button className="client-refresh" onClick={copyReference}>Copy reference</button><button className="client-refresh" onClick={copyBookingLink}>{linkCopied?"Copied link":"Copy booking link"}</button><button className="client-refresh" onClick={reload} disabled={refreshing}>{refreshing?"Refreshing…":"↻ Refresh status"}</button></div></div>
       {error && <div className="client-alert" role="alert">{error}</div>}{notice && <div className="client-notice" role="status">{notice}</div>}
-      <PushNotificationOptIn reference={reference} token={token}/>
       <section className="client-status-card"><div className="client-status-top"><div><span className="client-eyebrow">CURRENT STATUS</span><h2>{statusLabel}</h2></div><span className={"client-status-pill "+(cancelled?"is-muted":data.status==="COMPLETED"?"is-done":"")}>{data.status.replaceAll("_"," ")}</span></div>
         {cancelled ? <p className="client-status-note">Please contact the rental team if you need clarification or would like to discuss another date.</p> :
         <div className="client-progress">{timeline.map((step,index)=><div key={step} className={"client-progress-step "+(currentIndex>=index?"is-reached":"")}><span>{currentIndex>index?"✓":index+1}</span><small>{step==="ACTIVE"?"Active · pending return":statusText[step]}</small></div>)}</div>}

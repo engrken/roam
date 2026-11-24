@@ -1,4 +1,4 @@
-import { after, NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "node:crypto";
 import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
@@ -6,7 +6,6 @@ import { sendBookingMessageNotification, sendBookingStatusNotification, sendBook
 import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { isWithinPickupReminderWindow } from "@/lib/booking-reminder";
-import { notifyBooking, notifyTenant } from "@/lib/web-push";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -117,7 +116,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     await prisma.bookingMessage.create({
       data: { bookingId: booking.id, sender: "OWNER", body: message },
     });
-    after(() => notifyBooking(booking.id, "New message from the rental team", "You have a new message about booking " + reference + ".", "/").catch(error => console.error("Message push notification failed", error)));
     if (booking.customer.email) {
       try {
         await sendBookingMessageNotification({ recipient: booking.customer.email, tenantName: access.tenant.name, bookingReference: reference, senderLabel: "Rental team", message });
@@ -223,7 +221,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     });
 
     if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
-    after(() => notifyBooking(booking.id, "Booking status updated", "Your booking " + reference + " is now " + result.nextStatus.toLowerCase() + ".", "/").catch(error => console.error("Booking push notification failed", error)));
     let notification: "attempted" | "no_customer_email" | "failed" = booking.customer.email ? "attempted" : "no_customer_email";
     if (booking.customer.email) {
       try {

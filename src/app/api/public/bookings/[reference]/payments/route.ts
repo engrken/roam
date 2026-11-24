@@ -1,9 +1,8 @@
-import { after, NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
-import { notifyTenant } from "@/lib/web-push";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -81,7 +80,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }, select: { id: true, amount: true, status: true, reference: true } });
       return created;
     });
-    after(() => notifyTenant(booking.tenantId, "New payment submitted", "A customer submitted payment proof for booking " + reference + ".", "/workspace/" + encodeURIComponent(booking.tenant.slug) + "/payment-review").catch(error => console.error("Payment push notification failed", error)));
     return NextResponse.json({ submitted: true, submission: { ...submission, amount: Number(submission.amount) } }, { status: 201 });
   } catch (error) {
     const code = error instanceof Error ? error.message : "";

@@ -17,7 +17,7 @@ export function MarketplaceInquiryForm({ listingId, selfDriveEnabled, withDriver
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to send inquiry.");
       setSuccess(data.message || "Inquiry sent to the Host.");
-      setForm({ requesterName: "", requesterEmail: "", requesterPhone: "", startDate: "", endDate: "", message: "", contactConsent: false });
+      setForm({ requesterName: "", requesterEmail: "", requesterPhone: "", startDate: "", endDate: "", rentalMode: selfDriveEnabled ? "SELF_DRIVE" : "WITH_DRIVER", message: "", contactConsent: false });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to send inquiry.");
     } finally { setBusy(false); }

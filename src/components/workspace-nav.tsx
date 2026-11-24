@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { APP_VERSION } from "@/lib/app-meta";
+import { PersistentActionNotifications } from "@/components/persistent-action-notifications";
 import {
   LayoutDashboard, CarFront, LogOut, ShieldCheck, CalendarDays, MapPin, Users, Store,
   BookOpen, FileText, UserCog, MessageCircle, Wallet, Menu, X, LockKeyhole, CreditCard, ClipboardCheck, Wrench, ClipboardList,
@@ -127,5 +128,6 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
         </div>
       </section>
     </div>}
+    <PersistentActionNotifications endpoint={`/api/workspaces/${encodeURIComponent(slug)}/notifications`} />
   </aside>;
 }

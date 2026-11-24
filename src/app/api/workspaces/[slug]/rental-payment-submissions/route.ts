@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
+import { createAppNotification } from "@/lib/app-notifications";
 import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 
 export const runtime = "nodejs";
@@ -52,7 +53,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       if (action === "REJECT") {
         await tx.rentalPaymentSubmission.update({ where: { id: row.id }, data: { status: "REJECTED", reviewedById: access.user.id, reviewedAt: new Date(), rejectionReason } });
         await recordWorkspaceAudit(tx, { tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email, action: "rental_payment.rejected", targetType: "rentalPaymentSubmission", targetId: row.id, details: { bookingReference: row.booking.reference, reference: row.reference, amount: Number(row.amount) } });
-        return { status: "REJECTED", bookingId: row.bookingId, bookingReference: row.booking.reference };
+        return { status: "REJECTED" as const, submissionId: row.id, bookingId: row.bookingId, bookingReference: row.booking.reference };
       }
       const paid = row.booking.payments.reduce((sum, payment) => sum + (payment.kind === "REFUND" ? -Number(payment.amount) : Number(payment.amount)), 0);
       const remaining = Number(row.booking.totalAmount) + Number(row.booking.securityDeposit || 0) - paid;
@@ -65,7 +66,19 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       } });
       await tx.rentalPaymentSubmission.update({ where: { id: row.id }, data: { status: "APPROVED", reviewedById: access.user.id, reviewedAt: new Date(), rentalPaymentId: payment.id } });
       await recordWorkspaceAudit(tx, { tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email, action: "rental_payment.approved", targetType: "rentalPayment", targetId: payment.id, details: { submissionId: row.id, bookingReference: row.booking.reference, amount: Number(row.amount), method: row.paymentMethod.method } });
-      return { status: "APPROVED", paymentId: payment.id, bookingId: row.bookingId, bookingReference: row.booking.reference };
+      return { status: "APPROVED" as const, submissionId: row.id, paymentId: payment.id, bookingId: row.bookingId, bookingReference: row.booking.reference };
+    });
+    await createAppNotification({
+      tenantId: access.tenant.id,
+      bookingId: result.bookingId,
+      audience: "CLIENT",
+      type: "PAYMENT_REVIEW",
+      title: result.status === "APPROVED" ? "Payment verified" : "Payment proof rejected",
+      message: result.status === "APPROVED"
+        ? "Your payment for booking " + result.bookingReference + " was approved."
+        : "Your payment proof for booking " + result.bookingReference + " was rejected. Open the payment page for details.",
+      actionUrl: "/booking/" + encodeURIComponent(result.bookingReference) + "/payment#payment-submissions",
+      dedupeKey: "payment-review:" + result.submissionId + ":" + result.status,
     });
     return NextResponse.json({ reviewed: true, ...result });
   } catch (error) {

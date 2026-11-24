@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { createAppNotification } from "@/lib/app-notifications";
 import { sendBookingReminder } from "@/lib/email";
 import { getBookingReminderNoticeKey } from "@/lib/booking-reminder";
 
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
     prisma.booking.findMany({
       where: { status: "CONFIRMED", startAt: { gte: windowStart, lt: windowEnd }, customer: { email: { not: null } } },
       orderBy: { startAt: "asc" },
-      select: { id: true, reference: true, startAt: true, endAt: true, tenant: { select: { name: true, timezone: true } }, customer: { select: { email: true } } },
+      select: { id: true, reference: true, startAt: true, endAt: true, tenant: { select: { id: true, name: true, slug: true, timezone: true } }, customer: { select: { email: true } } },
       take: 200,
     }),
     prisma.booking.findMany({
@@ -75,6 +76,30 @@ export async function GET(request: NextRequest) {
       data: { status: "PROCESSING", lastError: null },
     });
     if (claim.count === 0) { skipped++; continue; }
+
+    const reminderTitle = booking.type === "PICKUP"
+      ? "Pickup reminder"
+      : booking.type === "RETURN" ? "Return reminder" : "Booking return is overdue";
+    const reminderMessage = booking.type === "PICKUP"
+      ? "Your booking " + booking.reference + " is scheduled to start within the next 24 hours. Review your pickup details."
+      : booking.type === "RETURN"
+        ? "Your booking " + booking.reference + " is scheduled to end within the next 24 hours. Review your return details."
+        : "Your booking " + booking.reference + " is past its scheduled return time. Please contact the rental team.";
+    await createAppNotification({
+      tenantId: booking.tenant.id, bookingId: booking.id, audience: "CLIENT",
+      type: booking.type + "_REMINDER", title: reminderTitle, message: reminderMessage,
+      actionUrl: "/booking/" + encodeURIComponent(booking.reference) + "#booking-update",
+      dedupeKey: "booking-reminder:client:" + noticeKey,
+    });
+    if (booking.type === "OVERDUE") {
+      await createAppNotification({
+        tenantId: booking.tenant.id, bookingId: booking.id, audience: "TENANT",
+        type: "BOOKING_OVERDUE", title: "Booking return is overdue",
+        message: "Booking " + booking.reference + " has passed its scheduled return time.",
+        actionUrl: "/workspace/" + encodeURIComponent(booking.tenant.slug) + "/bookings",
+        dedupeKey: "booking-reminder:tenant:" + noticeKey,
+      });
+    }
 
     try {
       if (!booking.customer.email) {

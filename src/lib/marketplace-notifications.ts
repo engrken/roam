@@ -19,7 +19,7 @@ export async function createMarketplaceHostNotification(
 ) {
   const title = marketplaceHostReviewTitle(input.targetType, input.status);
   const message = marketplaceHostReviewMessage(input.status, input.hostMessage);
-  return tx.marketplaceHostNotification.create({
+  const saved = await tx.marketplaceHostNotification.create({
     data: {
       tenantId: input.tenantId,
       targetType: input.targetType,
@@ -32,6 +32,22 @@ export async function createMarketplaceHostNotification(
     },
     select: { id: true, emailStatus: true },
   });
+  const tenant = await tx.tenant.findUnique({ where: { id: input.tenantId }, select: { slug: true } });
+  if (tenant) {
+    await tx.appNotification.createMany({
+      data: [{
+        tenantId: input.tenantId,
+        audience: "TENANT",
+        type: "MARKETPLACE_REVIEW",
+        title,
+        message,
+        actionUrl: "/workspace/" + encodeURIComponent(tenant.slug) + "/marketplace",
+        dedupeKey: "marketplace-review:" + saved.id,
+      }],
+      skipDuplicates: true,
+    });
+  }
+  return saved;
 }
 
 export async function deliverMarketplaceHostNotification(id: string) {

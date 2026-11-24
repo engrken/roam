@@ -122,7 +122,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const withDriverEnabled = body.withDriverEnabled === true;
   const withDriverDailyRate = body.withDriverDailyRate === "" || body.withDriverDailyRate == null ? null : Number(body.withDriverDailyRate);
   const year = body.year === "" || body.year == null ? null : Number(body.year);
-  if (make.length < 2 || model.length < 1 || plateNumber.length < 2 || plateNumber.length > 20 || !types.includes(body.type) || !Number.isFinite(dailyRate) || dailyRate < 0 || (!selfDriveEnabled && !withDriverEnabled) || (withDriverEnabled && (!Number.isFinite(withDriverDailyRate) || (withDriverDailyRate as number) < 0)) || (year !== null && (!Number.isInteger(year) || year < 1950 || year > new Date().getFullYear() + 1))) {
+  if (make.length < 2 || model.length < 1 || plateNumber.length < 2 || plateNumber.length > 20 || !types.includes(body.type) || !Number.isFinite(dailyRate) || dailyRate < 0 || (!selfDriveEnabled && !withDriverEnabled) || (withDriverEnabled && (withDriverDailyRate === null || !Number.isFinite(withDriverDailyRate) || withDriverDailyRate < 0)) || (year !== null && (!Number.isInteger(year) || year < 1950 || year > new Date().getFullYear() + 1))) {
     return NextResponse.json({ error: "Enter valid vehicle details and a daily rate." }, { status: 400 });
   }
   const branchId = typeof body.branchId === "string" && body.branchId ? body.branchId : null;

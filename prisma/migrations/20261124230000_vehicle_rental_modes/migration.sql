@@ -1,0 +1,7 @@
+ALTER TABLE "Vehicle"
+  ADD COLUMN "selfDriveEnabled" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN "withDriverEnabled" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN "withDriverDailyRate" DECIMAL(12,2);
+
+ALTER TABLE "MarketplaceBookingInquiry"
+  ADD COLUMN "rentalMode" VARCHAR(20) NOT NULL DEFAULT 'SELF_DRIVE';

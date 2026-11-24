@@ -317,6 +317,7 @@ model BookingItem {
   bookingId String
   vehicleId String
   rate      Decimal  @db.Decimal(12, 2)
+  rentalMode String   @default("SELF_DRIVE") @db.VarChar(20)
   booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   vehicle   Vehicle  @relation(fields: [vehicleId], references: [id])
   @@unique([bookingId, vehicleId])

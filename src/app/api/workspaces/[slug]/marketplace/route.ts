@@ -22,7 +22,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
             vehicle: {
               select: {
                 id: true, type: true, make: true, model: true, year: true, color: true,
-                dailyRate: true, status: true, branch: { select: { name: true } },
+                dailyRate: true, selfDriveEnabled: true, withDriverEnabled: true, withDriverDailyRate: true, status: true, branch: { select: { name: true } },
               },
             },
           },
@@ -59,14 +59,15 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
         vehicle: {
           id: listing.vehicle.id, type: listing.vehicle.type, make: listing.vehicle.make,
           model: listing.vehicle.model, year: listing.vehicle.year, color: listing.vehicle.color,
-          dailyRate: Number(listing.vehicle.dailyRate), status: listing.vehicle.status,
+          dailyRate: Number(listing.vehicle.dailyRate), selfDriveEnabled: listing.vehicle.selfDriveEnabled, withDriverEnabled: listing.vehicle.withDriverEnabled, withDriverDailyRate: listing.vehicle.withDriverDailyRate === null ? null : Number(listing.vehicle.withDriverDailyRate), status: listing.vehicle.status,
           branchName: listing.vehicle.branch?.name || "Unassigned",
         },
       })),
     } : null,
     eligibleVehicles: vehicles.filter((vehicle) => !vehicle.marketplaceListing).map((vehicle) => ({
       id: vehicle.id, type: vehicle.type, make: vehicle.make, model: vehicle.model,
-      year: vehicle.year, dailyRate: Number(vehicle.dailyRate),
+      year: vehicle.year, dailyRate: Number(vehicle.dailyRate), selfDriveEnabled: vehicle.selfDriveEnabled,
+      withDriverEnabled: vehicle.withDriverEnabled, withDriverDailyRate: vehicle.withDriverDailyRate === null ? null : Number(vehicle.withDriverDailyRate),
       branchName: vehicle.branch?.name || "Unassigned",
     })),
   });

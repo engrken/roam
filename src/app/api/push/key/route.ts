@@ -1,8 +1,21 @@
 import { NextResponse } from "next/server";
 import { getVapidPublicKey } from "@/lib/web-push";
+
 export const dynamic = "force-dynamic";
+
 export async function GET() {
-  const key = getVapidPublicKey();
-  if (!key) return NextResponse.json({ error: "Browser notifications are not configured yet." }, { status: 503 });
-  return NextResponse.json({ publicKey: key }, { headers: { "Cache-Control": "no-store" } });
+  try {
+    const publicKey = getVapidPublicKey();
+    return NextResponse.json(
+      { publicKey },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Browser notifications are not configured.";
+    console.error("Browser push key endpoint is not ready", error);
+    return NextResponse.json(
+      { error: message },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
 }

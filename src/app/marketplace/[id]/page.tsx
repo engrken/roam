@@ -27,7 +27,7 @@ export default async function MarketplaceListingDetailPage({ params }: { params:
     select: {
       id: true, headline: true, description: true, isPublished: true, status: true,
       hostProfile: { select: { status: true, displayName: true, city: true, province: true } },
-      vehicle: { select: { status: true, type: true, make: true, model: true, year: true, dailyRate: true, seats: true, transmission: true, color: true } },
+      vehicle: { select: { status: true, type: true, make: true, model: true, year: true, dailyRate: true, selfDriveEnabled: true, withDriverEnabled: true, withDriverDailyRate: true, seats: true, transmission: true, color: true } },
       tenant: { select: { status: true } },
     },
   });
@@ -54,7 +54,7 @@ export default async function MarketplaceListingDetailPage({ params }: { params:
             </div>
           </div>
           <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-7">
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Rental rate</p><p className="mt-2 text-3xl font-bold text-slate-950">{money(Number(listing.vehicle.dailyRate))}<span className="text-sm font-normal text-slate-500"> / day</span></p>
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Rental rate</p><div className="mt-2 space-y-2 text-lg font-bold text-slate-950">{listing.vehicle.selfDriveEnabled && <p>Self-drive <span className="text-cyan-800">{money(Number(listing.vehicle.dailyRate))}/day</span></p>}{listing.vehicle.withDriverEnabled && <p>With driver <span className="text-cyan-800">{money(Number(listing.vehicle.withDriverDailyRate))}/day</span></p>}</div>
             <div className="mt-6 border-t border-slate-100 pt-5"><p className="text-xs text-slate-500">Vehicle host</p><p className="mt-1 font-semibold text-slate-900">{listing.hostProfile.displayName}</p><p className="mt-2 flex items-center gap-1 text-sm text-slate-600"><MapPin size={14}/>{[listing.hostProfile.city,listing.hostProfile.province].filter(Boolean).join(", ")}</p></div>
             <div className="mt-6 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-950"><b>Bookings are not open yet.</b><p className="mt-1">This listing is part of the ROAM discovery preview. Rental requests and payments will become available only after launch readiness is complete.</p></div>
             {inquiriesEnabled ? <MarketplaceInquiryForm listingId={listing.id}/> : <Link href="/early-access" className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800">Get renter launch updates</Link>}

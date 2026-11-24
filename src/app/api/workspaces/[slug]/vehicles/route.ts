@@ -18,7 +18,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   return NextResponse.json({ vehicles: vehicles.map((v) => ({
     id: v.id, type: v.type, make: v.make, model: v.model, year: v.year, plateNumber: v.plateNumber,
     color: v.color, seats: v.seats, transmission: v.transmission, dailyRate: Number(v.dailyRate),
-    securityDeposit: Number(v.securityDeposit), status: v.status, notes: v.notes, branchId: v.branchId,
+    securityDeposit: Number(v.securityDeposit), selfDriveEnabled: v.selfDriveEnabled, withDriverEnabled: v.withDriverEnabled,
+    withDriverDailyRate: v.withDriverDailyRate === null ? null : Number(v.withDriverDailyRate), status: v.status, notes: v.notes, branchId: v.branchId,
     branchName: v.branch?.name || "Unassigned",
   })) });
 }
@@ -36,8 +37,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const plateNumber = typeof body?.plateNumber === "string" ? body.plateNumber.trim().toUpperCase() : "";
   const type = body?.type;
   const dailyRate = Number(body?.dailyRate);
+  const selfDriveEnabled = body?.selfDriveEnabled !== false;
+  const withDriverEnabled = body?.withDriverEnabled === true;
+  const withDriverDailyRate = body?.withDriverDailyRate === "" || body?.withDriverDailyRate == null ? null : Number(body.withDriverDailyRate);
   const year = body?.year === "" || body?.year == null ? null : Number(body.year);
-  if (make.length < 2 || model.length < 1 || plateNumber.length < 2 || plateNumber.length > 20 || !types.includes(type) || !Number.isFinite(dailyRate) || dailyRate < 0 || (year !== null && (!Number.isInteger(year) || year < 1950 || year > new Date().getFullYear() + 1))) {
+  if (make.length < 2 || model.length < 1 || plateNumber.length < 2 || plateNumber.length > 20 || !types.includes(type) || !Number.isFinite(dailyRate) || dailyRate < 0 || (!selfDriveEnabled && !withDriverEnabled) || (withDriverEnabled && (!Number.isFinite(withDriverDailyRate) || (withDriverDailyRate as number) < 0)) || (year !== null && (!Number.isInteger(year) || year < 1950 || year > new Date().getFullYear() + 1))) {
     return NextResponse.json({ error: "Enter a valid vehicle type, make, model, plate number, year, and daily rate." }, { status: 400 });
   }
   const plan = await prisma.subscription.findUnique({ where: { tenantId: access.tenant.id }, include: { plan: true } });
@@ -56,7 +60,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         color: typeof body.color === "string" ? body.color.trim().slice(0, 40) : null,
         transmission: typeof body.transmission === "string" ? body.transmission : null,
         seats: Number.isInteger(Number(body.seats)) && Number(body.seats) > 0 ? Number(body.seats) : null,
-        dailyRate, securityDeposit: Number.isFinite(Number(body.securityDeposit)) && Number(body.securityDeposit) >= 0 ? Number(body.securityDeposit) : 0,
+        dailyRate, selfDriveEnabled, withDriverEnabled, withDriverDailyRate, securityDeposit: Number.isFinite(Number(body.securityDeposit)) && Number(body.securityDeposit) >= 0 ? Number(body.securityDeposit) : 0,
         status: "AVAILABLE",
       } });
       await recordWorkspaceAudit(tx, {
@@ -114,8 +118,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const model = typeof body.model === "string" ? body.model.trim() : "";
   const plateNumber = typeof body.plateNumber === "string" ? body.plateNumber.trim().toUpperCase() : "";
   const dailyRate = Number(body.dailyRate);
+  const selfDriveEnabled = body.selfDriveEnabled !== false;
+  const withDriverEnabled = body.withDriverEnabled === true;
+  const withDriverDailyRate = body.withDriverDailyRate === "" || body.withDriverDailyRate == null ? null : Number(body.withDriverDailyRate);
   const year = body.year === "" || body.year == null ? null : Number(body.year);
-  if (make.length < 2 || model.length < 1 || plateNumber.length < 2 || plateNumber.length > 20 || !types.includes(body.type) || !Number.isFinite(dailyRate) || dailyRate < 0 || (year !== null && (!Number.isInteger(year) || year < 1950 || year > new Date().getFullYear() + 1))) {
+  if (make.length < 2 || model.length < 1 || plateNumber.length < 2 || plateNumber.length > 20 || !types.includes(body.type) || !Number.isFinite(dailyRate) || dailyRate < 0 || (!selfDriveEnabled && !withDriverEnabled) || (withDriverEnabled && (!Number.isFinite(withDriverDailyRate) || (withDriverDailyRate as number) < 0)) || (year !== null && (!Number.isInteger(year) || year < 1950 || year > new Date().getFullYear() + 1))) {
     return NextResponse.json({ error: "Enter valid vehicle details and a daily rate." }, { status: 400 });
   }
   const branchId = typeof body.branchId === "string" && body.branchId ? body.branchId : null;
@@ -128,6 +135,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       if (!existing) return false;
       await tx.vehicle.update({ where: { id }, data: {
         type: body.type, make, model, plateNumber, year, branchId, dailyRate,
+        selfDriveEnabled, withDriverEnabled, withDriverDailyRate,
         color: typeof body.color === "string" ? body.color.trim().slice(0, 40) : null,
         securityDeposit: Number.isFinite(Number(body.securityDeposit)) && Number(body.securityDeposit) >= 0 ? Number(body.securityDeposit) : 0,
       } });

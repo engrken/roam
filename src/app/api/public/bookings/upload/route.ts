@@ -3,6 +3,7 @@ import { handleUpload } from "@vercel/blob/client";
 import { head } from "@vercel/blob";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
+import { createAppNotification } from "@/lib/app-notifications";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { isTenantTrialReadOnly } from "@/lib/tenant-access";
 export const runtime="nodejs";
@@ -30,10 +31,19 @@ export async function POST(request:NextRequest){
     const payload=JSON.parse(tokenPayload||"{}");
     const bookingId=String(payload.bookingId||"");const kind=String(payload.kind||"");
     if(!bookingId||!kind)throw new Error("Missing booking upload metadata.");
-    const booking=await prisma.booking.findUnique({where:{id:bookingId},select:{tenantId:true}});
+    const booking=await prisma.booking.findUnique({where:{id:bookingId},select:{tenantId:true,reference:true,tenant:{select:{slug:true}}}});
     if(!booking||await isTenantTrialReadOnly(booking.tenantId))throw new Error("Document uploads are unavailable for this workspace.");
     const metadata = await head(blob.pathname);
-    await prisma.bookingDocument.create({data:{bookingId,kind,pathname:blob.pathname,fileName:blob.pathname.split("/").pop()||"document",contentType:metadata.contentType||blob.contentType||"application/octet-stream",size:metadata.size}});
+    const document = await prisma.bookingDocument.create({data:{bookingId,kind,pathname:blob.pathname,fileName:blob.pathname.split("/").pop()||"document",contentType:metadata.contentType||blob.contentType||"application/octet-stream",size:metadata.size},select:{id:true}});
+    if (!["MESSAGE_ATTACHMENT","PAYMENT_EVIDENCE"].includes(kind)) {
+      await createAppNotification({
+        tenantId: booking.tenantId, bookingId, audience: "TENANT",
+        type: "DOCUMENT_UPLOADED", title: "Customer uploaded a document",
+        message: "A customer uploaded " + kind.replaceAll("_", " ").toLowerCase() + " for booking " + booking.reference + ".",
+        actionUrl: "/workspace/" + encodeURIComponent(booking.tenant.slug) + "/bookings",
+        dedupeKey: "client-document:" + document.id,
+      });
+    }
    }
   });
   return NextResponse.json(result);

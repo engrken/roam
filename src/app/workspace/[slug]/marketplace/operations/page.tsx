@@ -8,7 +8,7 @@ import { WorkspaceNav } from "@/components/workspace-nav";
 
 type Block = { id: string; startAt: string; endAt: string; label: string | null };
 type Listing = { id: string; headline: string; status: string; isPublished: boolean; vehicle: { make: string; model: string; year: number | null; dailyRate: number; status: string }; availabilityBlocks: Block[] };
-type Inquiry = { id: string; listingId: string; requesterName: string; requesterEmail: string; requesterPhone: string | null; startAt: string; endAt: string; dailyRateSnapshot: number; message: string | null; status: string; hostNote: string | null; createdAt: string; contactConsentAt: string; consentVersion: string; listing: { headline: string; vehicle: { make: string; model: string } } };
+type Inquiry = { id: string; listingId: string; requesterName: string; requesterEmail: string; requesterPhone: string | null; startAt: string; endAt: string; dailyRateSnapshot: number; rentalMode: string; message: string | null; status: string; hostNote: string | null; createdAt: string; contactConsentAt: string; consentVersion: string; listing: { headline: string; vehicle: { make: string; model: string } } };
 
 const date = (value: string) => new Date(value).toLocaleDateString("en-PH", { timeZone: "Asia/Manila", dateStyle: "medium" });
 const statusLabel = (value: string) => value.replaceAll("_", " ");
@@ -26,7 +26,7 @@ const renterReplyDraft = (item: Inquiry, style: string) => {
   const period = `${date(item.startAt)} to ${date(item.endAt)}`;
   const greeting = `Hello ${item.requesterName},`;
   const vehicle = `${item.listing.vehicle.make} ${item.listing.vehicle.model} — ${item.listing.headline}`;
-  const details = `Your requested rental period is ${period} (${nights(item.startAt, item.endAt)} day(s)). The rate shown when you enquired was ₱${item.dailyRateSnapshot.toLocaleString("en-PH")} per day.`;
+  const details = `Your requested rental period is ${period} (${nights(item.startAt, item.endAt)} day(s)). Your selected option was ${item.rentalMode === "WITH_DRIVER" ? "with driver" : "self-drive"}; the rate shown when you enquired was ₱${item.dailyRateSnapshot.toLocaleString("en-PH")} per day.`;
   const closing = "This is an enquiry only, not a reservation or booking confirmation. Availability, final pricing, any deposits or additional charges, pickup arrangements, and rental terms must be confirmed by our team before a booking can be made.";
   if (style === "FOLLOW_UP") return [greeting, "", `Thank you for your interest in ${vehicle}. ${details}`, "", "Could you please confirm your preferred pickup location and approximate pickup time? We will check the dates and get back to you with the applicable terms and final price.", "", closing].join("\n");
   if (style === "UNAVAILABLE") return [greeting, "", `Thank you for enquiring about ${vehicle} for ${period}. Unfortunately, we are unable to accommodate those dates.`, "", "If your plans are flexible, please share an alternative date range and we can check again.", "", closing].join("\n");
@@ -40,7 +40,7 @@ const handoffSummary = (item: Inquiry) => [
   `Email: ${item.requesterEmail}`,
   `Phone: ${item.requesterPhone || "Not provided"}`,
   `Requested dates: ${date(item.startAt)} to ${date(item.endAt)} (${nights(item.startAt, item.endAt)} day(s))`,
-  `Rate snapshot: PHP ${item.dailyRateSnapshot.toFixed(2)} per day (not a final quote)`,
+  `Rental option: ${item.rentalMode === "WITH_DRIVER" ? "With driver" : "Self-drive"} · Rate snapshot: PHP ${item.dailyRateSnapshot.toFixed(2)} per day (not a final quote)`,
   `Contact consent: recorded ${new Date(item.contactConsentAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" })} · ${item.consentVersion}`,
   `Renter message: ${item.message || "None"}`,
   `Workflow status: ${statusLabel(item.status)}`,

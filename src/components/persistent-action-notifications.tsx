@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { Bell, ArrowUpRight, History, Clock3, CheckCircle2, AlertCircle } from "lucide-react";
 
 type NotificationItem = {
@@ -17,11 +18,14 @@ type NotificationItem = {
 type Props = { endpoint: string; token?: string };
 
 export function PersistentActionNotifications({ endpoint, token }: Props) {
+  const [mounted, setMounted] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => { setMounted(true); }, []);
 
   const requestHeaders = useMemo(() => {
     const headers: Record<string, string> = {};
@@ -134,7 +138,9 @@ export function PersistentActionNotifications({ endpoint, token }: Props) {
     color: "#fff", fontWeight: 800, cursor: working ? "wait" : "pointer", opacity: working ? .7 : 1,
   };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <>
       <button type="button" style={controlStyle} onClick={() => setHistoryOpen(value => !value)}
         aria-expanded={historyOpen} aria-label={pending.length + " pending notifications. Open notification history."}>
@@ -198,6 +204,7 @@ export function PersistentActionNotifications({ endpoint, token }: Props) {
           </section>
         </div>
       )}
-    </>
+    </>,
+    document.body,
   );
 }

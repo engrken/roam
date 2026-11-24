@@ -1,6 +1,7 @@
 import { NextRequest,NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
+import { createAppNotification } from "@/lib/app-notifications";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 import { sendBookingMessageNotification } from "@/lib/email";
@@ -31,7 +32,14 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{referen
  ]);
  if(!bookingAllowed||!ipAllowed)return NextResponse.json({error:"Too many messages. Please try again later."},{status:429});
  if(await isTenantTrialReadOnly(booking.tenantId))return NextResponse.json({error:"Messaging is temporarily unavailable because this rental workspace is in read-only mode."},{status:423});
- await prisma.bookingMessage.create({data:{bookingId:booking.id,sender:"CUSTOMER",body:message}});
+ const savedMessage=await prisma.bookingMessage.create({data:{bookingId:booking.id,sender:"CUSTOMER",body:message},select:{id:true}});
+ await createAppNotification({
+  tenantId:booking.tenantId,bookingId:booking.id,audience:"TENANT",
+  type:"CUSTOMER_MESSAGE",title:"New message from a customer",
+  message:"A customer sent a message about booking "+reference+".",
+  actionUrl:"/workspace/"+encodeURIComponent(booking.tenant.slug)+"/bookings",
+  dedupeKey:"customer-message:"+savedMessage.id,
+ });
  try {
   await sendBookingMessageNotification({recipient:booking.tenant.email,tenantName:booking.tenant.name,bookingReference:reference,senderLabel:"Customer",message,workspaceUrl:(process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app")+"/workspace/"+encodeURIComponent(booking.tenant.slug)+"/bookings"});
  } catch (error) { console.error("Customer message email notification failed", error); }

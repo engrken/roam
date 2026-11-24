@@ -72,7 +72,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     orderBy: { createdAt: "desc" },
     select: {
       id: true, type: true, make: true, model: true, year: true, color: true,
-      seats: true, transmission: true, dailyRate: true, securityDeposit: true,
+      seats: true, transmission: true, dailyRate: true, selfDriveEnabled: true, withDriverEnabled: true, withDriverDailyRate: true, securityDeposit: true,
       branch: { select: { id: true, name: true, address: true } },
     },
   }),
@@ -83,7 +83,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     branches,
     vehicles: vehicles.map((vehicle) => ({
       ...vehicle,
-      dailyRate: Number(vehicle.dailyRate),
+      dailyRate: Number(vehicle.dailyRate), selfDriveEnabled: vehicle.selfDriveEnabled, withDriverEnabled: vehicle.withDriverEnabled,
+      withDriverDailyRate: vehicle.withDriverDailyRate === null ? null : Number(vehicle.withDriverDailyRate),
       securityDeposit: Number(vehicle.securityDeposit),
     })),
   });
@@ -109,6 +110,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   const phone = typeof body?.phone === "string" ? body.phone.trim() : "";
   const vehicleId = typeof body?.vehicleId === "string" ? body.vehicleId : "";
+  const rentalMode = body?.rentalMode === "WITH_DRIVER" ? "WITH_DRIVER" : body?.rentalMode === "SELF_DRIVE" ? "SELF_DRIVE" : "";
   const rentalTerms = tenant.rentalTerms?.trim() || "";
   if (!rentalTerms) return NextResponse.json({ error: "This rental business has not published its rental terms yet. Please contact the business directly." }, { status: 409 });
   const rentalTermsVersion = hash(rentalTerms);
@@ -122,7 +124,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     name.length < 2 || name.length > 100 ||
     email.length > 254 || !/^\S+@\S+\.\S+$/.test(email) ||
     phone.length < 7 || phone.length > 30 ||
-    !vehicleId || vehicleId.length > 128 ||
+    !vehicleId || vehicleId.length > 128 || !rentalMode ||
     !startAt || !endAt || startAt <= new Date() || endAt <= startAt
   ) {
     return NextResponse.json({
@@ -154,9 +156,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
       const vehicle = await tx.vehicle.findFirst({
         where: { id: vehicleId, tenantId: tenant.id, status: { in: ["AVAILABLE", "RESERVED"] } },
-        select: { id: true, branchId: true, dailyRate: true, securityDeposit: true },
+        select: { id: true, branchId: true, dailyRate: true, selfDriveEnabled: true, withDriverEnabled: true, withDriverDailyRate: true, securityDeposit: true },
       });
       if (!vehicle) return { conflict: "This vehicle is not currently available." as const };
+      const modeEnabled = rentalMode === "WITH_DRIVER" ? vehicle.withDriverEnabled : vehicle.selfDriveEnabled;
+      const selectedRate = rentalMode === "WITH_DRIVER" ? vehicle.withDriverDailyRate : vehicle.dailyRate;
+      if (!modeEnabled || selectedRate === null) return { conflict: "That rental option is no longer available. Please refresh and choose another option." as const };
 
       const conflict = await tx.booking.findFirst({
         where: {
@@ -200,13 +205,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           status: "PENDING",
           startAt,
           endAt,
-          totalAmount: vehicle.dailyRate.mul(days),
+          totalAmount: selectedRate.mul(days),
           securityDeposit: vehicle.securityDeposit,
           rentalTermsSnapshot: rentalTerms,
           rentalTermsVersion,
           rentalTermsAcceptedAt: new Date(),
           publicTokenHash: hash(token),
-          items: { create: { vehicleId: vehicle.id, rate: vehicle.dailyRate } },
+          items: { create: { vehicleId: vehicle.id, rate: selectedRate, rentalMode } },
           messages: {
             create: {
               sender: "SYSTEM",

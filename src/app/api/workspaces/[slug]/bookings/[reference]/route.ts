@@ -38,7 +38,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       customer: { select: { name: true, email: true, phone: true } },
       items: {
         select: {
-          vehicle: { select: { id: true, type: true, make: true, model: true, year: true, plateNumber: true } },
+          rate: true, rentalMode: true, vehicle: { select: { id: true, type: true, make: true, model: true, year: true, plateNumber: true } },
         },
       },
       messages: { orderBy: { createdAt: "asc" } },
@@ -63,7 +63,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       securityDeposit: Number(booking.securityDeposit || 0),
       totalPayable: Number(booking.totalAmount) + Number(booking.securityDeposit || 0),
       customer: booking.customer,
-      vehicles: booking.items.map((item) => item.vehicle),
+      vehicles: booking.items.map((item) => ({ ...item.vehicle, rate: Number(item.rate), rentalMode: item.rentalMode })),
       messages: booking.messages,
       payments: booking.payments.map((payment) => ({ ...payment, amount: Number(payment.amount) })),
       documents: booking.documents,

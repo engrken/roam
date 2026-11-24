@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
+import { createAppNotification } from "@/lib/app-notifications";
 import { rentalDateTimeToUtc } from "@/lib/datetime";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const body = await request.json().catch(() => null);
   const tenant = await prisma.tenant.findUnique({
     where: { slug },
-    select: { id: true, name: true, status: true, timezone: true, rentalTerms: true },
+    select: { id: true, slug: true, name: true, status: true, timezone: true, rentalTerms: true },
   });
 
   if (!tenant || !["ACTIVE", "TRIAL"].includes(tenant.status)) {
@@ -213,7 +214,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             },
           },
         },
-        select: { reference: true, status: true },
+        select: { id: true, reference: true, status: true },
       });
 
       return { booking: savedBooking };
@@ -222,6 +223,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if ("conflict" in result) {
       return NextResponse.json({ error: result.conflict }, { status: 409 });
     }
+
+    await createAppNotification({
+      tenantId: tenant.id,
+      bookingId: result.booking.id,
+      audience: "TENANT",
+      type: "BOOKING_REQUEST",
+      title: "New booking request",
+      message: "A customer submitted booking request " + reference + ".",
+      actionUrl: "/workspace/" + encodeURIComponent(tenant.slug) + "/bookings",
+      dedupeKey: "booking-request:" + result.booking.id,
+    });
 
     const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://roamph.vercel.app").replace(/\/+$/, "");
     const bookingUrl = baseUrl + "/booking/" + encodeURIComponent(reference) + "?token=" + encodeURIComponent(token);

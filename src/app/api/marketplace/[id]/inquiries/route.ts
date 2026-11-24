@@ -46,7 +46,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         tenantStatus: listing.tenant.status,
       })) throw new Error("LISTING_NOT_PUBLIC");
 
-      const selectedRate = parsed.data.rentalMode === "WITH_DRIVER" ? listing.vehicle.withDriverDailyRate : listing.vehicle.dailyRate;\n      const modeEnabled = parsed.data.rentalMode === "WITH_DRIVER" ? listing.vehicle.withDriverEnabled : listing.vehicle.selfDriveEnabled;\n      if (!modeEnabled || selectedRate === null) throw new Error("RENTAL_MODE_UNAVAILABLE");\n\n      const [block, booking, maintenance, recentRequests] = await Promise.all([
+      const selectedRate = parsed.data.rentalMode === "WITH_DRIVER" ? listing.vehicle.withDriverDailyRate : listing.vehicle.dailyRate;
+      const modeEnabled = parsed.data.rentalMode === "WITH_DRIVER" ? listing.vehicle.withDriverEnabled : listing.vehicle.selfDriveEnabled;
+      if (!modeEnabled || selectedRate === null) throw new Error("RENTAL_MODE_UNAVAILABLE");
+
+      const [block, booking, maintenance, recentRequests] = await Promise.all([
         tx.marketplaceAvailabilityBlock.findFirst({
           where: { listingId: listing.id, startAt: { lt: range.endAt }, endAt: { gt: range.startAt } },
           select: { id: true },

@@ -93,7 +93,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   } catch (error) {
     const code = error instanceof Error ? error.message : "";
     if (code === "LISTING_NOT_PUBLIC") return NextResponse.json({ error: "This vehicle is no longer accepting inquiries." }, { status: 404 });
-    if (code === "RENTAL_MODE_UNAVAILABLE") return NextResponse.json({ error: "That rental option is no longer available. Please refresh the listing and choose another option." }, { status: 409 });\n    if (code === "DATES_UNAVAILABLE") return NextResponse.json({ error: "Those dates are unavailable. Please choose another range." }, { status: 409 });
+    if (code === "RENTAL_MODE_UNAVAILABLE") return NextResponse.json({ error: "That rental option is no longer available. Please refresh the listing and choose another option." }, { status: 409 });
+    if (code === "DATES_UNAVAILABLE") return NextResponse.json({ error: "Those dates are unavailable. Please choose another range." }, { status: 409 });
     if (code === "RATE_LIMITED") return NextResponse.json({ error: "Too many inquiries for this listing today. Please try again later." }, { status: 429 });
     console.error("Marketplace renter inquiry failed", error);
     return NextResponse.json({ error: "Unable to send your inquiry right now." }, { status: 500 });

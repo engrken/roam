@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { sendSubscriptionPaymentEmail } from "@/lib/email";
+import { createAppNotification } from "@/lib/app-notifications";
 
 export async function notifySubscriptionPayment(input: {
   tenantId: string;
@@ -24,6 +25,24 @@ export async function notifySubscriptionPayment(input: {
   } catch (error) {
     console.error("Subscription payment tenant notification failed", error);
   }
+  await createAppNotification({
+    tenantId: input.tenantId,
+    audience: "TENANT",
+    type: "SUBSCRIPTION_PAYMENT",
+    title: input.status === "APPROVED" ? "Subscription payment approved"
+      : input.status === "REJECTED" ? "Subscription payment needs attention"
+      : input.status === "EXPIRED" ? "Provisional subscription access expired"
+      : "Subscription payment submitted",
+    message: input.status === "APPROVED"
+      ? "Your subscription payment reference " + input.reference + " was approved."
+      : input.status === "REJECTED"
+        ? "Your subscription payment reference " + input.reference + " was rejected. " + (input.reason || "Review the payment details and resubmit.")
+        : input.status === "EXPIRED"
+          ? "The provisional access period for subscription payment " + input.reference + " expired before approval."
+          : "Your subscription payment reference " + input.reference + " was submitted for review.",
+    actionUrl: "/workspace/" + encodeURIComponent(tenant.slug) + "/account",
+    dedupeKey: "subscription-payment:" + input.tenantId + ":" + input.reference + ":" + input.status,
+  });
 }
 
 export async function expireTenantPendingSubscriptionPayment(tenantId: string, now = new Date()) {

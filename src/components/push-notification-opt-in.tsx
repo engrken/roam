@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 type Props = { slug?: string; reference?: string; token?: string };
+type PushApiResponse = { error?: string; publicKey?: string };
 
 function decodeKey(value: string) {
   const padding = "=".repeat((4 - value.length % 4) % 4);
@@ -12,10 +13,11 @@ function decodeKey(value: string) {
 }
 
 async function readResponse(response: Response) {
-  return response.json().catch(() => ({})) as Promise<{ error?: string }>;
+  return response.json().catch(() => ({})) as Promise<PushApiResponse>;
 }
 
 export function PushNotificationOptIn(props: Props) {
+  const { slug, reference, token } = props;
   const [supported, setSupported] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [enabled, setEnabled] = useState(false);
@@ -29,13 +31,13 @@ export function PushNotificationOptIn(props: Props) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       cache: "no-store",
-      body: JSON.stringify({ ...props, subscription: subscription.toJSON() }),
+      body: JSON.stringify({ slug, reference, token, subscription: subscription.toJSON() }),
     });
     const result = await readResponse(response);
     if (!response.ok) {
       throw new Error(result.error || "ROAM could not save this device's notification subscription.");
     }
-  }, [props.slug, props.reference, props.token]);
+  }, [slug, reference, token]);
 
   useEffect(() => {
     let active = true;
@@ -189,7 +191,7 @@ export function PushNotificationOptIn(props: Props) {
         fetch("/api/push/key", { cache: "no-store" }),
         navigator.serviceWorker.register("/sw.js", { scope: "/" }),
       ]);
-      const keyBody = await readResponse(keyResponse) as { error?: string; publicKey?: string };
+      const keyBody = await readResponse(keyResponse);
       if (!keyResponse.ok || !keyBody.publicKey) {
         throw new Error(keyBody.error || "ROAM's browser notification service is not configured correctly.");
       }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "node:crypto";
 import { getTenantAccess, canManageFleet, workspaceWriteBlock } from "@/lib/tenant-access";
 import { prisma } from "@/lib/prisma";
+import { createAppNotification } from "@/lib/app-notifications";
 import { sendBookingMessageNotification, sendBookingStatusNotification, sendBookingReminder, sendRentalCompletionReceipt } from "@/lib/email";
 import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 import { consumeRateLimit } from "@/lib/rate-limit";
@@ -113,8 +114,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       consumeRateLimit("workspace-booking-message-actor", access.user.id, 60, 60 * 60 * 1000),
     ]);
     if (!bookingAllowed || !actorAllowed) return NextResponse.json({ error: "Too many booking messages. Please try again later." }, { status: 429 });
-    await prisma.bookingMessage.create({
+    const savedMessage = await prisma.bookingMessage.create({
       data: { bookingId: booking.id, sender: "OWNER", body: message },
+      select: { id: true },
+    });
+    await createAppNotification({
+      tenantId: access.tenant.id, bookingId: booking.id, audience: "CLIENT",
+      type: "TEAM_MESSAGE", title: "New message from the rental team",
+      message: "The rental team sent a message about booking " + reference + ".",
+      actionUrl: "/booking/" + encodeURIComponent(reference) + "#booking-messages",
+      dedupeKey: "team-message:" + savedMessage.id,
     });
     if (booking.customer.email) {
       try {
@@ -221,6 +230,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     });
 
     if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
+    await createAppNotification({
+      tenantId: access.tenant.id, bookingId: booking.id, audience: "CLIENT",
+      type: "BOOKING_STATUS", title: "Booking " + result.nextStatus.toLowerCase(),
+      message: "Your booking " + reference + " is now " + result.nextStatus.toLowerCase() + ".",
+      actionUrl: "/booking/" + encodeURIComponent(reference) + "#booking-update",
+      dedupeKey: "booking-status:" + booking.id + ":" + result.nextStatus,
+    });
     let notification: "attempted" | "no_customer_email" | "failed" = booking.customer.email ? "attempted" : "no_customer_email";
     if (booking.customer.email) {
       try {
@@ -344,6 +360,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return true;
     });
     if (!result) return NextResponse.json({ error: "Document not found." }, { status: 404 });
+    await createAppNotification({
+      tenantId: access.tenant.id, bookingId: booking.id, audience: "CLIENT",
+      type: "DOCUMENT_REVIEW",
+      title: "Document " + String(body.reviewStatus).toLowerCase(),
+      message: "The rental team reviewed a document for booking " + reference + ": " + String(body.reviewStatus).toLowerCase() + ".",
+      actionUrl: "/booking/" + encodeURIComponent(reference) + "#booking-documents",
+      dedupeKey: "document-review:" + body.documentId + ":" + body.reviewStatus,
+    });
     return NextResponse.json({ reviewed: true });
   }
 

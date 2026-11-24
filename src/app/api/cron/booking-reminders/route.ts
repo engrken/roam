@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     prisma.booking.findMany({
       where: { status: "ACTIVE", endAt: { gte: windowStart, lt: windowEnd }, customer: { email: { not: null } } },
       orderBy: { endAt: "asc" },
-      select: { id: true, reference: true, startAt: true, endAt: true, tenant: { select: { name: true, timezone: true } }, customer: { select: { email: true } } },
+      select: { id: true, reference: true, startAt: true, endAt: true, tenant: { select: { id: true, name: true, slug: true, timezone: true } }, customer: { select: { email: true } } },
       take: 200,
     }),
     prisma.booking.findMany({
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       // reminders are intentionally recurring, once per tenant-local day.
       where: { status: "ACTIVE", endAt: { lte: now }, customer: { email: { not: null } } },
       orderBy: { endAt: "asc" },
-      select: { id: true, reference: true, startAt: true, endAt: true, tenant: { select: { name: true, timezone: true } }, customer: { select: { email: true } } },
+      select: { id: true, reference: true, startAt: true, endAt: true, tenant: { select: { id: true, name: true, slug: true, timezone: true } }, customer: { select: { email: true } } },
       take: 200,
     }),
   ]);

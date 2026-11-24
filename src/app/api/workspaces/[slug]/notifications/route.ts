@@ -24,7 +24,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   return NextResponse.json({
     notifications: rows.map(row => ({
       ...row,
-      actionUrl: access.role === "STAFF" ? `/workspace/${encodeURIComponent(slug)}` : row.actionUrl,
+      actionUrl: access.role === "STAFF" || (row.type === "SUBSCRIPTION_PAYMENT" && access.role !== "OWNER") ? `/workspace/${encodeURIComponent(slug)}` : row.actionUrl,
       createdAt: row.createdAt.toISOString(),
       acknowledgedAt: row.acknowledgedAt?.toISOString() ?? null,
     })),

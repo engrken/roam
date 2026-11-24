@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 
 function tokenFrom(request: NextRequest) {
-  return request.headers.get("authorization")?.match(/^Bearer\\s+(.+)$/i)?.[1]
+  return request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1]
     || request.nextUrl.searchParams.get("token")
     || "";
 }

@@ -16,6 +16,14 @@ async function readResponse(response: Response) {
   return response.json().catch(() => ({})) as Promise<PushApiResponse>;
 }
 
+function formatPushError(error: unknown) {
+  const message = error instanceof Error ? error.message : "";
+  if (/error retrieving push subscription/i.test(message)) {
+    return "Your browser's push service could not retrieve a subscription. Update your browser and retry. If it continues, disable VPN/proxy or network filtering, or try another network or browser.";
+  }
+  return message || "Unable to update notification settings.";
+}
+
 export function PushNotificationOptIn(props: Props) {
   const { slug, reference, token } = props;
   const pushContextKey = `${slug ?? ""}\\u0000${reference ?? ""}\\u0000${token ?? ""}`;
@@ -80,7 +88,8 @@ export function PushNotificationOptIn(props: Props) {
       }
 
       try {
-        const registration = await navigator.serviceWorker.getRegistration("/");
+        const existingRegistration = await navigator.serviceWorker.getRegistration("/");
+        const registration = existingRegistration ? await navigator.serviceWorker.ready : null;
         const subscription = await registration?.pushManager.getSubscription();
         if (!active) return;
 
@@ -113,11 +122,11 @@ export function PushNotificationOptIn(props: Props) {
             setMessage("This browser has a subscription, but ROAM could not sync it. Press RETRY to repair the connection.");
           }
         }
-      } catch {
+      } catch (error) {
         if (active) {
           setEnabled(false);
           setSynced(false);
-          setMessage("Could not check this device's notification subscription. Try again.");
+          setMessage(formatPushError(error));
         }
       } finally {
         if (active) setChecking(false);
@@ -204,9 +213,11 @@ export function PushNotificationOptIn(props: Props) {
           : "Notification permission was not granted. You can enable it whenever you are ready.");
       }
 
+      const keyRequest = fetch("/api/push/key", { cache: "no-store" });
+      await navigator.serviceWorker.register("/sw.js", { scope: "/" });
       const [keyResponse, registration] = await Promise.all([
-        fetch("/api/push/key", { cache: "no-store" }),
-        navigator.serviceWorker.register("/sw.js", { scope: "/" }),
+        keyRequest,
+        navigator.serviceWorker.ready,
       ]);
       const keyBody = await readResponse(keyResponse);
       if (!keyResponse.ok || !keyBody.publicKey) {
@@ -235,7 +246,7 @@ export function PushNotificationOptIn(props: Props) {
         setEnabled(false);
         setSynced(false);
       }
-      setMessage(error instanceof Error ? error.message : "Unable to update notification settings.");
+      setMessage(formatPushError(error));
     } finally {
       setBusy(false);
       setChecking(false);

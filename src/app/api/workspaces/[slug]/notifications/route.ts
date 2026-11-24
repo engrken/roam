@@ -10,15 +10,25 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   const access = await getTenantAccess(slug);
   if (!access) return NextResponse.json({ error: "Workspace access denied." }, { status: 404 });
 
-  const rows = await prisma.appNotification.findMany({
-    where: { tenantId: access.tenant.id, audience: "TENANT" },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    select: {
-      id: true, type: true, title: true, message: true, actionUrl: true,
-      createdAt: true, acknowledgedAt: true, acknowledgedByLabel: true,
-    },
-  });
+  const notificationSelect = {
+    id: true, type: true, title: true, message: true, actionUrl: true,
+    createdAt: true, acknowledgedAt: true, acknowledgedByLabel: true,
+  } as const;
+  const [pending, acknowledged] = await Promise.all([
+    prisma.appNotification.findMany({
+      where: { tenantId: access.tenant.id, audience: "TENANT", acknowledgedAt: null },
+      orderBy: { createdAt: "asc" },
+      take: 100,
+      select: notificationSelect,
+    }),
+    prisma.appNotification.findMany({
+      where: { tenantId: access.tenant.id, audience: "TENANT", acknowledgedAt: { not: null } },
+      orderBy: { acknowledgedAt: "desc" },
+      take: 50,
+      select: notificationSelect,
+    }),
+  ]);
+  const rows = [...pending, ...acknowledged].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
   // Staff can acknowledge shared notices, but their allowed landing page is the workspace overview.
   return NextResponse.json({

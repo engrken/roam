@@ -12,7 +12,7 @@ This guide is for rental-business Owners and Admins setting up a ROAM Workspace 
 
 ## 2. Add branches and vehicles
 1. Add your main pickup branch and its customer-facing address.
-2. Register each rentable vehicle with its type, make, model, plate number, daily rate and security deposit.
+2. Register each rentable vehicle with its type, make, model, plate number and security deposit.\n3. In **Rental options & pricing**, enable **Self-drive**, **With driver**, or both. Set the daily rate for each enabled option. The with-driver rate is the complete daily rate including the driver.\n4. Set the vehicle to **Available** only when it is ready to rent. Use Maintenance or Inactive when appropriate.
 3. Set each vehicle to **Available** only when it is ready to rent. Use Maintenance or Inactive when appropriate.
 4. Review your fleet and public booking page on a mobile device.
 

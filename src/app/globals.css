@@ -945,3 +945,19 @@
   .roam-sidebar .roam-side-nav .roam-sidebar-notifications{display:block!important}
   .roam-sidebar .roam-side-nav .roam-notification-card{display:flex!important;flex-direction:row;align-items:center}
 }
+
+
+/* Browser push control accessibility and recovery state. */
+.roam-sidebar-notifications .roam-notification-button:focus-visible {
+  outline: 2px solid #d3f58b;
+  outline-offset: 3px;
+}
+.roam-sidebar-notifications .roam-notification-button.is-error {
+  border-color: #fb7185;
+  background: #7f1d1d;
+  color: #fff;
+}
+.roam-sidebar-notifications .roam-notification-feedback {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

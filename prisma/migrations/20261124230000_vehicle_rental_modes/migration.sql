@@ -5,3 +5,6 @@ ALTER TABLE "Vehicle"
 
 ALTER TABLE "MarketplaceBookingInquiry"
   ADD COLUMN "rentalMode" VARCHAR(20) NOT NULL DEFAULT 'SELF_DRIVE';
+
+ALTER TABLE "BookingItem"
+  ADD COLUMN "rentalMode" VARCHAR(20) NOT NULL DEFAULT 'SELF_DRIVE';

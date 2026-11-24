@@ -136,7 +136,7 @@ export function PushNotificationOptIn(props: Props) {
       window.removeEventListener("focus", refresh);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [syncSubscription]);
+  }, [syncSubscription, pushContextKey]);
 
   async function toggle() {
     setBusy(true);

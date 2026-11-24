@@ -11,7 +11,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const body = await request.json().catch(() => null);
   const token = typeof body?.token === "string"
     ? body.token
-    : request.headers.get("authorization")?.match(/^Bearer\\s+(.+)$/i)?.[1] || "";
+    : request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1] || "";
   if (token.length < 20) return NextResponse.json({ error: "A valid booking access link is required." }, { status: 401 });
 
   const booking = await prisma.booking.findFirst({

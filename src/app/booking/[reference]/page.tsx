@@ -10,7 +10,7 @@ import "../../[slug]/book/booking-experience.css";
 type Message = { id: string; sender: string; body: string; createdAt: string };
 type Document = { id: string; kind: string; fileName: string; reviewStatus: string; createdAt?: string };
 type Payment = { amount: number; kind: string; method: string; reference: string | null; receivedAt: string };
-type Vehicle = { make: string; model: string; year: number | null; type: string; transmission: string | null; seats: number | null; rate: number; branch: { name: string; address: string | null } | null };
+type Vehicle = { make: string; model: string; year: number | null; type: string; transmission: string | null; seats: number | null; rate: number; rentalMode: string; branch: { name: string; address: string | null } | null };
 type Data = {
   reference: string; status: string; startAt: string; endAt: string; totalAmount: number; securityDeposit: number; totalPayable: number; paidAmount: number; balanceDue: number; rentalTermsSnapshot?: string | null; rentalTermsAcceptedAt?: string | null;
   business: { name: string; phone: string | null; currency?: string; timezone?: string }; customer?: { name: string };
@@ -142,7 +142,7 @@ export default function CustomerBookingPage() {
           </section>
           <section className="client-panel roam-customer-summary-panel">
             <div className="client-panel-heading"><div><span className="client-eyebrow">VEHICLE & PAYMENT</span><h2>Your rental summary</h2></div></div>
-            {data.vehicles?.length ? <div className="roam-customer-vehicle-list">{data.vehicles.map((vehicle,index)=><div key={index}><span className="roam-customer-vehicle-icon">🚘</span><span><b>{vehicle.year ? vehicle.year+" " : ""}{vehicle.make} {vehicle.model}</b><small>{[vehicle.type.replaceAll("_"," "),vehicle.transmission,vehicle.seats ? vehicle.seats+" seats" : null].filter(Boolean).join(" · ")}</small><small>{vehicle.branch?.name || "Pickup location to be confirmed"}{vehicle.branch?.address ? " · "+vehicle.branch.address : ""}</small></span><strong>{money(vehicle.rate,data.business.currency)}<small>/day</small></strong></div>)}</div> : <p className="client-panel-copy">Vehicle details will appear here.</p>}
+            {data.vehicles?.length ? <div className="roam-customer-vehicle-list">{data.vehicles.map((vehicle,index)=><div key={index}><span className="roam-customer-vehicle-icon">🚘</span><span><b>{vehicle.year ? vehicle.year+" " : ""}{vehicle.make} {vehicle.model}</b><small>{[vehicle.type.replaceAll("_"," "),vehicle.transmission,vehicle.seats ? vehicle.seats+" seats" : null].filter(Boolean).join(" · ")}</small><small>{vehicle.rentalMode === "WITH_DRIVER" ? "With driver" : "Self-drive"} · {vehicle.branch?.name || "Pickup location to be confirmed"}{vehicle.branch?.address ? " · "+vehicle.branch.address : ""}</small></span><strong>{money(vehicle.rate,data.business.currency)}<small>/day</small></strong></div>)}</div> : <p className="client-panel-copy">Vehicle details will appear here.</p>}
             <div className="roam-customer-payment-summary">
               <div><small>RENTAL FEE</small><b>{money(data.totalAmount,data.business.currency)}</b></div>
               <div><small>REFUNDABLE SECURITY DEPOSIT</small><b>{money(data.securityDeposit||0,data.business.currency)}</b></div>

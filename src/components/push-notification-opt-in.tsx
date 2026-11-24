@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type Props = { slug?: string; reference?: string; token?: string };
 type PushApiResponse = { error?: string; publicKey?: string };
@@ -18,6 +18,8 @@ async function readResponse(response: Response) {
 
 export function PushNotificationOptIn(props: Props) {
   const { slug, reference, token } = props;
+  const pushContextKey = `${slug ?? ""}\\u0000${reference ?? ""}\\u0000${token ?? ""}`;
+  const lastSyncedSubscriptionKey = useRef<string | null>(null);
   const [supported, setSupported] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [enabled, setEnabled] = useState(false);
@@ -56,6 +58,7 @@ export function PushNotificationOptIn(props: Props) {
 
       if (!available) {
         setPermission("default");
+        lastSyncedSubscriptionKey.current = null;
         setEnabled(false);
         setSynced(false);
         setMessage("Browser push requires HTTPS and a compatible browser.");
@@ -66,6 +69,7 @@ export function PushNotificationOptIn(props: Props) {
       const currentPermission = Notification.permission;
       setPermission(currentPermission);
       if (currentPermission !== "granted") {
+        lastSyncedSubscriptionKey.current = null;
         setEnabled(false);
         setSynced(false);
         setMessage(currentPermission === "denied"
@@ -82,7 +86,15 @@ export function PushNotificationOptIn(props: Props) {
 
         setEnabled(Boolean(subscription));
         if (!subscription) {
+          lastSyncedSubscriptionKey.current = null;
           setSynced(false);
+          setMessage("");
+          return;
+        }
+
+        const subscriptionKey = `${pushContextKey}\\u0000${subscription.endpoint}`;
+        if (lastSyncedSubscriptionKey.current === subscriptionKey) {
+          setSynced(true);
           setMessage("");
           return;
         }
@@ -90,11 +102,13 @@ export function PushNotificationOptIn(props: Props) {
         try {
           await syncSubscription(subscription);
           if (active) {
+            lastSyncedSubscriptionKey.current = subscriptionKey;
             setSynced(true);
             setMessage("");
           }
         } catch {
           if (active) {
+            lastSyncedSubscriptionKey.current = null;
             setSynced(false);
             setMessage("This browser has a subscription, but ROAM could not sync it. Press RETRY to repair the connection.");
           }
@@ -138,12 +152,14 @@ export function PushNotificationOptIn(props: Props) {
         const registration = await navigator.serviceWorker.getRegistration("/");
         const subscription = await registration?.pushManager.getSubscription();
         if (!subscription) {
+          lastSyncedSubscriptionKey.current = null;
           setEnabled(false);
           setSynced(false);
           throw new Error("This device no longer has an active push subscription. Turn notifications on again.");
         }
 
         await subscription.unsubscribe();
+        lastSyncedSubscriptionKey.current = null;
         setEnabled(false);
         setSynced(false);
 
@@ -170,6 +186,7 @@ export function PushNotificationOptIn(props: Props) {
           throw new Error("The browser subscription is no longer available. Turn notifications on again.");
         }
         await syncSubscription(subscription);
+        lastSyncedSubscriptionKey.current = `${pushContextKey}\\u0000${subscription.endpoint}`;
         setSynced(true);
         setMessage("Notification connection repaired. This device is registered with ROAM.");
         return;
@@ -206,6 +223,7 @@ export function PushNotificationOptIn(props: Props) {
       }
 
       await syncSubscription(subscription);
+      lastSyncedSubscriptionKey.current = `${pushContextKey}\\u0000${subscription.endpoint}`;
       setEnabled(true);
       setSynced(true);
       setMessage("Notifications are on. This device is registered to receive ROAM booking and payment updates.");

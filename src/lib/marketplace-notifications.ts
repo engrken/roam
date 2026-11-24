@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sendMarketplaceHostReviewUpdate } from "@/lib/email";
@@ -36,6 +37,7 @@ export async function createMarketplaceHostNotification(
   if (tenant) {
     await tx.appNotification.createMany({
       data: [{
+        id: randomUUID(),
         tenantId: input.tenantId,
         audience: "TENANT",
         type: "MARKETPLACE_REVIEW",

@@ -8,7 +8,7 @@ import "./booking-experience.css";
 type Vehicle = {
   id: string; type: string; make: string; model: string; year: number | null;
   color?: string | null; seats?: number | null; transmission?: string | null;
-  dailyRate: number; securityDeposit: number;
+  dailyRate: number; selfDriveEnabled: boolean; withDriverEnabled: boolean; withDriverDailyRate: number | null; securityDeposit: number;
   branch: { id?: string; name: string; address: string | null } | null;
 };
 type Branch = { id: string; name: string; address: string | null };
@@ -60,6 +60,7 @@ export default function PublicBookPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicleId, setVehicleId] = useState("");
+  const [rentalMode, setRentalMode] = useState<"SELF_DRIVE" | "WITH_DRIVER">("SELF_DRIVE");
   const [branchId, setBranchId] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -146,14 +147,15 @@ export default function PublicBookPage() {
   }, [draftLoaded, slug, startAt, endAt, branchId]);
 
   const chosen = vehicles.find(vehicle => vehicle.id === vehicleId);
+  const selectedRate = chosen ? (rentalMode === "WITH_DRIVER" ? chosen.withDriverDailyRate : chosen.dailyRate) : null;
   const estimate = useMemo(() => {
     if (!chosen || !startAt || !endAt) return null;
     const zone = business?.timezone || "Asia/Manila";
     const start = wallClockEpoch(startAt, zone), end = wallClockEpoch(endAt, zone);
     if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
     const days = Math.max(1, Math.ceil((end - start) / 86_400_000));
-    return { days, rental: chosen.dailyRate * days, deposit: chosen.securityDeposit || 0 };
-  }, [startAt, endAt, chosen, business?.timezone]);
+    return { days, rental: (selectedRate || 0) * days, deposit: chosen.securityDeposit || 0 };
+  }, [startAt, endAt, chosen, selectedRate, business?.timezone]);
 
   async function continueToVehicles(event: FormEvent) {
     event.preventDefault();
@@ -201,7 +203,7 @@ export default function PublicBookPage() {
     try {
       const response = await fetch("/api/public/" + encodeURIComponent(slug) + "/bookings", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone, vehicleId, startAt, endAt, acceptedRentalTerms, rentalTermsVersion: business.rentalTermsVersion }),
+        body: JSON.stringify({ name, email, phone, vehicleId, rentalMode, startAt, endAt, acceptedRentalTerms, rentalTermsVersion: business.rentalTermsVersion }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Unable to submit your request.");
@@ -250,9 +252,10 @@ export default function PublicBookPage() {
             <div className="roam-booking-step-heading"><span>STEP 2 OF 4</span><h2>Choose your vehicle</h2><p>Vehicles shown below are available for your selected rental period, based on current bookings.</p></div>
             <div className="roam-booking-trip-chip"><span>📅 {displayDate(startAt, zone)} – {displayDate(endAt, zone)}</span><button type="button" onClick={() => { setStep(1); setError(""); }}>Change dates</button></div>
             {vehicles.length === 0 ? <div className="client-empty roam-booking-no-vehicles"><strong>No vehicles match those dates.</strong><p>Try another pickup period or select a different branch.</p><button type="button" className="client-primary" onClick={() => { setStep(1); setError(""); }}>Change schedule</button></div> :
-              <div className="roam-booking-vehicle-list">{vehicles.map(vehicle => <button type="button" key={vehicle.id} className={"roam-booking-vehicle " + (vehicleId === vehicle.id ? "is-selected" : "")} onClick={() => { setVehicleId(vehicle.id); setError(""); }}>
-                <span className="roam-booking-vehicle-icon">🚘</span><span className="roam-booking-vehicle-info"><b>{vehicle.year ? vehicle.year + " " : ""}{vehicle.make} {vehicle.model}</b><small>{[vehicle.type.replaceAll("_", " "), vehicle.transmission, vehicle.seats ? vehicle.seats + " seats" : null, vehicle.color].filter(Boolean).join(" · ")}</small><small>{vehicle.branch?.name || "Pickup location to be confirmed"}{vehicle.branch?.address ? " · " + vehicle.branch.address : ""}</small></span><span className="roam-booking-vehicle-rate"><b>{money(vehicle.dailyRate, currency)}</b><small>per day</small></span><span className="roam-booking-radio">{vehicleId === vehicle.id ? "✓" : ""}</span>
+              <div className="roam-booking-vehicle-list">{vehicles.map(vehicle => <button type="button" key={vehicle.id} className={"roam-booking-vehicle " + (vehicleId === vehicle.id ? "is-selected" : "")} onClick={() => { setVehicleId(vehicle.id); setRentalMode(vehicle.selfDriveEnabled ? "SELF_DRIVE" : "WITH_DRIVER"); setError(""); }}>
+                <span className="roam-booking-vehicle-icon">🚘</span><span className="roam-booking-vehicle-info"><b>{vehicle.year ? vehicle.year + " " : ""}{vehicle.make} {vehicle.model}</b><small>{[vehicle.type.replaceAll("_", " "), vehicle.transmission, vehicle.seats ? vehicle.seats + " seats" : null, vehicle.color].filter(Boolean).join(" · ")}</small><small>{vehicle.branch?.name || "Pickup location to be confirmed"}{vehicle.branch?.address ? " · " + vehicle.branch.address : ""}</small></span><span className="roam-booking-vehicle-rate">{vehicle.selfDriveEnabled && <><b>{money(vehicle.dailyRate, currency)}</b><small>self-drive / day</small></>}{vehicle.withDriverEnabled && <><b>{money(vehicle.withDriverDailyRate || 0, currency)}</b><small>with driver / day</small></>}</span><span className="roam-booking-radio">{vehicleId === vehicle.id ? "✓" : ""}</span>
               </button>)}</div>}
+            {chosen && <label className="mt-4 block text-sm font-semibold">Rental option<select className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-3" value={rentalMode} onChange={event => setRentalMode(event.target.value as "SELF_DRIVE" | "WITH_DRIVER")}><option value="SELF_DRIVE" disabled={!chosen.selfDriveEnabled}>Self-drive — {money(chosen.dailyRate, currency)}/day</option><option value="WITH_DRIVER" disabled={!chosen.withDriverEnabled}>With driver — {money(chosen.withDriverDailyRate || 0, currency)}/day</option></select></label>}
             <div className="roam-booking-actions"><button type="button" className="client-refresh" onClick={() => setStep(1)}>← Back</button><button type="button" className="client-primary" disabled={!vehicleId || !chosen} onClick={continueToDetails}>Continue <span>→</span></button></div>
           </div>}
           {step === 3 && <form className="roam-booking-step-content" onSubmit={continueToReview}>
@@ -277,7 +280,7 @@ export default function PublicBookPage() {
               <div><small>CUSTOMER</small><b>{name}</b><span>{email} · {phone}</span><button type="button" onClick={() => setStep(3)}>Edit details</button></div>
             </div>
             {estimate && <div className="roam-booking-cost">
-              <div><span>{money(chosen?.dailyRate || 0, currency)} × {estimate.days} {estimate.days === 1 ? "day" : "days"}</span><b>{money(estimate.rental, currency)}</b></div>
+              <div><span>{money(selectedRate || 0, currency)} × {estimate.days} {estimate.days === 1 ? "day" : "days"}</span><b>{money(estimate.rental, currency)}</b></div>
               {estimate.deposit > 0 && <div><span>Refundable security deposit (business-set)</span><b>{money(estimate.deposit, currency)}</b></div>}
               <div className="roam-booking-cost-total"><span>Estimated amount</span><b>{money(estimate.rental + estimate.deposit, currency)}</b></div>
               <small>This is an estimate, not a payment receipt or confirmed charge. The rental team will confirm the final amount and payment arrangements.</small>

@@ -19,6 +19,7 @@ export const marketplaceInquirySchema = z.object({
   requesterPhone: z.string().trim().max(40).optional().or(z.literal("")),
   startDate: dateOnly,
   endDate: dateOnly,
+  rentalMode: z.enum(["SELF_DRIVE", "WITH_DRIVER"]).default("SELF_DRIVE"),
   message: z.string().trim().max(1500).optional().or(z.literal("")),
   contactConsent: z.literal(true),
 }).refine((value) => value.startDate < value.endDate, {

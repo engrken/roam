@@ -23,15 +23,26 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   });
   if (!booking) return NextResponse.json({ error: "Booking not found." }, { status: 404 });
 
-  const rows = await prisma.appNotification.findMany({
-    where: { bookingId: booking.id, audience: "CLIENT" },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    select: {
-      id: true, type: true, title: true, message: true, actionUrl: true,
-      createdAt: true, acknowledgedAt: true, acknowledgedByLabel: true,
-    },
-  });
+  const notificationSelect = {
+    id: true, type: true, title: true, message: true, actionUrl: true,
+    createdAt: true, acknowledgedAt: true, acknowledgedByLabel: true,
+  } as const;
+  const [pending, acknowledged] = await Promise.all([
+    prisma.appNotification.findMany({
+      where: { bookingId: booking.id, audience: "CLIENT", acknowledgedAt: null },
+      orderBy: { createdAt: "asc" },
+      take: 100,
+      select: notificationSelect,
+    }),
+    prisma.appNotification.findMany({
+      where: { bookingId: booking.id, audience: "CLIENT", acknowledgedAt: { not: null } },
+      orderBy: { acknowledgedAt: "desc" },
+      take: 50,
+      select: notificationSelect,
+    }),
+  ]);
+  const rows = [...pending, ...acknowledged].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
   return NextResponse.json({
     notifications: rows.map(row => ({
       ...row,

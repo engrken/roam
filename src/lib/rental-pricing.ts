@@ -71,3 +71,66 @@ export function calculateRentalPrice(input: {
   if (amountCents === null) return null;
   return { periods, amount: (amountCents / 100).toFixed(2) };
 }
+
+export type ReturnChargeBreakdown = {
+  vehicleId: string;
+  actualKm: number;
+  includedKm: number | null;
+  excessKm: number;
+  excessMileageCharge: string;
+  overtimeMinutes: number;
+  overtimeHours: number;
+  overtimeCharge: string;
+  totalCharge: string;
+};
+
+export function calculateReturnCharges(input: {
+  vehicleId: string;
+  handoverOdometerKm: number;
+  returnOdometerKm: number;
+  startAt: Date | string;
+  endAt: Date | string;
+  returnedAt: Date | string;
+  includedKmPerDay: number | null;
+  excessMileageRate: number;
+  overtimeGraceMinutes: number;
+  overtimeHourlyRate: number | null;
+}): ReturnChargeBreakdown | null {
+  const start = input.startAt instanceof Date ? input.startAt.getTime() : new Date(input.startAt).getTime();
+  const end = input.endAt instanceof Date ? input.endAt.getTime() : new Date(input.endAt).getTime();
+  const returned = input.returnedAt instanceof Date ? input.returnedAt.getTime() : new Date(input.returnedAt).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || !Number.isFinite(returned) || end <= start
+    || !Number.isSafeInteger(input.handoverOdometerKm) || !Number.isSafeInteger(input.returnOdometerKm)
+    || input.handoverOdometerKm < 0 || input.returnOdometerKm < input.handoverOdometerKm
+    || !Number.isFinite(input.excessMileageRate) || input.excessMileageRate < 0
+    || !Number.isSafeInteger(input.overtimeGraceMinutes) || input.overtimeGraceMinutes < 0
+    || (input.includedKmPerDay !== null && (!Number.isSafeInteger(input.includedKmPerDay) || input.includedKmPerDay < 0))
+    || (input.overtimeHourlyRate !== null && (!Number.isFinite(input.overtimeHourlyRate) || input.overtimeHourlyRate < 0))) return null;
+
+  const actualKm = input.returnOdometerKm - input.handoverOdometerKm;
+  const rentalDays = Math.max(1, Math.ceil((end - start) / 86_400_000));
+  const includedKm = input.includedKmPerDay === null ? null : input.includedKmPerDay * rentalDays;
+  const excessKm = includedKm === null ? 0 : Math.max(0, actualKm - includedKm);
+  const mileageCents = Math.round(input.excessMileageRate * 100) * excessKm;
+
+  const overtimeMs = Math.max(0, returned - end - input.overtimeGraceMinutes * 60_000);
+  const overtimeMinutes = Math.ceil(overtimeMs / 60_000);
+  const overtimeHours = input.overtimeHourlyRate === null || overtimeMinutes === 0
+    ? 0 : Math.ceil(overtimeMinutes / 60);
+  const overtimeCents = input.overtimeHourlyRate === null
+    ? 0 : Math.round(input.overtimeHourlyRate * 100) * overtimeHours;
+  const totalCents = mileageCents + overtimeCents;
+  if (![mileageCents, overtimeCents, totalCents].every(Number.isSafeInteger) || totalCents < 0 || totalCents > 100_000_000_000) return null;
+
+  return {
+    vehicleId: input.vehicleId,
+    actualKm,
+    includedKm,
+    excessKm,
+    excessMileageCharge: (mileageCents / 100).toFixed(2),
+    overtimeMinutes,
+    overtimeHours,
+    overtimeCharge: (overtimeCents / 100).toFixed(2),
+    totalCharge: (totalCents / 100).toFixed(2),
+  };
+}

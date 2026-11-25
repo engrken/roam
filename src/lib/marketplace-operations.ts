@@ -27,7 +27,7 @@ export const marketplaceInquirySchema = z.object({
   deliveryAddress: z.string().trim().max(300).optional().or(z.literal("")),
   message: z.string().trim().max(1500).optional().or(z.literal("")),
   contactConsent: z.literal(true),
-}).refine((value) => value.startDate < value.endDate, {
+}).refine((value) => value.startDate < value.endDate || (value.startDate === value.endDate && value.startTime < value.endTime), {
   message: "End date must be on or after start date.",
   path: ["endDate"],
 });

@@ -47,3 +47,8 @@ SET "ratePeriods" = GREATEST(1, CEIL(EXTRACT(EPOCH FROM ("endAt" - "startAt")) /
 ALTER TABLE "MarketplaceRentalQuote"
   ADD COLUMN "rateUnit" VARCHAR(10) NOT NULL DEFAULT 'DAILY',
   ADD COLUMN "securityDeposit" DECIMAL(12,2) NOT NULL DEFAULT 0;
+
+ALTER TABLE "Booking"
+  ADD COLUMN "returnChargesAmount" DECIMAL(12,2) NOT NULL DEFAULT 0,
+  ADD COLUMN "returnChargesBreakdown" JSONB,
+  ADD COLUMN "returnChargesCalculatedAt" TIMESTAMP(3);

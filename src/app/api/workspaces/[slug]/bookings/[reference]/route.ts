@@ -377,7 +377,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           const receiptData = await prisma.booking.findFirst({
             where: { id: booking.id, tenantId: access.tenant.id },
             select: {
-              totalAmount: true, securityDeposit: true,
+              totalAmount: true, securityDeposit: true, returnChargesAmount: true, returnChargesBreakdown: true,
               items: { select: { vehicle: { select: { make: true, model: true, plateNumber: true } } } },
               payments: { orderBy: { receivedAt: "asc" }, select: { amount: true, kind: true, method: true, reference: true, notes: true, receivedAt: true } },
             },

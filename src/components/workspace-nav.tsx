@@ -88,26 +88,41 @@ export function WorkspaceNav({ slug, name, role, active }: { slug: string; name:
       {effectiveRole==="OWNER" ? <Link href={`/workspace/${slug}/account`} style={{display:"block",marginTop:5,fontWeight:700,color:"#0e7490"}}>Review subscription <ArrowUpRight size={12}/></Link> : <span style={{display:"block",marginTop:5}}>Ask your workspace owner about upgrading.</span>}
     </div>}
     <nav className="roam-side-nav" id="roam-workspace-menu" aria-label="Workspace navigation" onClick={() => setMenuOpen(false)}>
+      <div className="roam-nav-section-label">WORKSPACE</div>
       <Link title="Overview" className={active === "overview" ? "active" : ""} href={`/workspace/${slug}`}><LayoutDashboard size={18}/><span className="roam-nav-label">Overview</span></Link>
+
+      <div className="roam-nav-section-label">FLEET OPERATIONS</div>
       <Link title="Fleet management" className={active === "fleet" ? "active" : ""} href={`/workspace/${slug}/fleet`}><CarFront size={18}/><span className="roam-nav-label">Fleet management</span></Link>
-      {effectiveRole !== "STAFF" && <Link title="Marketplace host onboarding" className={active === "marketplace" ? "active" : ""} href={`/workspace/${slug}/marketplace`}><Store size={18}/><span className="roam-nav-label">Marketplace</span></Link>}
       {effectiveRole !== "STAFF" && <>
         <Link title="Maintenance & expenses" className={active === "maintenance" ? "active" : ""} href={`/workspace/${slug}/maintenance`}><Wrench size={18}/><span className="roam-nav-label">Maintenance & expenses</span></Link>
         <Link title="Fleet calendar" className={active === "calendar" ? "active" : ""} href={`/workspace/${slug}/calendar`}><CalendarDays size={18}/><span className="roam-nav-label">Fleet calendar</span></Link>
+      </>}
+      {lockedItem("branches", "Branches", <MapPin size={18}/>)}
+
+      <div className="roam-nav-section-label">BOOKINGS & CUSTOMERS</div>
+      {effectiveRole !== "STAFF" && <>
         <Link title="Bookings" className={active === "bookings" ? "active" : ""} href={`/workspace/${slug}/bookings`}><CalendarDays size={18}/><span className="roam-nav-label">Bookings</span></Link>
         <Link title="Customer messages" className={active === "messages" ? "active" : ""} href={`/workspace/${slug}/messages`}><MessageCircle size={18}/><span className="roam-nav-label">Customer messages</span></Link>
+        <Link title="Customers" className={active === "customers" ? "active" : ""} href={`/workspace/${slug}/customers`}><Users size={18}/><span className="roam-nav-label">Customers</span></Link>
+      </>}
+      <Link title="Rental terms" className={active === "rental-terms" ? "active" : ""} href={`/workspace/${slug}/rental-terms`}><FileText size={18}/><span className="roam-nav-label">Rental terms</span></Link>
+
+      <div className="roam-nav-section-label">BUSINESS</div>
+      {effectiveRole !== "STAFF" && <Link title="Marketplace host onboarding" className={active === "marketplace" ? "active" : ""} href={`/workspace/${slug}/marketplace`}><Store size={18}/><span className="roam-nav-label">Marketplace</span></Link>}
+      {effectiveRole !== "STAFF" && <>
         <Link title="Financials" className={active === "finance" ? "active" : ""} href={`/workspace/${slug}/finance`}><Wallet size={18}/><span className="roam-nav-label">Financials</span></Link>
         <Link title="Payment verification" className={active === "payment-review" ? "active" : ""} href={`/workspace/${slug}/payment-review`}><ClipboardCheck size={18}/><span className="roam-nav-label">Payment verification</span></Link>
       </>}
-      {lockedItem("branches", "Branches", <MapPin size={18}/>)}
-{effectiveRole !== "STAFF" && <Link title="Customers" className={active === "customers" ? "active" : ""} href={`/workspace/${slug}/customers`}><Users size={18}/><span className="roam-nav-label">Customers</span></Link>}
-      <Link title="Rental terms" className={active === "rental-terms" ? "active" : ""} href={`/workspace/${slug}/rental-terms`}><FileText size={18}/><span className="roam-nav-label">Rental terms</span></Link>
-      {lockedItem("team", "Team & access", <UserCog size={18}/>)}
-      {(effectiveRole === "OWNER" || effectiveRole === "ADMIN") && <Link title="Audit history" className={active === "audit" ? "active" : ""} href={`/workspace/${slug}/audit`}><ClipboardList size={18}/><span className="roam-nav-label">Audit history</span></Link>}
       <Link title="Business settings" className={active === "settings" ? "active" : ""} href={`/workspace/${slug}/settings`}><UserCog size={18}/><span className="roam-nav-label">Business settings</span></Link>
       {(effectiveRole === "OWNER" || effectiveRole === "ADMIN") && <Link title="Rental payment methods" className={active === "payment-settings" ? "active" : ""} href={`/workspace/${slug}/payment-settings`}><CreditCard size={18}/><span className="roam-nav-label">Rental payment methods</span></Link>}
+
+      <div className="roam-nav-section-label">TEAM & REPORTING</div>
+      {lockedItem("team", "Team & access", <UserCog size={18}/>)}
+      {(effectiveRole === "OWNER" || effectiveRole === "ADMIN") && <Link title="Audit history" className={active === "audit" ? "active" : ""} href={`/workspace/${slug}/audit`}><ClipboardList size={18}/><span className="roam-nav-label">Audit history</span></Link>}
       {effectiveRole === "OWNER" && <Link title="Account & subscription" className={active === "account" ? "active" : ""} href={`/workspace/${slug}/account`}><ShieldCheck size={18}/><span className="roam-nav-label">Account & subscription</span></Link>}
       {effectiveRole !== "STAFF" && lockedItem("reports", "Reports", <UserCog size={18}/>)}
+
+      <div className="roam-nav-section-label">HELP & SUPPORT</div>
       <Link title="How-to guides" className={active === "help" ? "active" : ""} href={`/workspace/${slug}/help`}><BookOpen size={18}/><span className="roam-nav-label">How-to guides</span></Link>
       <Link href="/admin" title="Platform admin" className="roam-admin-link"><ShieldCheck size={18}/><span className="roam-nav-label">Platform admin</span></Link>
     </nav>

@@ -189,7 +189,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
 
       let returnChargesAmount = "0.00";
-      let returnChargeBreakdown: ReturnChargeBreakdown[] = [];
+      const returnChargeBreakdown: ReturnChargeBreakdown[] = [];
       if (nextStatus === "ACTIVE" || nextStatus === "COMPLETED") {
         const inspectionType = nextStatus === "ACTIVE" ? "HANDOVER" : "RETURN";
         const completed = await tx.vehicleInspection.findMany({

@@ -25,13 +25,15 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     take: 100,
     select: {
       id: true, requesterName: true, requesterEmail: true, requesterPhone: true,
-      startAt: true, endAt: true, dailyRateSnapshot: true, status: true, message: true,
+      startAt: true, endAt: true, dailyRateSnapshot: true, rateUnit: true, ratePeriods: true,
+      deliveryRequested: true, deliveryAddress: true, deliveryFeeSnapshot: true, includedKmPerDaySnapshot: true,
+      excessMileageRateSnapshot: true, overtimeGraceMinutesSnapshot: true, overtimeHourlyRateSnapshot: true, status: true, message: true,
       listing: { select: { headline: true, vehicle: { select: { make: true, model: true, year: true } } } },
       rentalQuotes: {
         orderBy: { version: "desc" },
         take: 10,
         select: {
-          id: true, version: true, status: true, currency: true, dailyRate: true,
+          id: true, version: true, status: true, currency: true, dailyRate: true, rateUnit: true,
           rentalDays: true, baseAmount: true, addOns: true, discountAmount: true,
           fees: true, totalAmount: true, validUntil: true, snapshot: true,
           agreementReference: true, agreementReviewedAt: true, agreementReviewedById: true,
@@ -47,6 +49,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     inquiries: inquiries.map((item) => ({
       ...item,
       dailyRateSnapshot: Number(item.dailyRateSnapshot),
+      deliveryFeeSnapshot: Number(item.deliveryFeeSnapshot),
+      excessMileageRateSnapshot: Number(item.excessMileageRateSnapshot),
+      overtimeHourlyRateSnapshot: item.overtimeHourlyRateSnapshot === null ? null : Number(item.overtimeHourlyRateSnapshot),
       rentalQuotes: item.rentalQuotes.map((quote) => ({
         ...quote,
         dailyRate: Number(quote.dailyRate),
@@ -73,7 +78,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     where: { id: parsed.data.inquiryId, tenantId: access.tenant.id },
     select: {
       id: true, status: true, startAt: true, endAt: true, requesterName: true,
-      requesterEmail: true, requesterPhone: true, dailyRateSnapshot: true,
+      requesterEmail: true, requesterPhone: true, dailyRateSnapshot: true, rateUnit: true, ratePeriods: true,
+      deliveryRequested: true, deliveryAddress: true, deliveryFeeSnapshot: true, includedKmPerDaySnapshot: true,
+      excessMileageRateSnapshot: true, overtimeGraceMinutesSnapshot: true, overtimeHourlyRateSnapshot: true,
       listing: { select: { headline: true, vehicle: { select: { make: true, model: true, year: true } } } },
     },
   });
@@ -84,7 +91,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const startDate = new Date(inquiry.startAt).toISOString().slice(0, 10);
   const endDate = new Date(inquiry.endAt).toISOString().slice(0, 10);
-  const rentalDays = Math.round((inquiry.endAt.getTime() - inquiry.startAt.getTime()) / 86_400_000);
+  const rentalDays = inquiry.ratePeriods;
   const validUntilDate = new Date(`${parsed.data.validUntil}T00:00:00.000Z`);
   const maxExpiryDate = new Date(`${todayInManila()}T00:00:00.000Z`);
   maxExpiryDate.setUTCDate(maxExpiryDate.getUTCDate() + 30);
@@ -108,11 +115,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     inquiryId: inquiry.id,
     requester: { name: inquiry.requesterName, email: inquiry.requesterEmail, phone: inquiry.requesterPhone },
     listing: inquiry.listing,
-    rentalPeriod: { startDate, endDate, rentalDays },
+    rentalPeriod: { startDate, endDate, startAt: inquiry.startAt.toISOString(), endAt: inquiry.endAt.toISOString(), rateUnit: inquiry.rateUnit, ratePeriods: inquiry.ratePeriods },
     originalDailyRateSnapshot: Number(inquiry.dailyRateSnapshot),
+    originalRateSnapshot: { unitRate: Number(inquiry.dailyRateSnapshot), rateUnit: inquiry.rateUnit, ratePeriods: inquiry.ratePeriods },
+    requestedExtras: {
+      deliveryRequested: inquiry.deliveryRequested, deliveryAddress: inquiry.deliveryAddress,
+      deliveryFeeSnapshot: Number(inquiry.deliveryFeeSnapshot), includedKmPerDay: inquiry.includedKmPerDaySnapshot,
+      excessMileageRate: Number(inquiry.excessMileageRateSnapshot), overtimeGraceMinutes: inquiry.overtimeGraceMinutesSnapshot,
+      overtimeHourlyRate: inquiry.overtimeHourlyRateSnapshot === null ? null : Number(inquiry.overtimeHourlyRateSnapshot),
+    },
     currency,
     quote: {
       dailyRate: parsed.data.dailyRate,
+      rateUnit: inquiry.rateUnit,
       baseAmount: totals.baseAmount,
       addOns: parsed.data.addOns,
       discountAmount: totals.discountAmount,
@@ -140,6 +155,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           version,
           currency,
           dailyRate: parsed.data.dailyRate.toFixed(2),
+          rateUnit: inquiry.rateUnit,
           rentalDays,
           baseAmount: totals.baseAmount,
           addOns: parsed.data.addOns,

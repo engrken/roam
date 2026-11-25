@@ -20,7 +20,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       orderBy: { createdAt: "desc" },
       select: {
         id: true, headline: true, status: true, isPublished: true,
-        vehicle: { select: { make: true, model: true, year: true, dailyRate: true, status: true } },
+        vehicle: { select: { make: true, model: true, year: true, dailyRate: true, hourlyRate: true, weeklyRate: true, monthlyRate: true, selfDriveEnabled: true, withDriverEnabled: true, withDriverDailyRate: true, status: true } },
         availabilityBlocks: { where: { endAt: { gte: new Date() } }, orderBy: { startAt: "asc" }, take: 50, select: { id: true, startAt: true, endAt: true, label: true } },
       },
     }),
@@ -30,7 +30,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       take: 100,
       select: {
         id: true, listingId: true, requesterName: true, requesterEmail: true, requesterPhone: true,
-        startAt: true, endAt: true, dailyRateSnapshot: true, rentalMode: true, message: true, status: true,
+        startAt: true, endAt: true, dailyRateSnapshot: true, rentalMode: true, rateUnit: true, ratePeriods: true,
+        deliveryRequested: true, deliveryAddress: true, deliveryFeeSnapshot: true, includedKmPerDaySnapshot: true,
+        excessMileageRateSnapshot: true, overtimeGraceMinutesSnapshot: true, overtimeHourlyRateSnapshot: true, message: true, status: true,
         hostNote: true, createdAt: true, reviewedAt: true, contactConsentAt: true, consentVersion: true,
         listing: { select: { headline: true, vehicle: { select: { make: true, model: true } } } },
       },
@@ -42,11 +44,18 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     inquiriesEnabled: process.env.ROAM_MARKETPLACE_INQUIRIES_ENABLED === "true",
     listings: listings.map((listing) => ({
       ...listing,
-      vehicle: { ...listing.vehicle, dailyRate: Number(listing.vehicle.dailyRate) },
+      vehicle: { ...listing.vehicle, dailyRate: Number(listing.vehicle.dailyRate),
+        hourlyRate: listing.vehicle.hourlyRate === null ? null : Number(listing.vehicle.hourlyRate),
+        weeklyRate: listing.vehicle.weeklyRate === null ? null : Number(listing.vehicle.weeklyRate),
+        monthlyRate: listing.vehicle.monthlyRate === null ? null : Number(listing.vehicle.monthlyRate),
+        withDriverDailyRate: listing.vehicle.withDriverDailyRate === null ? null : Number(listing.vehicle.withDriverDailyRate) },
     })),
     inquiries: inquiries.map((inquiry) => ({
       ...inquiry,
       dailyRateSnapshot: Number(inquiry.dailyRateSnapshot),
+      deliveryFeeSnapshot: Number(inquiry.deliveryFeeSnapshot),
+      excessMileageRateSnapshot: Number(inquiry.excessMileageRateSnapshot),
+      overtimeHourlyRateSnapshot: inquiry.overtimeHourlyRateSnapshot === null ? null : Number(inquiry.overtimeHourlyRateSnapshot),
     })),
   });
 }

@@ -317,10 +317,13 @@ export default function PublicBookPage() {
           <div className="client-summary-top"><span>YOUR RENTAL SUMMARY</span><span className="client-secure">● PRIVATE & SECURE</span></div>
           {chosen && estimate ? <>
             <div className="roam-booking-summary-vehicle"><b>{chosen.year ? chosen.year + " " : ""}{chosen.make} {chosen.model}</b><small>{chosen.branch?.name || "Pickup location to be confirmed"}</small></div>
-            <div className="client-summary-line"><span>Rental duration</span><strong>{estimate.days} {estimate.days === 1 ? "day" : "days"}</strong></div>
+            <div className="client-summary-line"><span>Rental option</span><strong>{rentalMode === "WITH_DRIVER" ? "With driver" : "Self-drive"}</strong></div>
+            <div className="client-summary-line"><span>Rental duration</span><strong>{estimate.periods} {rentalRateUnitLabel(rateUnit)}{estimate.periods === 1 ? "" : "s"}</strong></div>
             <div className="client-summary-line"><span>Rental estimate</span><strong>{money(estimate.rental, currency)}</strong></div>
+            {estimate.delivery > 0 && <div className="client-summary-line"><span>Delivery</span><strong>{money(estimate.delivery, currency)}</strong></div>}
+            {estimate.delivery === 0 && deliveryRequested && <div className="client-summary-line"><span>Delivery</span><strong>Free</strong></div>}
             {estimate.deposit > 0 && <div className="client-summary-line"><span>Refundable deposit</span><strong>{money(estimate.deposit, currency)}</strong></div>}
-            <div className="client-summary-total"><span>Estimated total</span><strong>{money(estimate.rental + estimate.deposit, currency)}</strong></div>
+            <div className="client-summary-total"><span>Estimated total</span><strong>{money(estimate.rental + estimate.delivery + estimate.deposit, currency)}</strong></div>
           </> : <div className="client-summary-empty"><div>₱</div><strong>Your summary will appear here.</strong><p>Choose your dates and vehicle to see the estimated rental cost.</p></div>}
           <div className="client-trust"><div>✓ <span><b>No payment collected here</b><small>Send a request first. The rental team will confirm payment arrangements.</small></span></div><div>✓ <span><b>Private booking link</b><small>Track your request and communicate securely.</small></span></div></div>
         </aside>

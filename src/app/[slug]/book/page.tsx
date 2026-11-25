@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { availableRentalRateUnits, calculateRentalPrice, rentalRateForMode, rentalRateUnitLabel, type RentalMode, type RentalRateUnit } from "@/lib/rental-pricing";
@@ -157,7 +157,7 @@ export default function PublicBookPage() {
   const chosen = vehicles.find(vehicle => vehicle.id === vehicleId);
   const selectedRate = chosen ? rentalRateForMode(chosen, rentalMode, rateUnit) : null;
   const selectedRateUnits = chosen ? availableRentalRateUnits(chosen, rentalMode) : [];
-  const estimate = useMemo(() => {
+  const estimate = (() => {
     if (!chosen || selectedRate === null || !startAt || !endAt) return null;
     const zone = business?.timezone || "Asia/Manila";
     const start = wallClockEpoch(startAt, zone), end = wallClockEpoch(endAt, zone);
@@ -171,7 +171,7 @@ export default function PublicBookPage() {
       overtimeGraceMinutes: chosen.overtimeGraceMinutes,
       overtimeHourlyRate: rentalMode === "WITH_DRIVER" ? chosen.withDriverOvertimeHourlyRate : chosen.overtimeHourlyRate,
     };
-  }, [startAt, endAt, chosen, selectedRate, rateUnit, deliveryRequested, rentalMode, business?.timezone]);
+  })();
 
   async function continueToVehicles(event: FormEvent) {
     event.preventDefault();

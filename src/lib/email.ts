@@ -436,6 +436,8 @@ export async function sendRentalCompletionReceipt(input: {
   currency: string;
   rentalAmount: number;
   securityDeposit: number;
+  returnChargesAmount?: number;
+  returnChargesBreakdown?: { vehicleId: string; actualKm: number; includedKm: number | null; excessKm: number; excessMileageCharge: string; overtimeMinutes: number; overtimeHours: number; overtimeCharge: string; totalCharge: string }[];
   pickupAt: Date;
   returnedAt: Date;
   vehicles: string[];
@@ -456,6 +458,10 @@ export async function sendRentalCompletionReceipt(input: {
   const paid = transactions.reduce((sum, row) => sum + (row.kind === "REFUND" ? -row.amount : row.amount), 0);
   const refunds = transactions.filter(row => row.kind === "REFUND").reduce((sum, row) => sum + row.amount, 0);
   const vehicleList = input.vehicles.join(", ");
+  const returnChargesAmount = input.returnChargesAmount || 0;
+  const returnChargeRows = (input.returnChargesBreakdown || []).map(item =>
+    `Vehicle ${item.vehicleId}: ${item.actualKm} km driven, ${item.excessKm} excess km (${money(Number(item.excessMileageCharge))}), ${item.overtimeHours} overtime hour(s) (${money(Number(item.overtimeCharge))})`
+  );
   const rows = transactions.map(row => '<tr><td style="padding:9px;border-bottom:1px solid #e5eaf0">' + safe(date(row.receivedAt)) + '</td><td style="padding:9px;border-bottom:1px solid #e5eaf0">' + safe(row.kind) + ' · ' + safe(row.method.replaceAll("_", " ")) + '</td><td style="padding:9px;border-bottom:1px solid #e5eaf0">' + safe(row.reference || "—") + '</td><td style="padding:9px;text-align:right;border-bottom:1px solid #e5eaf0">' + (row.kind === "REFUND" ? "−" : "") + safe(money(row.amount)) + '</td></tr>').join("");
   const subject = "Rental completion and payment acknowledgement · " + input.bookingReference;
   const text = [
@@ -465,7 +471,7 @@ export async function sendRentalCompletionReceipt(input: {
     "Vehicle(s): " + vehicleList,
     "Pickup: " + date(input.pickupAt),
     "Returned: " + date(input.returnedAt),
-    "Rental charge: " + money(input.rentalAmount),
+    "Rental and usage charges: " + money(input.rentalAmount),\n    "Return mileage/overtime charges included above: " + money(returnChargesAmount),\n    ...returnChargeRows,
     "Security deposit held: " + money(input.securityDeposit),
     "Net amount received (payments less recorded refunds): " + money(paid),
     "Refunds recorded: " + money(refunds),
@@ -479,6 +485,6 @@ export async function sendRentalCompletionReceipt(input: {
   ].join("\n");
   await getTransport().sendMail({
     from, to: input.recipient, subject, text,
-    html: '<div style="font-family:Arial,sans-serif;max-width:680px;margin:24px auto;padding:24px;color:#172033;line-height:1.55"><div style="font-size:22px;font-weight:800;letter-spacing:2px">ROAM</div><h2>Rental completion & payment acknowledgement</h2><p>Hello ' + safe(input.customerName) + ', your vehicle return has been recorded by <strong>' + safe(input.tenantName) + '</strong>. Keep this email as your acknowledgement copy.</p><div style="padding:16px;background:#f3f6fb;border-radius:10px"><strong>Booking ' + safe(input.bookingReference) + '</strong><br/>Vehicle(s): ' + safe(vehicleList) + '<br/>Pickup: ' + safe(date(input.pickupAt)) + '<br/>Returned: ' + safe(date(input.returnedAt)) + '</div><h3>Booking summary</h3><p>Rental charge: <strong>' + safe(money(input.rentalAmount)) + '</strong><br/>Security deposit held: <strong>' + safe(money(input.securityDeposit)) + '</strong><br/>Net amount received (less recorded refunds): <strong>' + safe(money(paid)) + '</strong><br/>Refunds recorded: <strong>' + safe(money(refunds)) + '</strong></p><h3>Transaction details</h3><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th align="left">Date</th><th align="left">Type / method</th><th align="left">Reference</th><th align="right">Amount</th></tr></thead><tbody>' + (rows || '<tr><td colspan="4">No transactions have been recorded.</td></tr>') + '</tbody></table><p style="margin-top:20px;font-size:12px;color:#64748b">This acknowledgement reflects transactions recorded by the rental business. It is not proof of a bank transfer or confirmation that any unrecorded security-deposit refund has been paid. Any deposit refund should appear as a separate recorded refund transaction.</p><p>Thank you,<br/><strong>' + safe(input.tenantName) + '</strong></p></div>',
+    html: '<div style="font-family:Arial,sans-serif;max-width:680px;margin:24px auto;padding:24px;color:#172033;line-height:1.55"><div style="font-size:22px;font-weight:800;letter-spacing:2px">ROAM</div><h2>Rental completion & payment acknowledgement</h2><p>Hello ' + safe(input.customerName) + ', your vehicle return has been recorded by <strong>' + safe(input.tenantName) + '</strong>. Keep this email as your acknowledgement copy.</p><div style="padding:16px;background:#f3f6fb;border-radius:10px"><strong>Booking ' + safe(input.bookingReference) + '</strong><br/>Vehicle(s): ' + safe(vehicleList) + '<br/>Pickup: ' + safe(date(input.pickupAt)) + '<br/>Returned: ' + safe(date(input.returnedAt)) + '</div><h3>Booking summary</h3><p>Rental and usage charges: <strong>' + safe(money(input.rentalAmount)) + '</strong><br/>Return mileage/overtime charges included above: <strong>' + safe(money(returnChargesAmount)) + '</strong><br/>' + returnChargeRows.map(row => '<small style="display:block;color:#64748b">' + safe(row) + '</small>').join("") + '<br/>Security deposit held: <strong>' + safe(money(input.securityDeposit)) + '</strong><br/>Net amount received (less recorded refunds): <strong>' + safe(money(paid)) + '</strong><br/>Refunds recorded: <strong>' + safe(money(refunds)) + '</strong></p><h3>Transaction details</h3><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th align="left">Date</th><th align="left">Type / method</th><th align="left">Reference</th><th align="right">Amount</th></tr></thead><tbody>' + (rows || '<tr><td colspan="4">No transactions have been recorded.</td></tr>') + '</tbody></table><p style="margin-top:20px;font-size:12px;color:#64748b">This acknowledgement reflects transactions recorded by the rental business. It is not proof of a bank transfer or confirmation that any unrecorded security-deposit refund has been paid. Any deposit refund should appear as a separate recorded refund transaction.</p><p>Thank you,<br/><strong>' + safe(input.tenantName) + '</strong></p></div>',
   });
 }

@@ -7,10 +7,10 @@ import { ArrowLeft, CalendarOff, RefreshCw, Inbox, Trash2 } from "lucide-react";
 import { WorkspaceNav } from "@/components/workspace-nav";
 
 type Block = { id: string; startAt: string; endAt: string; label: string | null };
-type Listing = { id: string; headline: string; status: string; isPublished: boolean; vehicle: { make: string; model: string; year: number | null; dailyRate: number; status: string }; availabilityBlocks: Block[] };
-type Inquiry = { id: string; listingId: string; requesterName: string; requesterEmail: string; requesterPhone: string | null; startAt: string; endAt: string; dailyRateSnapshot: number; rentalMode: string; message: string | null; status: string; hostNote: string | null; createdAt: string; contactConsentAt: string; consentVersion: string; listing: { headline: string; vehicle: { make: string; model: string } } };
+type Listing = { id: string; headline: string; status: string; isPublished: boolean; vehicle: { make: string; model: string; year: number | null; dailyRate: number; hourlyRate: number | null; weeklyRate: number | null; monthlyRate: number | null; status: string }; availabilityBlocks: Block[] };
+type Inquiry = { id: string; listingId: string; requesterName: string; requesterEmail: string; requesterPhone: string | null; startAt: string; endAt: string; dailyRateSnapshot: number; rentalMode: string; rateUnit: string; ratePeriods: number; deliveryRequested: boolean; deliveryAddress: string | null; deliveryFeeSnapshot: number; includedKmPerDaySnapshot: number | null; excessMileageRateSnapshot: number; overtimeGraceMinutesSnapshot: number; overtimeHourlyRateSnapshot: number | null; message: string | null; status: string; hostNote: string | null; createdAt: string; contactConsentAt: string; consentVersion: string; listing: { headline: string; vehicle: { make: string; model: string } } };
 
-const date = (value: string) => new Date(value).toLocaleDateString("en-PH", { timeZone: "Asia/Manila", dateStyle: "medium" });
+const date = (value: string) => new Date(value).toLocaleString("en-PH", { timeZone: "Asia/Manila", dateStyle: "medium", timeStyle: "short" });
 const statusLabel = (value: string) => value.replaceAll("_", " ");
 const nextInquiryStatuses: Record<string, string[]> = {
   NEW: ["CONTACTED", "QUALIFIED", "DECLINED", "CLOSED"],
@@ -21,12 +21,12 @@ const nextInquiryStatuses: Record<string, string[]> = {
   CLOSED: [],
 };
 const inquiryStatusOptions = (status: string) => [status, ...(nextInquiryStatuses[status] || [])];
-const nights = (startAt: string, endAt: string) => Math.max(1, Math.round((new Date(endAt).getTime() - new Date(startAt).getTime()) / 86400000));
+const nights = (startAt: string, endAt: string) => Math.max(1, Math.ceil((new Date(endAt).getTime() - new Date(startAt).getTime()) / 86400000));
 const renterReplyDraft = (item: Inquiry, style: string) => {
   const period = `${date(item.startAt)} to ${date(item.endAt)}`;
   const greeting = `Hello ${item.requesterName},`;
   const vehicle = `${item.listing.vehicle.make} ${item.listing.vehicle.model} — ${item.listing.headline}`;
-  const details = `Your requested rental period is ${period} (${nights(item.startAt, item.endAt)} day(s)). Your selected option was ${item.rentalMode === "WITH_DRIVER" ? "with driver" : "self-drive"}; the rate shown when you enquired was ₱${item.dailyRateSnapshot.toLocaleString("en-PH")} per day.`;
+  const details = `Your requested rental period is ${period}. Your selected option was ${item.rentalMode === "WITH_DRIVER" ? "with driver" : "self-drive"}; the rate shown when you enquired was ₱${item.dailyRateSnapshot.toLocaleString("en-PH")} per ${item.rateUnit.toLowerCase()} (${item.ratePeriods} unit(s)).${item.deliveryRequested ? ` Delivery requested to: ${item.deliveryAddress || "address to be confirmed"}.` : ""}`;
   const closing = "This is an enquiry only, not a reservation or booking confirmation. Availability, final pricing, any deposits or additional charges, pickup arrangements, and rental terms must be confirmed by our team before a booking can be made.";
   if (style === "FOLLOW_UP") return [greeting, "", `Thank you for your interest in ${vehicle}. ${details}`, "", "Could you please confirm your preferred pickup location and approximate pickup time? We will check the dates and get back to you with the applicable terms and final price.", "", closing].join("\n");
   if (style === "UNAVAILABLE") return [greeting, "", `Thank you for enquiring about ${vehicle} for ${period}. Unfortunately, we are unable to accommodate those dates.`, "", "If your plans are flexible, please share an alternative date range and we can check again.", "", closing].join("\n");
@@ -39,8 +39,13 @@ const handoffSummary = (item: Inquiry) => [
   `Renter: ${item.requesterName}`,
   `Email: ${item.requesterEmail}`,
   `Phone: ${item.requesterPhone || "Not provided"}`,
-  `Requested dates: ${date(item.startAt)} to ${date(item.endAt)} (${nights(item.startAt, item.endAt)} day(s))`,
-  `Rental option: ${item.rentalMode === "WITH_DRIVER" ? "With driver" : "Self-drive"} · Rate snapshot: PHP ${item.dailyRateSnapshot.toFixed(2)} per day (not a final quote)`,
+  `Requested rental period: ${date(item.startAt)} to ${date(item.endAt)}`,
+  `Rate snapshot: PHP ${item.dailyRateSnapshot.toFixed(2)} per ${item.rateUnit.toLowerCase()} × ${item.ratePeriods} unit(s)`,
+  `Rental option: ${item.rentalMode === "WITH_DRIVER" ? "With driver" : "Self-drive"} · Rate unit: ${item.rateUnit} · Rate periods: ${item.ratePeriods}`,
+  `Delivery requested: ${item.deliveryRequested ? `Yes · ${item.deliveryAddress || "address pending"} · PHP ${item.deliveryFeeSnapshot.toFixed(2)}` : "No"}`,
+  `Mileage allowance: ${item.includedKmPerDaySnapshot === null ? "Not set" : item.includedKmPerDaySnapshot + " km/day"} · Excess mileage PHP ${item.excessMileageRateSnapshot.toFixed(2)}/km`,
+  `Overtime: ${item.overtimeGraceMinutesSnapshot}-minute grace · ${item.overtimeHourlyRateSnapshot === null ? "Rate to confirm" : "PHP " + item.overtimeHourlyRateSnapshot.toFixed(2) + "/hour"}`,
+  `Rate snapshot is not a final quote.`,
   `Contact consent: recorded ${new Date(item.contactConsentAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" })} · ${item.consentVersion}`,
   `Renter message: ${item.message || "None"}`,
   `Workflow status: ${statusLabel(item.status)}`,
@@ -170,7 +175,7 @@ export default function MarketplaceOperationsPage() {
         {!inquiriesEnabled && <p className="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-600">The public inquiry form is disabled in production. This inbox is ready for the later launch-readiness step.</p>}
         {inquiries.length ? <div className="mt-4 grid gap-3">{inquiries.map(item=><article key={item.id} className="rounded-xl border border-slate-200 p-4">
           <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-semibold text-slate-900">{item.requesterName}</p><p className="mt-1 text-xs text-slate-500">{item.listing.vehicle.make} {item.listing.vehicle.model} · {item.listing.headline}</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold text-slate-600">{statusLabel(item.status)}</span></div>
-          <div className="mt-3 grid gap-1 text-xs text-slate-600 sm:grid-cols-2"><p>{item.requesterEmail}</p><p>{item.requesterPhone || "No phone provided"}</p><p>{date(item.startAt)} – {date(item.endAt)}</p><p>Rate when requested: ₱{item.dailyRateSnapshot.toLocaleString("en-PH")} / day</p></div>
+          <div className="mt-3 grid gap-1 text-xs text-slate-600 sm:grid-cols-2"><p>{item.requesterEmail}</p><p>{item.requesterPhone || "No phone provided"}</p><p>{date(item.startAt)} – {date(item.endAt)}</p><p>Rate when requested: ₱{item.dailyRateSnapshot.toLocaleString("en-PH")} / {item.rateUnit.toLowerCase()} × {item.ratePeriods}</p>{item.deliveryRequested && <p>Delivery requested: {item.deliveryAddress || "Address pending"} · ₱{item.deliveryFeeSnapshot.toLocaleString("en-PH")}</p>}{item.includedKmPerDaySnapshot !== null && <p>Mileage: {item.includedKmPerDaySnapshot} km/day included · ₱{item.excessMileageRateSnapshot}/excess km</p>}{item.overtimeHourlyRateSnapshot !== null && <p>Overtime: {item.overtimeGraceMinutesSnapshot}-minute grace · ₱{item.overtimeHourlyRateSnapshot}/hour</p>}</div>
           {item.message && <p className="mt-3 whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{item.message}</p>}
           <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold text-slate-900">Structured manual handoff</p><p className="mt-1 text-xs text-slate-600">Contact permission recorded {date(item.contactConsentAt)} · {item.consentVersion}</p></div><button type="button" onClick={() => { void navigator.clipboard.writeText(handoffSummary(item)).then(() => setNotice("Handoff summary copied."), () => setError("Clipboard access was unavailable. Select and copy the details manually.")); }} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700">Copy handoff summary</button></div>

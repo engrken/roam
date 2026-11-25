@@ -13,7 +13,7 @@ const unitLabels: Record<RentalRateUnit, string> = {
   HOURLY: "hour",
   DAILY: "day",
   WEEKLY: "week",
-  MONTHLY: "month",
+  MONTHLY: "30-day month",
 };
 
 export function isRentalRateUnit(value: unknown): value is RentalRateUnit {

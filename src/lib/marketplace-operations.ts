@@ -19,8 +19,8 @@ export const marketplaceInquirySchema = z.object({
   requesterPhone: z.string().trim().max(40).optional().or(z.literal("")),
   startDate: dateOnly,
   endDate: dateOnly,
-  startTime: z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/).default("09:00"),
-  endTime: z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/).default("09:00"),
+  startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("09:00"),
+  endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("09:00"),
   rentalMode: z.enum(["SELF_DRIVE", "WITH_DRIVER"]).default("SELF_DRIVE"),
   rateUnit: z.enum(["HOURLY", "DAILY", "WEEKLY", "MONTHLY"]).default("DAILY"),
   deliveryRequested: z.boolean().default(false),
@@ -33,8 +33,8 @@ export const marketplaceInquirySchema = z.object({
 });
 
 export function marketplaceDateRange(startDate: string, endDate: string, startTime = "00:00", endTime = "00:00") {
-  const datePattern = /^\\d{4}-\\d{2}-\\d{2}$/;
-  const timePattern = /^([01]\\d|2[0-3]):[0-5]\\d$/;
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+  const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
   if (!datePattern.test(startDate) || !datePattern.test(endDate) || !timePattern.test(startTime) || !timePattern.test(endTime)) return null;
   const startCheck = new Date(`${startDate}T00:00:00.000Z`);
   const endCheck = new Date(`${endDate}T00:00:00.000Z`);

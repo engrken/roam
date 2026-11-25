@@ -7,7 +7,7 @@ type RentalVehicle = {
   dailyRate: number; selfDriveEnabled: boolean; withDriverEnabled: boolean; withDriverDailyRate: number | null;
   hourlyRate: number | null; weeklyRate: number | null; monthlyRate: number | null;
   withDriverHourlyRate: number | null; withDriverWeeklyRate: number | null; withDriverMonthlyRate: number | null;
-  deliveryAvailable: boolean; deliveryFee: number; includedKmPerDay: number | null; excessMileageRate: number;
+  deliveryAvailable: boolean; deliveryFee: number; securityDeposit: number; includedKmPerDay: number | null; excessMileageRate: number;
   overtimeGraceMinutes: number; overtimeHourlyRate: number | null; withDriverOvertimeHourlyRate: number | null;
 };
 
@@ -38,7 +38,7 @@ export function MarketplaceInquiryForm({ listingId, vehicle }: { listingId: stri
       : Math.max(1, Math.ceil(hours / 720));
     const cents = rentalAmountCents(selectedRate, periods);
     if (cents === null) return null;
-    return { periods, rental: cents / 100, delivery: form.deliveryRequested ? vehicle.deliveryFee : 0 };
+    return { periods, rental: cents / 100, delivery: form.deliveryRequested ? vehicle.deliveryFee : 0, deposit: vehicle.securityDeposit };
   }, [form.startDate, form.startTime, form.endDate, form.endTime, form.rateUnit, form.deliveryRequested, selectedRate, vehicle.deliveryFee]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -80,7 +80,7 @@ export function MarketplaceInquiryForm({ listingId, vehicle }: { listingId: stri
       <label className="block text-xs font-medium text-slate-700">Return time<input required type="time" className="mt-1 w-full min-w-0 rounded-lg border border-slate-200 px-2 py-2.5 text-sm" value={form.endTime} onChange={e=>setForm({...form,endTime:e.target.value})}/></label>
     </div>
     {vehicle.deliveryAvailable && <div className="rounded-lg border border-slate-200 p-3"><label className="flex items-center gap-2 text-xs font-semibold text-slate-700"><input type="checkbox" checked={form.deliveryRequested} onChange={e=>setForm({...form,deliveryRequested:e.target.checked})}/> Request delivery ({vehicle.deliveryFee ? money(vehicle.deliveryFee) : "Free"})</label>{form.deliveryRequested && <label className="mt-2 block text-xs font-medium text-slate-700">Delivery address<textarea required minLength={5} maxLength={300} rows={2} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm" value={form.deliveryAddress} onChange={e=>setForm({...form,deliveryAddress:e.target.value})}/></label>}</div>}
-    {estimate && <div className="rounded-lg bg-slate-50 p-3 text-sm"><div className="flex justify-between gap-3"><span>Estimated rental ({estimate.periods} {rentalRateUnitLabel(form.rateUnit)} unit(s))</span><b>{money(estimate.rental)}</b></div>{form.deliveryRequested && <div className="mt-1 flex justify-between gap-3"><span>Delivery</span><b>{estimate.delivery ? money(estimate.delivery) : "Free"}</b></div>}<p className="mt-2 text-xs leading-5 text-slate-500">Preliminary estimate only. Refundable deposit, final fees and charges will be confirmed in the Host's quotation.</p></div>}
+    {estimate && <div className="rounded-lg bg-slate-50 p-3 text-sm"><div className="flex justify-between gap-3"><span>Estimated rental ({estimate.periods} {rentalRateUnitLabel(form.rateUnit)} unit(s))</span><b>{money(estimate.rental)}</b></div>{form.deliveryRequested && <div className="mt-1 flex justify-between gap-3"><span>Delivery</span><b>{estimate.delivery ? money(estimate.delivery) : "Free"}</b></div>}{estimate.deposit > 0 && <div className="mt-1 flex justify-between gap-3"><span>Refundable security deposit</span><b>{money(estimate.deposit)}</b></div>}<p className="mt-2 text-xs leading-5 text-slate-500">Preliminary estimate only. Refundable deposit, final fees and charges will be confirmed in the Host's quotation.</p></div>}
     <div className="rounded-lg border border-slate-100 p-3 text-xs leading-5 text-slate-600">
       {vehicle.includedKmPerDay !== null ? <p>Included mileage: {vehicle.includedKmPerDay} km/day · Excess mileage: {money(vehicle.excessMileageRate)}/km</p> : <p>Mileage allowance is confirmed by the Host.</p>}
       <p>Overtime grace: {vehicle.overtimeGraceMinutes} minutes. The applicable hourly overtime rate will be confirmed by the Host.</p>

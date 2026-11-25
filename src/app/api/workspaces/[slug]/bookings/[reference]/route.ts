@@ -38,7 +38,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       customer: { select: { name: true, email: true, phone: true } },
       items: {
         select: {
-          rate: true, rentalMode: true, vehicle: { select: { id: true, type: true, make: true, model: true, year: true, plateNumber: true } },
+          rate: true, rentalMode: true, rateUnit: true, ratePeriods: true, deliveryRequested: true, deliveryAddress: true, deliveryFeeSnapshot: true, includedKmPerDaySnapshot: true, excessMileageRateSnapshot: true, overtimeGraceMinutesSnapshot: true, overtimeHourlyRateSnapshot: true, vehicle: { select: { id: true, type: true, make: true, model: true, year: true, plateNumber: true } },
         },
       },
       messages: { orderBy: { createdAt: "asc" } },
@@ -63,7 +63,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       securityDeposit: Number(booking.securityDeposit || 0),
       totalPayable: Number(booking.totalAmount) + Number(booking.securityDeposit || 0),
       customer: booking.customer,
-      vehicles: booking.items.map((item) => ({ ...item.vehicle, rate: Number(item.rate), rentalMode: item.rentalMode })),
+      vehicles: booking.items.map((item) => ({ ...item.vehicle, rate: Number(item.rate), rentalMode: item.rentalMode, rateUnit: item.rateUnit, ratePeriods: item.ratePeriods, deliveryRequested: item.deliveryRequested, deliveryAddress: item.deliveryAddress, deliveryFeeSnapshot: Number(item.deliveryFeeSnapshot), includedKmPerDaySnapshot: item.includedKmPerDaySnapshot, excessMileageRateSnapshot: Number(item.excessMileageRateSnapshot), overtimeGraceMinutesSnapshot: item.overtimeGraceMinutesSnapshot, overtimeHourlyRateSnapshot: item.overtimeHourlyRateSnapshot === null ? null : Number(item.overtimeHourlyRateSnapshot) })),
       messages: booking.messages,
       payments: booking.payments.map((payment) => ({ ...payment, amount: Number(payment.amount) })),
       documents: booking.documents,

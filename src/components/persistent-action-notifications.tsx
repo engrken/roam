@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { Bell, ArrowUpRight, History, Clock3, CheckCircle2, AlertCircle } from "lucide-react";
 
@@ -17,15 +17,17 @@ type NotificationItem = {
 
 type Props = { endpoint: string; token?: string };
 
+const subscribeHydration = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export function PersistentActionNotifications({ endpoint, token }: Props) {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(subscribeHydration, getHydratedSnapshot, getServerSnapshot);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => { setMounted(true); }, []);
 
   const requestHeaders = useMemo(() => {
     const headers: Record<string, string> = {};

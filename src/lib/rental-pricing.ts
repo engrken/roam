@@ -44,7 +44,7 @@ export function rentalRateForMode(
     ? (mode === "WITH_DRIVER" ? "withDriverDailyRate" : "dailyRate")
     : prefix + suffix;
   const raw = vehicle[field];
-  if (typeof raw !== "number" && typeof raw !== "string") return null;
+  if (raw === null || raw === undefined) return null;
   const rate = Number(raw);
   return Number.isFinite(rate) && rate >= 0 ? rate : null;
 }

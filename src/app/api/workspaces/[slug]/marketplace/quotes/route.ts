@@ -55,6 +55,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       rentalQuotes: item.rentalQuotes.map((quote) => ({
         ...quote,
         dailyRate: Number(quote.dailyRate),
+        securityDeposit: Number(quote.securityDeposit),
         baseAmount: Number(quote.baseAmount),
         discountAmount: Number(quote.discountAmount),
         totalAmount: Number(quote.totalAmount),

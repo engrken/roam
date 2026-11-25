@@ -12,10 +12,13 @@ This guide is for rental-business Owners and Admins setting up a ROAM Workspace 
 
 ## 2. Add branches and vehicles
 1. Add your main pickup branch and its customer-facing address.
-2. Register each rentable vehicle with its type, make, model, plate number and security deposit.
-3. In **Rental options & pricing**, enable **Self-drive**, **With driver**, or both. Set the daily rate for each enabled option. The with-driver rate is the complete daily rate including the driver.
-4. Set the vehicle to **Available** only when it is ready to rent. Use Maintenance or Inactive when appropriate.
-5. Review your fleet and public booking page on a mobile device.
+2. Register each rentable vehicle with its type, make, model, plate number and refundable security deposit.
+3. In **Rental options & pricing**, enable **Self-drive**, **With driver**, or both. Enter the daily rate for every enabled option; the with-driver price is the full rate including the driver.
+4. Optionally add hourly, weekly and monthly prices for each enabled rental mode. Customers can select only rate periods that have a configured price.
+5. Configure delivery availability and its per-booking fee, daily included mileage and excess-kilometer rate, plus the overtime grace period and hourly overtime rate for each rental mode.
+6. Put the mileage, overtime, delivery and deposit rules in your rental terms so customers can review them before requesting a booking.
+7. Set the vehicle to **Available** only when it is ready to rent. Use Maintenance or Inactive when appropriate.
+8. Review your fleet and public booking page on a mobile device.
 
 ## 3. Publish rental terms
 1. Open **Rental terms**.

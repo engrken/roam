@@ -7,7 +7,7 @@ import { sendBookingMessageNotification, sendBookingStatusNotification, sendBook
 import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { isWithinPickupReminderWindow } from "@/lib/booking-reminder";
-import { calculateReturnCharges } from "@/lib/rental-pricing";
+import { calculateReturnCharges, type ReturnChargeBreakdown } from "@/lib/rental-pricing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
 
       let returnChargesAmount = "0.00";
-      let returnChargeBreakdown: ReturnType<typeof calculateReturnCharges>[] = [];
+      let returnChargeBreakdown: ReturnChargeBreakdown[] = [];
       if (nextStatus === "ACTIVE" || nextStatus === "COMPLETED") {
         const inspectionType = nextStatus === "ACTIVE" ? "HANDOVER" : "RETURN";
         const completed = await tx.vehicleInspection.findMany({

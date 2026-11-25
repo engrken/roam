@@ -40,7 +40,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           tenant: { select: { status: true } },
           vehicle: { select: { id: true, status: true, dailyRate: true, selfDriveEnabled: true, withDriverEnabled: true, withDriverDailyRate: true,
             hourlyRate: true, weeklyRate: true, monthlyRate: true, withDriverHourlyRate: true, withDriverWeeklyRate: true, withDriverMonthlyRate: true,
-            deliveryAvailable: true, deliveryFee: true, includedKmPerDay: true, excessMileageRate: true, overtimeGraceMinutes: true,
+            deliveryAvailable: true, deliveryFee: true, securityDeposit: true, includedKmPerDay: true, excessMileageRate: true, overtimeGraceMinutes: true,
             overtimeHourlyRate: true, withDriverOvertimeHourlyRate: true } },
         },
       });
@@ -95,6 +95,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           deliveryRequested: parsed.data.deliveryRequested,
           deliveryAddress: parsed.data.deliveryRequested ? parsed.data.deliveryAddress || null : null,
           deliveryFeeSnapshot: deliveryFee.toFixed(2),
+          securityDepositSnapshot: Number(listing.vehicle.securityDeposit).toFixed(2),
           includedKmPerDaySnapshot: listing.vehicle.includedKmPerDay,
           excessMileageRateSnapshot: Number(listing.vehicle.excessMileageRate).toFixed(2),
           overtimeGraceMinutesSnapshot: listing.vehicle.overtimeGraceMinutes,

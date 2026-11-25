@@ -40,6 +40,23 @@ export default async function MarketplaceListingDetailPage({ params }: { params:
     tenantStatus: listing.tenant.status,
   })) notFound();
 
+  const rentalVehicle = {
+    ...listing.vehicle,
+    dailyRate: Number(listing.vehicle.dailyRate),
+    withDriverDailyRate: listing.vehicle.withDriverDailyRate === null ? null : Number(listing.vehicle.withDriverDailyRate),
+    hourlyRate: listing.vehicle.hourlyRate === null ? null : Number(listing.vehicle.hourlyRate),
+    weeklyRate: listing.vehicle.weeklyRate === null ? null : Number(listing.vehicle.weeklyRate),
+    monthlyRate: listing.vehicle.monthlyRate === null ? null : Number(listing.vehicle.monthlyRate),
+    withDriverHourlyRate: listing.vehicle.withDriverHourlyRate === null ? null : Number(listing.vehicle.withDriverHourlyRate),
+    withDriverWeeklyRate: listing.vehicle.withDriverWeeklyRate === null ? null : Number(listing.vehicle.withDriverWeeklyRate),
+    withDriverMonthlyRate: listing.vehicle.withDriverMonthlyRate === null ? null : Number(listing.vehicle.withDriverMonthlyRate),
+    deliveryFee: Number(listing.vehicle.deliveryFee),
+    excessMileageRate: Number(listing.vehicle.excessMileageRate),
+    overtimeHourlyRate: listing.vehicle.overtimeHourlyRate === null ? null : Number(listing.vehicle.overtimeHourlyRate),
+    withDriverOvertimeHourlyRate: listing.vehicle.withDriverOvertimeHourlyRate === null ? null : Number(listing.vehicle.withDriverOvertimeHourlyRate),
+    securityDeposit: Number(listing.vehicle.securityDeposit),
+  };
+
   return <MarketplacePublicShell>
     <section className="bg-slate-50 px-5 py-12 sm:px-8 sm:py-16">
       <div className="mx-auto max-w-5xl">
@@ -64,13 +81,13 @@ export default async function MarketplaceListingDetailPage({ params }: { params:
             </div>
             <div className="mt-4 border-t border-slate-100 pt-4 text-xs leading-5 text-slate-600">
               <p>Refundable security deposit: {money(Number(listing.vehicle.securityDeposit))}</p>
-              {listing.vehicle.deliveryAvailable && <p>Delivery: {listing.vehicle.deliveryFee > 0 ? money(Number(listing.vehicle.deliveryFee)) + " per booking" : "Available free of charge"}</p>}
+              {listing.vehicle.deliveryAvailable && <p>Delivery: {Number(listing.vehicle.deliveryFee) > 0 ? money(Number(listing.vehicle.deliveryFee)) + " per booking" : "Available free of charge"}</p>}
               {listing.vehicle.includedKmPerDay !== null && <p>Mileage: {listing.vehicle.includedKmPerDay} km/day included · {money(Number(listing.vehicle.excessMileageRate))}/excess km</p>}
               <p>Overtime grace: {listing.vehicle.overtimeGraceMinutes} minutes</p>
             </div>
             <div className="mt-6 border-t border-slate-100 pt-5"><p className="text-xs text-slate-500">Vehicle host</p><p className="mt-1 font-semibold text-slate-900">{listing.hostProfile.displayName}</p><p className="mt-2 flex items-center gap-1 text-sm text-slate-600"><MapPin size={14}/>{[listing.hostProfile.city,listing.hostProfile.province].filter(Boolean).join(", ")}</p></div>
             <div className="mt-6 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-950"><b>Bookings are not open yet.</b><p className="mt-1">This listing is part of the ROAM discovery preview. Rental requests and payments will become available only after launch readiness is complete.</p></div>
-            {inquiriesEnabled ? <MarketplaceInquiryForm listingId={listing.id} vehicle={listing.vehicle}/> : <Link href="/early-access" className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800">Get renter launch updates</Link>}
+            {inquiriesEnabled ? <MarketplaceInquiryForm listingId={listing.id} vehicle={rentalVehicle}/> : <Link href="/early-access" className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800">Get renter launch updates</Link>}
           </aside>
         </div>
       </div>

@@ -37,7 +37,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{slug:st
  const inspection=await prisma.vehicleInspection.upsert({
   where:{bookingId_vehicleId_type:{bookingId:booking.id,vehicleId,type}},
   create:{tenantId:access.tenant.id,bookingId:booking.id,vehicleId,type,odometerKm,fuelLevel,conditionNotes,damageNotes:damageNotes||null},
-  update:{odometerKm,fuelLevel,conditionNotes,damageNotes:damageNotes||null,inspectedAt:new Date()},
+  update:{odometerKm,fuelLevel,conditionNotes,damageNotes:damageNotes||null},
   include:{vehicle:{select:{make:true,model:true,plateNumber:true}},photos:{select:{id:true,fileName:true}}},
  });
  return NextResponse.json({inspection},{status:201});

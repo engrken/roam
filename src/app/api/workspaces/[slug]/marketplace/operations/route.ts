@@ -31,7 +31,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       select: {
         id: true, listingId: true, requesterName: true, requesterEmail: true, requesterPhone: true,
         startAt: true, endAt: true, dailyRateSnapshot: true, rentalMode: true, rateUnit: true, ratePeriods: true,
-        deliveryRequested: true, deliveryAddress: true, deliveryFeeSnapshot: true, includedKmPerDaySnapshot: true,
+        deliveryRequested: true, deliveryAddress: true, deliveryFeeSnapshot: true, securityDepositSnapshot: true, includedKmPerDaySnapshot: true,
         excessMileageRateSnapshot: true, overtimeGraceMinutesSnapshot: true, overtimeHourlyRateSnapshot: true, message: true, status: true,
         hostNote: true, createdAt: true, reviewedAt: true, contactConsentAt: true, consentVersion: true,
         listing: { select: { headline: true, vehicle: { select: { make: true, model: true } } } },
@@ -53,7 +53,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     inquiries: inquiries.map((inquiry) => ({
       ...inquiry,
       dailyRateSnapshot: Number(inquiry.dailyRateSnapshot),
-      deliveryFeeSnapshot: Number(inquiry.deliveryFeeSnapshot),
+      deliveryFeeSnapshot: Number(inquiry.deliveryFeeSnapshot), securityDepositSnapshot: Number(inquiry.securityDepositSnapshot),
       excessMileageRateSnapshot: Number(inquiry.excessMileageRateSnapshot),
       overtimeHourlyRateSnapshot: inquiry.overtimeHourlyRateSnapshot === null ? null : Number(inquiry.overtimeHourlyRateSnapshot),
     })),

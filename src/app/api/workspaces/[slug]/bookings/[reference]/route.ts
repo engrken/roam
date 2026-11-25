@@ -7,6 +7,7 @@ import { sendBookingMessageNotification, sendBookingStatusNotification, sendBook
 import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { isWithinPickupReminderWindow } from "@/lib/booking-reminder";
+import { calculateReturnCharges } from "@/lib/rental-pricing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -137,7 +138,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const result = await prisma.$transaction(async (tx) => {
       const current = await tx.booking.findFirst({
         where: { id: booking.id, tenantId: access.tenant.id },
-        select: { id: true, status: true, startAt: true, endAt: true, items: { select: { vehicleId: true } }, payments: { select: { amount: true, kind: true } } },
+        select: {
+          id: true, status: true, startAt: true, endAt: true,
+          items: { select: {
+            vehicleId: true, includedKmPerDaySnapshot: true, excessMileageRateSnapshot: true,
+            overtimeGraceMinutesSnapshot: true, overtimeHourlyRateSnapshot: true,
+          } },
+          payments: { select: { amount: true, kind: true } },
+        },
       });
       if (!current) return { error: "Booking not found.", status: 404 as const };
 
@@ -179,6 +187,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         }
       }
 
+      let returnChargesAmount = "0.00";
+      let returnChargeBreakdown: ReturnType<typeof calculateReturnCharges>[] = [];
       if (nextStatus === "ACTIVE" || nextStatus === "COMPLETED") {
         const inspectionType = nextStatus === "ACTIVE" ? "HANDOVER" : "RETURN";
         const completed = await tx.vehicleInspection.findMany({
@@ -192,9 +202,64 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             status: 409 as const,
           };
         }
+
+        if (nextStatus === "COMPLETED") {
+          const [handoverInspections, returnInspections] = await Promise.all([
+            tx.vehicleInspection.findMany({
+              where: { tenantId: access.tenant.id, bookingId: current.id, type: "HANDOVER" },
+              select: { vehicleId: true, odometerKm: true },
+            }),
+            tx.vehicleInspection.findMany({
+              where: { tenantId: access.tenant.id, bookingId: current.id, type: "RETURN" },
+              select: { vehicleId: true, odometerKm: true, inspectedAt: true },
+            }),
+          ]);
+          const handoverByVehicle = new Map(handoverInspections.map((item) => [item.vehicleId, item]));
+          const returnByVehicle = new Map(returnInspections.map((item) => [item.vehicleId, item]));
+          let totalCents = 0;
+          for (const item of current.items) {
+            const handover = handoverByVehicle.get(item.vehicleId);
+            const returned = returnByVehicle.get(item.vehicleId);
+            if (!handover || !returned) {
+              return { error: "Handover and return inspections are required to calculate usage charges.", status: 409 as const };
+            }
+            const charge = calculateReturnCharges({
+              vehicleId: item.vehicleId,
+              handoverOdometerKm: handover.odometerKm,
+              returnOdometerKm: returned.odometerKm,
+              startAt: current.startAt,
+              endAt: current.endAt,
+              returnedAt: returned.inspectedAt,
+              includedKmPerDay: item.includedKmPerDaySnapshot,
+              excessMileageRate: Number(item.excessMileageRateSnapshot),
+              overtimeGraceMinutes: item.overtimeGraceMinutesSnapshot,
+              overtimeHourlyRate: item.overtimeHourlyRateSnapshot === null ? null : Number(item.overtimeHourlyRateSnapshot),
+            });
+            if (!charge) {
+              return { error: "A return inspection has invalid mileage or timing data. Review the inspection before completing this booking.", status: 409 as const };
+            }
+            totalCents += Math.round(Number(charge.totalCharge) * 100);
+            if (!Number.isSafeInteger(totalCents) || totalCents > 100_000_000_000) {
+              return { error: "The return settlement exceeds the supported amount.", status: 409 as const };
+            }
+            returnChargeBreakdown.push(charge);
+          }
+          returnChargesAmount = (totalCents / 100).toFixed(2);
+        }
       }
 
-      await tx.booking.update({ where: { id: current.id }, data: { status: nextStatus as never } });
+      await tx.booking.update({
+        where: { id: current.id },
+        data: {
+          status: nextStatus as never,
+          ...(nextStatus === "COMPLETED" ? {
+            returnChargesAmount,
+            returnChargesBreakdown: returnChargeBreakdown,
+            returnChargesCalculatedAt: new Date(),
+            totalAmount: { increment: returnChargesAmount },
+          } : {}),
+        },
+      });
       await recordWorkspaceAudit(tx, {
         tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
         action: "booking.status_changed", targetType: "booking", targetId: current.id,
@@ -217,7 +282,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         data: {
           bookingId: current.id,
           sender: "SYSTEM",
-          body: "Booking status changed from " + current.status + " to " + nextStatus + " by the rental team.",
+          body: nextStatus === "COMPLETED" ? "Booking completed. Return settlement charges: " + returnChargesAmount + " (mileage and overtime, where applicable)." : "Booking status changed from " + current.status + " to " + nextStatus + " by the rental team.",
         },
       });
       return {
@@ -226,6 +291,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         nextStatus,
         startAt: current.startAt,
         endAt: current.endAt,
+        ...(nextStatus === "COMPLETED" ? { returnChargesAmount, returnChargeBreakdown } : {}),
       };
     });
 

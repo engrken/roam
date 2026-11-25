@@ -8,6 +8,7 @@ import { getClientIp } from "@/lib/request-ip";
 import { sendBookingRequestReceived } from "@/lib/email";
 import { isTenantTrialReadOnly } from "@/lib/tenant-access";
 import { blockingMaintenanceStatuses } from "@/lib/maintenance-availability";
+import { isRentalRateUnit, rentalAmountCents, rentalPeriodsForRange, rentalRateForMode } from "@/lib/rental-pricing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -72,7 +73,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     orderBy: { createdAt: "desc" },
     select: {
       id: true, type: true, make: true, model: true, year: true, color: true,
-      seats: true, transmission: true, dailyRate: true, selfDriveEnabled: true, withDriverEnabled: true, withDriverDailyRate: true, securityDeposit: true,
+      seats: true, transmission: true, dailyRate: true, selfDriveEnabled: true, withDriverEnabled: true, withDriverDailyRate: true,
+      hourlyRate: true, weeklyRate: true, monthlyRate: true, withDriverHourlyRate: true, withDriverWeeklyRate: true, withDriverMonthlyRate: true,
+      deliveryAvailable: true, deliveryFee: true, includedKmPerDay: true, excessMileageRate: true, overtimeGraceMinutes: true,
+      overtimeHourlyRate: true, withDriverOvertimeHourlyRate: true, securityDeposit: true,
       branch: { select: { id: true, name: true, address: true } },
     },
   }),
@@ -85,6 +89,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       ...vehicle,
       dailyRate: Number(vehicle.dailyRate), selfDriveEnabled: vehicle.selfDriveEnabled, withDriverEnabled: vehicle.withDriverEnabled,
       withDriverDailyRate: vehicle.withDriverDailyRate === null ? null : Number(vehicle.withDriverDailyRate),
+      hourlyRate: vehicle.hourlyRate === null ? null : Number(vehicle.hourlyRate),
+      weeklyRate: vehicle.weeklyRate === null ? null : Number(vehicle.weeklyRate),
+      monthlyRate: vehicle.monthlyRate === null ? null : Number(vehicle.monthlyRate),
+      withDriverHourlyRate: vehicle.withDriverHourlyRate === null ? null : Number(vehicle.withDriverHourlyRate),
+      withDriverWeeklyRate: vehicle.withDriverWeeklyRate === null ? null : Number(vehicle.withDriverWeeklyRate),
+      withDriverMonthlyRate: vehicle.withDriverMonthlyRate === null ? null : Number(vehicle.withDriverMonthlyRate),
+      deliveryFee: Number(vehicle.deliveryFee), excessMileageRate: Number(vehicle.excessMileageRate),
+      overtimeHourlyRate: vehicle.overtimeHourlyRate === null ? null : Number(vehicle.overtimeHourlyRate),
+      withDriverOvertimeHourlyRate: vehicle.withDriverOvertimeHourlyRate === null ? null : Number(vehicle.withDriverOvertimeHourlyRate),
       securityDeposit: Number(vehicle.securityDeposit),
     })),
   });
@@ -111,6 +124,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const phone = typeof body?.phone === "string" ? body.phone.trim() : "";
   const vehicleId = typeof body?.vehicleId === "string" ? body.vehicleId : "";
   const rentalMode = body?.rentalMode === "WITH_DRIVER" ? "WITH_DRIVER" : body?.rentalMode === "SELF_DRIVE" ? "SELF_DRIVE" : "";
+  const rateUnit = body?.rateUnit;
+  const deliveryRequested = body?.deliveryRequested === true;
+  const deliveryAddress = typeof body?.deliveryAddress === "string" ? body.deliveryAddress.trim().slice(0, 300) : "";
   const rentalTerms = tenant.rentalTerms?.trim() || "";
   if (!rentalTerms) return NextResponse.json({ error: "This rental business has not published its rental terms yet. Please contact the business directly." }, { status: 409 });
   const rentalTermsVersion = hash(rentalTerms);
@@ -124,7 +140,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     name.length < 2 || name.length > 100 ||
     email.length > 254 || !/^\S+@\S+\.\S+$/.test(email) ||
     phone.length < 7 || phone.length > 30 ||
-    !vehicleId || vehicleId.length > 128 || !rentalMode ||
+    !vehicleId || vehicleId.length > 128 || !rentalMode || !isRentalRateUnit(rateUnit) ||
+    (deliveryRequested && (deliveryAddress.length < 5 || deliveryAddress.length > 300)) ||
     !startAt || !endAt || startAt <= new Date() || endAt <= startAt
   ) {
     return NextResponse.json({
@@ -141,7 +158,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Too many booking requests. Please try again later." }, { status: 429 });
   }
 
-  const days = Math.max(1, Math.ceil((endAt.getTime() - startAt.getTime()) / 86_400_000));
+  
   const token = randomBytes(32).toString("base64url");
   const reference = "RM-" + randomBytes(6).toString("hex").toUpperCase();
 
@@ -156,12 +173,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
       const vehicle = await tx.vehicle.findFirst({
         where: { id: vehicleId, tenantId: tenant.id, status: { in: ["AVAILABLE", "RESERVED"] } },
-        select: { id: true, branchId: true, dailyRate: true, selfDriveEnabled: true, withDriverEnabled: true, withDriverDailyRate: true, securityDeposit: true },
+        select: { id: true, branchId: true, dailyRate: true, selfDriveEnabled: true, withDriverEnabled: true, withDriverDailyRate: true,
+          hourlyRate: true, weeklyRate: true, monthlyRate: true, withDriverHourlyRate: true, withDriverWeeklyRate: true, withDriverMonthlyRate: true,
+          deliveryAvailable: true, deliveryFee: true, includedKmPerDay: true, excessMileageRate: true, overtimeGraceMinutes: true,
+          overtimeHourlyRate: true, withDriverOvertimeHourlyRate: true, securityDeposit: true },
       });
       if (!vehicle) return { conflict: "This vehicle is not currently available." as const };
       const modeEnabled = rentalMode === "WITH_DRIVER" ? vehicle.withDriverEnabled : vehicle.selfDriveEnabled;
-      const selectedRate = rentalMode === "WITH_DRIVER" ? vehicle.withDriverDailyRate : vehicle.dailyRate;
-      if (!modeEnabled || selectedRate === null) return { conflict: "That rental option is no longer available. Please refresh and choose another option." as const };
+      const selectedRate = rentalRateForMode(vehicle, rentalMode, rateUnit);
+      const ratePeriods = rentalPeriodsForRange(startAt, endAt, rateUnit);
+      if (!modeEnabled || selectedRate === null || ratePeriods === null) return { conflict: "That rental option or pricing period is no longer available. Please refresh and choose another option." as const };
+      if (deliveryRequested && !vehicle.deliveryAvailable) return { conflict: "Vehicle delivery is no longer available for this vehicle." as const };
+      const baseAmountCents = rentalAmountCents(selectedRate, ratePeriods);
+      const deliveryFee = deliveryRequested ? Number(vehicle.deliveryFee) : 0;
+      const totalAmountCents = baseAmountCents === null ? null : baseAmountCents + Math.round(deliveryFee * 100);
+      if (totalAmountCents === null || !Number.isSafeInteger(totalAmountCents) || totalAmountCents > 100_000_000_000) {
+        return { conflict: "Unable to calculate a valid rental total. Please contact the rental team." as const };
+      }
+      const overtimeRate = rentalMode === "WITH_DRIVER" ? vehicle.withDriverOvertimeHourlyRate : vehicle.overtimeHourlyRate;
 
       const conflict = await tx.booking.findFirst({
         where: {
@@ -205,13 +234,21 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           status: "PENDING",
           startAt,
           endAt,
-          totalAmount: selectedRate.mul(days),
+          totalAmount: (totalAmountCents / 100).toFixed(2),
           securityDeposit: vehicle.securityDeposit,
           rentalTermsSnapshot: rentalTerms,
           rentalTermsVersion,
           rentalTermsAcceptedAt: new Date(),
           publicTokenHash: hash(token),
-          items: { create: { vehicleId: vehicle.id, rate: selectedRate, rentalMode } },
+          items: { create: {
+            vehicleId: vehicle.id, rate: selectedRate.toFixed(2), rentalMode, rateUnit, ratePeriods,
+            deliveryRequested, deliveryAddress: deliveryRequested ? deliveryAddress : null,
+            deliveryFeeSnapshot: deliveryFee.toFixed(2),
+            includedKmPerDaySnapshot: vehicle.includedKmPerDay,
+            excessMileageRateSnapshot: Number(vehicle.excessMileageRate).toFixed(2),
+            overtimeGraceMinutesSnapshot: vehicle.overtimeGraceMinutes,
+            overtimeHourlyRateSnapshot: overtimeRate === null ? null : Number(overtimeRate).toFixed(2),
+          } },
           messages: {
             create: {
               sender: "SYSTEM",

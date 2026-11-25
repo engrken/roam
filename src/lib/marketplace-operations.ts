@@ -19,7 +19,12 @@ export const marketplaceInquirySchema = z.object({
   requesterPhone: z.string().trim().max(40).optional().or(z.literal("")),
   startDate: dateOnly,
   endDate: dateOnly,
+  startTime: z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/).default("09:00"),
+  endTime: z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/).default("09:00"),
   rentalMode: z.enum(["SELF_DRIVE", "WITH_DRIVER"]).default("SELF_DRIVE"),
+  rateUnit: z.enum(["HOURLY", "DAILY", "WEEKLY", "MONTHLY"]).default("DAILY"),
+  deliveryRequested: z.boolean().default(false),
+  deliveryAddress: z.string().trim().max(300).optional().or(z.literal("")),
   message: z.string().trim().max(1500).optional().or(z.literal("")),
   contactConsent: z.literal(true),
 }).refine((value) => value.startDate < value.endDate, {
@@ -27,17 +32,21 @@ export const marketplaceInquirySchema = z.object({
   path: ["endDate"],
 });
 
-export function marketplaceDateRange(startDate: string, endDate: string) {
+export function marketplaceDateRange(startDate: string, endDate: string, startTime = "00:00", endTime = "00:00") {
+  const datePattern = /^\\d{4}-\\d{2}-\\d{2}$/;
+  const timePattern = /^([01]\\d|2[0-3]):[0-5]\\d$/;
+  if (!datePattern.test(startDate) || !datePattern.test(endDate) || !timePattern.test(startTime) || !timePattern.test(endTime)) return null;
   const startCheck = new Date(`${startDate}T00:00:00.000Z`);
   const endCheck = new Date(`${endDate}T00:00:00.000Z`);
   if (!Number.isFinite(startCheck.getTime()) || !Number.isFinite(endCheck.getTime())) return null;
   if (startCheck.toISOString().slice(0, 10) !== startDate || endCheck.toISOString().slice(0, 10) !== endDate) return null;
-  const startAt = new Date(`${startDate}T00:00:00+08:00`);
-  const endAt = new Date(`${endDate}T00:00:00+08:00`);
+  const startAt = new Date(`${startDate}T${startTime}:00+08:00`);
+  const endAt = new Date(`${endDate}T${endTime}:00+08:00`);
   const durationMs = endAt.getTime() - startAt.getTime();
-  const nights = Math.round(durationMs / 86_400_000);
-  if (nights < 1 || nights > 30) return null;
-  return { startAt, endAt, nights };
+  const hours = durationMs / 3_600_000;
+  const nights = Math.max(1, Math.ceil(hours / 24));
+  if (!Number.isFinite(hours) || hours <= 0 || hours > 30 * 24) return null;
+  return { startAt, endAt, nights, hours };
 }
 
 export function marketplaceAvailabilityRange(startDate: string, inclusiveEndDate: string) {
@@ -46,7 +55,7 @@ export function marketplaceAvailabilityRange(startDate: string, inclusiveEndDate
   if (!Number.isFinite(startCheck.getTime()) || !Number.isFinite(endCheck.getTime())) return null;
   if (startCheck.toISOString().slice(0, 10) !== startDate || endCheck.toISOString().slice(0, 10) !== inclusiveEndDate || inclusiveEndDate < startDate) return null;
   endCheck.setUTCDate(endCheck.getUTCDate() + 1);
-  return marketplaceDateRange(startDate, endCheck.toISOString().slice(0, 10));
+  return marketplaceDateRange(startDate, endCheck.toISOString().slice(0, 10), "00:00", "00:00");
 }
 
 export type MarketplaceInquiryStatus =

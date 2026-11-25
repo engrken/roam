@@ -3,12 +3,17 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { availableRentalRateUnits, calculateRentalPrice, rentalRateForMode, rentalRateUnitLabel, type RentalMode, type RentalRateUnit } from "@/lib/rental-pricing";
 import "./booking-experience.css";
 
 type Vehicle = {
   id: string; type: string; make: string; model: string; year: number | null;
   color?: string | null; seats?: number | null; transmission?: string | null;
-  dailyRate: number; selfDriveEnabled: boolean; withDriverEnabled: boolean; withDriverDailyRate: number | null; securityDeposit: number;
+  dailyRate: number; selfDriveEnabled: boolean; withDriverEnabled: boolean; withDriverDailyRate: number | null;
+  hourlyRate: number | null; weeklyRate: number | null; monthlyRate: number | null;
+  withDriverHourlyRate: number | null; withDriverWeeklyRate: number | null; withDriverMonthlyRate: number | null;
+  deliveryAvailable: boolean; deliveryFee: number; includedKmPerDay: number | null; excessMileageRate: number;
+  overtimeGraceMinutes: number; overtimeHourlyRate: number | null; withDriverOvertimeHourlyRate: number | null; securityDeposit: number;
   branch: { id?: string; name: string; address: string | null } | null;
 };
 type Branch = { id: string; name: string; address: string | null };
@@ -60,7 +65,10 @@ export default function PublicBookPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicleId, setVehicleId] = useState("");
-  const [rentalMode, setRentalMode] = useState<"SELF_DRIVE" | "WITH_DRIVER">("SELF_DRIVE");
+  const [rentalMode, setRentalMode] = useState<RentalMode>("SELF_DRIVE");
+  const [rateUnit, setRateUnit] = useState<RentalRateUnit>("DAILY");
+  const [deliveryRequested, setDeliveryRequested] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState("");
   const [branchId, setBranchId] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -147,15 +155,23 @@ export default function PublicBookPage() {
   }, [draftLoaded, slug, startAt, endAt, branchId]);
 
   const chosen = vehicles.find(vehicle => vehicle.id === vehicleId);
-  const selectedRate = chosen ? (rentalMode === "WITH_DRIVER" ? chosen.withDriverDailyRate : chosen.dailyRate) : null;
+  const selectedRate = chosen ? rentalRateForMode(chosen, rentalMode, rateUnit) : null;
+  const selectedRateUnits = chosen ? availableRentalRateUnits(chosen, rentalMode) : [];
   const estimate = useMemo(() => {
-    if (!chosen || !startAt || !endAt) return null;
+    if (!chosen || selectedRate === null || !startAt || !endAt) return null;
     const zone = business?.timezone || "Asia/Manila";
     const start = wallClockEpoch(startAt, zone), end = wallClockEpoch(endAt, zone);
     if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
-    const days = Math.max(1, Math.ceil((end - start) / 86_400_000));
-    return { days, rental: (selectedRate || 0) * days, deposit: chosen.securityDeposit || 0 };
-  }, [startAt, endAt, chosen, selectedRate, business?.timezone]);
+    const price = calculateRentalPrice({ startAt: new Date(start), endAt: new Date(end), rate: selectedRate, rateUnit });
+    if (!price) return null;
+    const delivery = deliveryRequested ? chosen.deliveryFee : 0;
+    return {
+      periods: price.periods, rental: Number(price.amount), delivery, deposit: chosen.securityDeposit || 0,
+      includedKmPerDay: chosen.includedKmPerDay, excessMileageRate: chosen.excessMileageRate,
+      overtimeGraceMinutes: chosen.overtimeGraceMinutes,
+      overtimeHourlyRate: rentalMode === "WITH_DRIVER" ? chosen.withDriverOvertimeHourlyRate : chosen.overtimeHourlyRate,
+    };
+  }, [startAt, endAt, chosen, selectedRate, rateUnit, deliveryRequested, rentalMode, business?.timezone]);
 
   async function continueToVehicles(event: FormEvent) {
     event.preventDefault();
@@ -203,7 +219,7 @@ export default function PublicBookPage() {
     try {
       const response = await fetch("/api/public/" + encodeURIComponent(slug) + "/bookings", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone, vehicleId, rentalMode, startAt, endAt, acceptedRentalTerms, rentalTermsVersion: business.rentalTermsVersion }),
+        body: JSON.stringify({ name, email, phone, vehicleId, rentalMode, rateUnit, deliveryRequested, deliveryAddress, startAt, endAt, acceptedRentalTerms, rentalTermsVersion: business.rentalTermsVersion }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Unable to submit your request.");
@@ -252,10 +268,15 @@ export default function PublicBookPage() {
             <div className="roam-booking-step-heading"><span>STEP 2 OF 4</span><h2>Choose your vehicle</h2><p>Vehicles shown below are available for your selected rental period, based on current bookings.</p></div>
             <div className="roam-booking-trip-chip"><span>📅 {displayDate(startAt, zone)} – {displayDate(endAt, zone)}</span><button type="button" onClick={() => { setStep(1); setError(""); }}>Change dates</button></div>
             {vehicles.length === 0 ? <div className="client-empty roam-booking-no-vehicles"><strong>No vehicles match those dates.</strong><p>Try another pickup period or select a different branch.</p><button type="button" className="client-primary" onClick={() => { setStep(1); setError(""); }}>Change schedule</button></div> :
-              <div className="roam-booking-vehicle-list">{vehicles.map(vehicle => <button type="button" key={vehicle.id} className={"roam-booking-vehicle " + (vehicleId === vehicle.id ? "is-selected" : "")} onClick={() => { setVehicleId(vehicle.id); setRentalMode(vehicle.selfDriveEnabled ? "SELF_DRIVE" : "WITH_DRIVER"); setError(""); }}>
+              <div className="roam-booking-vehicle-list">{vehicles.map(vehicle => <button type="button" key={vehicle.id} className={"roam-booking-vehicle " + (vehicleId === vehicle.id ? "is-selected" : "")} onClick={() => { setVehicleId(vehicle.id); setRentalMode(vehicle.selfDriveEnabled ? "SELF_DRIVE" : "WITH_DRIVER"); setRateUnit("DAILY"); setDeliveryRequested(false); setDeliveryAddress(""); setError(""); }}>
                 <span className="roam-booking-vehicle-icon">🚘</span><span className="roam-booking-vehicle-info"><b>{vehicle.year ? vehicle.year + " " : ""}{vehicle.make} {vehicle.model}</b><small>{[vehicle.type.replaceAll("_", " "), vehicle.transmission, vehicle.seats ? vehicle.seats + " seats" : null, vehicle.color].filter(Boolean).join(" · ")}</small><small>{vehicle.branch?.name || "Pickup location to be confirmed"}{vehicle.branch?.address ? " · " + vehicle.branch.address : ""}</small></span><span className="roam-booking-vehicle-rate">{vehicle.selfDriveEnabled && <><b>{money(vehicle.dailyRate, currency)}</b><small>self-drive / day</small></>}{vehicle.withDriverEnabled && <><b>{money(vehicle.withDriverDailyRate || 0, currency)}</b><small>with driver / day</small></>}</span><span className="roam-booking-radio">{vehicleId === vehicle.id ? "✓" : ""}</span>
               </button>)}</div>}
-            {chosen && <label className="mt-4 block text-sm font-semibold">Rental option<select className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-3" value={rentalMode} onChange={event => setRentalMode(event.target.value as "SELF_DRIVE" | "WITH_DRIVER")}><option value="SELF_DRIVE" disabled={!chosen.selfDriveEnabled}>Self-drive — {money(chosen.dailyRate, currency)}/day</option><option value="WITH_DRIVER" disabled={!chosen.withDriverEnabled}>With driver — {money(chosen.withDriverDailyRate || 0, currency)}/day</option></select></label>}
+            {chosen && <div className="mt-4 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <label className="block text-sm font-semibold">Rental option<select className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-3" value={rentalMode} onChange={event => { const next = event.target.value as RentalMode; setRentalMode(next); const units = availableRentalRateUnits(chosen, next); if (!units.includes(rateUnit)) setRateUnit(units[0] || "DAILY"); }}><option value="SELF_DRIVE" disabled={!chosen.selfDriveEnabled}>Self-drive</option><option value="WITH_DRIVER" disabled={!chosen.withDriverEnabled}>With driver</option></select></label>
+              <label className="block text-sm font-semibold">Pricing period<select className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-3" value={rateUnit} onChange={event => setRateUnit(event.target.value as RentalRateUnit)}>{selectedRateUnits.map(unit => <option key={unit} value={unit}>{unit} — {money(rentalRateForMode(chosen, rentalMode, unit) || 0, currency)}/{rentalRateUnitLabel(unit)}</option>)}</select></label>
+              {chosen.deliveryAvailable && <div className="border-t border-slate-200 pt-3"><label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={deliveryRequested} onChange={event => setDeliveryRequested(event.target.checked)}/> Request vehicle delivery ({chosen.deliveryFee ? money(chosen.deliveryFee, currency) : "Free"})</label>{deliveryRequested && <label className="mt-2 block text-sm">Delivery address<textarea required minLength={5} maxLength={300} rows={2} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2" value={deliveryAddress} onChange={event => setDeliveryAddress(event.target.value)} placeholder="Enter the delivery address"/></label>}</div>}
+              <div className="text-xs leading-5 text-slate-600">{chosen.includedKmPerDay !== null ? <p>Included mileage: {chosen.includedKmPerDay} km/day · Excess: {money(chosen.excessMileageRate, currency)}/km</p> : <p>Mileage allowance: confirm with the rental team.</p>}<p>Overtime grace: {chosen.overtimeGraceMinutes} minutes</p>{(rentalMode === "WITH_DRIVER" ? chosen.withDriverOvertimeHourlyRate : chosen.overtimeHourlyRate) !== null && <p>Overtime rate: {money((rentalMode === "WITH_DRIVER" ? chosen.withDriverOvertimeHourlyRate : chosen.overtimeHourlyRate) || 0, currency)}/hour</p>}</div>
+            </div>}
             <div className="roam-booking-actions"><button type="button" className="client-refresh" onClick={() => setStep(1)}>← Back</button><button type="button" className="client-primary" disabled={!vehicleId || !chosen} onClick={continueToDetails}>Continue <span>→</span></button></div>
           </div>}
           {step === 3 && <form className="roam-booking-step-content" onSubmit={continueToReview}>
@@ -280,9 +301,10 @@ export default function PublicBookPage() {
               <div><small>CUSTOMER</small><b>{name}</b><span>{email} · {phone}</span><button type="button" onClick={() => setStep(3)}>Edit details</button></div>
             </div>
             {estimate && <div className="roam-booking-cost">
-              <div><span>{money(selectedRate || 0, currency)} × {estimate.days} {estimate.days === 1 ? "day" : "days"}</span><b>{money(estimate.rental, currency)}</b></div>
-              {estimate.deposit > 0 && <div><span>Refundable security deposit (business-set)</span><b>{money(estimate.deposit, currency)}</b></div>}
-              <div className="roam-booking-cost-total"><span>Estimated amount</span><b>{money(estimate.rental + estimate.deposit, currency)}</b></div>
+              <div><span>{money(selectedRate || 0, currency)} × {estimate.periods} {rentalRateUnitLabel(rateUnit)}{estimate.periods === 1 ? "" : "s"}</span><b>{money(estimate.rental, currency)}</b></div>
+              {estimate.delivery > 0 && <div><span>Vehicle delivery</span><b>{money(estimate.delivery, currency)}</b></div>}{estimate.delivery === 0 && deliveryRequested && <div><span>Vehicle delivery</span><b>Free</b></div>}{estimate.deposit > 0 && <div><span>Refundable security deposit</span><b>{money(estimate.deposit, currency)}</b></div>}
+              {estimate.includedKmPerDay !== null && <small>Included mileage: {estimate.includedKmPerDay} km/day. Excess mileage is charged at {money(estimate.excessMileageRate, currency)}/km when returned.</small>}{estimate.overtimeHourlyRate !== null && <small>Overtime starts after a {estimate.overtimeGraceMinutes}-minute grace period and is {money(estimate.overtimeHourlyRate, currency)}/hour.</small>}
+              <div className="roam-booking-cost-total"><span>Estimated amount</span><b>{money(estimate.rental + estimate.delivery + estimate.deposit, currency)}</b></div>
               <small>This is an estimate, not a payment receipt or confirmed charge. The rental team will confirm the final amount and payment arrangements.</small>
             </div>}
             <section className="client-rental-terms roam-booking-terms"><div><strong>Rental terms and conditions</strong><p>Please read the business’s terms before submitting your request.</p></div><div className="client-rental-terms-copy">{business?.rentalTerms || "This rental business has not published its rental terms yet."}</div>

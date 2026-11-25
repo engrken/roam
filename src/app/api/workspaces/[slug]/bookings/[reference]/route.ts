@@ -35,7 +35,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const booking = await prisma.booking.findFirst({
     where: { tenantId: access.tenant.id, reference },
     select: {
-      id: true, reference: true, status: true, startAt: true, endAt: true, totalAmount: true, securityDeposit: true,
+      id: true, reference: true, status: true, startAt: true, endAt: true, totalAmount: true, securityDeposit: true, returnChargesAmount: true, returnChargesBreakdown: true, returnChargesCalculatedAt: true,
       customer: { select: { name: true, email: true, phone: true } },
       items: {
         select: {
@@ -62,6 +62,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       endAt: booking.endAt,
       totalAmount: Number(booking.totalAmount),
       securityDeposit: Number(booking.securityDeposit || 0),
+      returnChargesAmount: Number(booking.returnChargesAmount || 0), returnChargesBreakdown: booking.returnChargesBreakdown, returnChargesCalculatedAt: booking.returnChargesCalculatedAt,
       totalPayable: Number(booking.totalAmount) + Number(booking.securityDeposit || 0),
       customer: booking.customer,
       vehicles: booking.items.map((item) => ({ ...item.vehicle, rate: Number(item.rate), rentalMode: item.rentalMode, rateUnit: item.rateUnit, ratePeriods: item.ratePeriods, deliveryRequested: item.deliveryRequested, deliveryAddress: item.deliveryAddress, deliveryFeeSnapshot: Number(item.deliveryFeeSnapshot), includedKmPerDaySnapshot: item.includedKmPerDaySnapshot, excessMileageRateSnapshot: Number(item.excessMileageRateSnapshot), overtimeGraceMinutesSnapshot: item.overtimeGraceMinutesSnapshot, overtimeHourlyRateSnapshot: item.overtimeHourlyRateSnapshot === null ? null : Number(item.overtimeHourlyRateSnapshot) })),
@@ -299,7 +300,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     await createAppNotification({
       tenantId: access.tenant.id, bookingId: booking.id, audience: "CLIENT",
       type: "BOOKING_STATUS", title: "Booking " + result.nextStatus.toLowerCase(),
-      message: "Your booking " + reference + " is now " + result.nextStatus.toLowerCase() + ".",
+      message: result.nextStatus === "COMPLETED" ? "Your rental is complete. Additional mileage/overtime charges: PHP " + result.returnChargesAmount + "." : "Your booking " + reference + " is now " + result.nextStatus.toLowerCase() + ".",
       actionUrl: "/booking/" + encodeURIComponent(reference) + "#booking-update",
       dedupeKey: "booking-status:" + booking.id + ":" + result.nextStatus,
     });
@@ -408,7 +409,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         }
       }
     }
-    return NextResponse.json({ updated: true, notification, receipt });
+    return NextResponse.json({ updated: true, notification, receipt, ...(result.nextStatus === "COMPLETED" ? { returnChargesAmount: result.returnChargesAmount, returnChargeBreakdown: result.returnChargeBreakdown } : {}) });
   }
 
   if (typeof body?.documentId === "string" && ["APPROVED", "REJECTED"].includes(body.reviewStatus)) {

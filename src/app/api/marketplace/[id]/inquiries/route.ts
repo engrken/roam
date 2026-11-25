@@ -21,7 +21,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!parsed.success) return NextResponse.json({ error: "Complete your contact details, rental dates, and contact permission." }, { status: 400 });
 
   const range = marketplaceDateRange(parsed.data.startDate, parsed.data.endDate, parsed.data.startTime, parsed.data.endTime);
-  if (!range || parsed.data.startDate < todayInManila()) {
+  if (!range || range.startAt <= new Date() || parsed.data.startDate < todayInManila()) {
     return NextResponse.json({ error: "Choose a future date range of up to 30 days." }, { status: 400 });
   }
 

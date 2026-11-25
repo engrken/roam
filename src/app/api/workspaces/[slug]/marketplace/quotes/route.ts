@@ -26,14 +26,14 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     select: {
       id: true, requesterName: true, requesterEmail: true, requesterPhone: true,
       startAt: true, endAt: true, dailyRateSnapshot: true, rateUnit: true, ratePeriods: true,
-      deliveryRequested: true, deliveryAddress: true, deliveryFeeSnapshot: true, includedKmPerDaySnapshot: true,
+      deliveryRequested: true, deliveryAddress: true, deliveryFeeSnapshot: true, securityDepositSnapshot: true, includedKmPerDaySnapshot: true,
       excessMileageRateSnapshot: true, overtimeGraceMinutesSnapshot: true, overtimeHourlyRateSnapshot: true, status: true, message: true,
       listing: { select: { headline: true, vehicle: { select: { make: true, model: true, year: true } } } },
       rentalQuotes: {
         orderBy: { version: "desc" },
         take: 10,
         select: {
-          id: true, version: true, status: true, currency: true, dailyRate: true, rateUnit: true,
+          id: true, version: true, status: true, currency: true, dailyRate: true, rateUnit: true, securityDeposit: true,
           rentalDays: true, baseAmount: true, addOns: true, discountAmount: true,
           fees: true, totalAmount: true, validUntil: true, snapshot: true,
           agreementReference: true, agreementReviewedAt: true, agreementReviewedById: true,
@@ -49,7 +49,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     inquiries: inquiries.map((item) => ({
       ...item,
       dailyRateSnapshot: Number(item.dailyRateSnapshot),
-      deliveryFeeSnapshot: Number(item.deliveryFeeSnapshot),
+      deliveryFeeSnapshot: Number(item.deliveryFeeSnapshot), securityDepositSnapshot: Number(item.securityDepositSnapshot),
       excessMileageRateSnapshot: Number(item.excessMileageRateSnapshot),
       overtimeHourlyRateSnapshot: item.overtimeHourlyRateSnapshot === null ? null : Number(item.overtimeHourlyRateSnapshot),
       rentalQuotes: item.rentalQuotes.map((quote) => ({
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     select: {
       id: true, status: true, startAt: true, endAt: true, requesterName: true,
       requesterEmail: true, requesterPhone: true, dailyRateSnapshot: true, rateUnit: true, ratePeriods: true,
-      deliveryRequested: true, deliveryAddress: true, deliveryFeeSnapshot: true, includedKmPerDaySnapshot: true,
+      deliveryRequested: true, deliveryAddress: true, deliveryFeeSnapshot: true, securityDepositSnapshot: true, includedKmPerDaySnapshot: true,
       excessMileageRateSnapshot: true, overtimeGraceMinutesSnapshot: true, overtimeHourlyRateSnapshot: true,
       listing: { select: { headline: true, vehicle: { select: { make: true, model: true, year: true } } } },
     },
@@ -120,13 +120,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     originalRateSnapshot: { unitRate: Number(inquiry.dailyRateSnapshot), rateUnit: inquiry.rateUnit, ratePeriods: inquiry.ratePeriods },
     requestedExtras: {
       deliveryRequested: inquiry.deliveryRequested, deliveryAddress: inquiry.deliveryAddress,
-      deliveryFeeSnapshot: Number(inquiry.deliveryFeeSnapshot), includedKmPerDay: inquiry.includedKmPerDaySnapshot,
+      deliveryFeeSnapshot: Number(inquiry.deliveryFeeSnapshot), securityDepositSnapshot: Number(inquiry.securityDepositSnapshot), includedKmPerDay: inquiry.includedKmPerDaySnapshot,
       excessMileageRate: Number(inquiry.excessMileageRateSnapshot), overtimeGraceMinutes: inquiry.overtimeGraceMinutesSnapshot,
       overtimeHourlyRate: inquiry.overtimeHourlyRateSnapshot === null ? null : Number(inquiry.overtimeHourlyRateSnapshot),
     },
     currency,
     quote: {
       dailyRate: parsed.data.dailyRate,
+      securityDeposit: Number(inquiry.securityDepositSnapshot),
       rateUnit: inquiry.rateUnit,
       baseAmount: totals.baseAmount,
       addOns: parsed.data.addOns,
@@ -155,6 +156,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           version,
           currency,
           dailyRate: parsed.data.dailyRate.toFixed(2),
+          securityDeposit: inquiry.securityDepositSnapshot,
           rateUnit: inquiry.rateUnit,
           rentalDays,
           baseAmount: totals.baseAmount,
@@ -175,7 +177,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       });
       return created;
     });
-    return NextResponse.json({ quote: { ...quote, dailyRate: Number(quote.dailyRate), baseAmount: Number(quote.baseAmount), discountAmount: Number(quote.discountAmount), totalAmount: Number(quote.totalAmount) } }, { status: 201 });
+    return NextResponse.json({ quote: { ...quote, dailyRate: Number(quote.dailyRate), securityDeposit: Number(quote.securityDeposit), baseAmount: Number(quote.baseAmount), discountAmount: Number(quote.discountAmount), totalAmount: Number(quote.totalAmount) } }, { status: 201 });
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
       return NextResponse.json({ error: "Another team member created a quote version at the same time. Refresh and try again." }, { status: 409 });

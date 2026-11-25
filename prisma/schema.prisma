@@ -302,6 +302,9 @@ model Booking {
   endAt       DateTime
   totalAmount Decimal       @db.Decimal(12, 2)
   securityDeposit Decimal   @default(0) @db.Decimal(12, 2)
+  returnChargesAmount Decimal @default(0) @db.Decimal(12, 2)
+  returnChargesBreakdown Json?
+  returnChargesCalculatedAt DateTime?
   notes       String?
   rentalTermsSnapshot String? @db.Text
   rentalTermsVersion String?

@@ -8,14 +8,14 @@ import { WorkspaceNav } from "@/components/workspace-nav";
 
 type LineItem = { label: string; amount: number };
 type Quote = {
-  id: string; version: number; status: string; currency: string; dailyRate: number;
+  id: string; version: number; status: string; currency: string; dailyRate: number; rateUnit: string; securityDeposit: number;
   rentalDays: number; baseAmount: number; addOns: LineItem[]; discountAmount: number;
   fees: LineItem[]; totalAmount: number; validUntil: string; agreementReference: string | null;
   agreementReviewedAt: string | null; approvedAt: string | null; renterAcceptedAt?: string | null; renterAcceptedName?: string | null; renterAcceptedEmail?: string | null; createdAt: string;
 };
 type Inquiry = {
   id: string; requesterName: string; requesterEmail: string; requesterPhone: string | null;
-  startAt: string; endAt: string; dailyRateSnapshot: number; status: string; message: string | null;
+  startAt: string; endAt: string; dailyRateSnapshot: number; rateUnit: string; ratePeriods: number; deliveryRequested: boolean; deliveryAddress: string | null; deliveryFeeSnapshot: number; securityDepositSnapshot: number; includedKmPerDaySnapshot: number | null; excessMileageRateSnapshot: number; overtimeGraceMinutesSnapshot: number; overtimeHourlyRateSnapshot: number | null; status: string; message: string | null;
   listing: { headline: string; vehicle: { make: string; model: string; year: number | null } };
   rentalQuotes: Quote[];
 };
@@ -40,11 +40,15 @@ const quoteText = (inquiry: Inquiry, quote: Quote) => [
   `ROAM RENTAL QUOTATION — VERSION ${quote.version}`,
   `Renter: ${inquiry.requesterName}`,
   `Vehicle: ${inquiry.listing.vehicle.make} ${inquiry.listing.vehicle.model} — ${inquiry.listing.headline}`,
-  `Rental period: ${date(inquiry.startAt)} to ${date(inquiry.endAt)} (${quote.rentalDays} day(s))`,
-  `Daily rate: ${money(quote.dailyRate, quote.currency)}`,
+  `Rental period: ${date(inquiry.startAt)} to ${date(inquiry.endAt)} (${quote.rentalDays} ${quote.rateUnit.toLowerCase()} unit(s))`,
+  `Rate per ${quote.rateUnit.toLowerCase()}: ${money(quote.dailyRate, quote.currency)}`,
+  `Refundable security deposit: ${money(quote.securityDeposit, quote.currency)} (separate from rental subtotal)`,
   `Rental subtotal: ${money(quote.baseAmount, quote.currency)}`,
   ...(quote.addOns || []).map((item) => `Add-on — ${item.label}: ${money(item.amount, quote.currency)}`),
   ...(quote.fees || []).map((item) => `Fee — ${item.label}: ${money(item.amount, quote.currency)}`),
+  ...(inquiry.deliveryRequested ? [`Delivery requested: ${inquiry.deliveryAddress || "Address pending"} · ${money(inquiry.deliveryFeeSnapshot, quote.currency)} (confirm in quote line items)`] : []),
+  ...(inquiry.includedKmPerDaySnapshot !== null ? [`Mileage allowance: ${inquiry.includedKmPerDaySnapshot} km/day · excess ${money(inquiry.excessMileageRateSnapshot, quote.currency)}/km`] : []),
+  `Overtime: ${inquiry.overtimeGraceMinutesSnapshot}-minute grace`,
   `Discount: -${money(quote.discountAmount, quote.currency)}`,
   `TOTAL: ${money(quote.totalAmount, quote.currency)}`,
   `Quote valid until: ${date(quote.validUntil)}`,
@@ -173,7 +177,7 @@ export default function MarketplaceQuotesPage() {
           {latest ? <div className="mt-4 grid gap-3">
             <div className="rounded-xl border border-slate-200 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="font-semibold text-slate-900">Quote v{latest.version} · {latest.status}</p><p className="mt-1 text-xs text-slate-500">Valid until {date(latest.validUntil)}</p></div><div className="text-right"><p className="text-xs text-slate-500">Quoted total</p><p className="text-lg font-bold">{money(latest.totalAmount, latest.currency)}</p></div></div>
-              <div className="mt-3 grid gap-1 text-xs text-slate-600 sm:grid-cols-2"><p>{latest.rentalDays} rental day(s) × {money(latest.dailyRate, latest.currency)} = {money(latest.baseAmount, latest.currency)}</p><p>Discount: −{money(latest.discountAmount, latest.currency)}</p>
+              <div className="mt-3 grid gap-1 text-xs text-slate-600 sm:grid-cols-2"><p>{latest.rentalDays} {latest.rateUnit.toLowerCase()} unit(s) × {money(latest.dailyRate, latest.currency)} = {money(latest.baseAmount, latest.currency)}</p><p>Discount: −{money(latest.discountAmount, latest.currency)}</p><p>Refundable deposit (separate): {money(latest.securityDeposit, latest.currency)}</p>
                 {(latest.addOns || []).map((item, index) => <p key={`addon-${index}`}>Add-on: {item.label} · {money(item.amount, latest.currency)}</p>)}
                 {(latest.fees || []).map((item, index) => <p key={`fee-${index}`}>Fee: {item.label} · {money(item.amount, latest.currency)}</p>)}
               </div>
@@ -200,7 +204,7 @@ export default function MarketplaceQuotesPage() {
           {eligible ? <form onSubmit={(event) => void createQuote(event, inquiry)} className="mt-4 grid gap-3 border-t border-slate-100 pt-4">
             <div><h3 className="text-sm font-semibold text-slate-900">{latest ? "Prepare a revised quote version" : "Prepare quote draft"}</h3><p className="mt-1 text-xs text-slate-500">Each save creates a new immutable version and supersedes earlier active versions. Amounts are in {currency}.</p></div>
             <div className="grid gap-3 sm:grid-cols-3">
-              <label className="grid gap-1 text-xs font-medium text-slate-700">Daily rate<input name="dailyRate" type="number" min="0" max="1000000" step="0.01" required defaultValue={inquiry.dailyRateSnapshot} className="roam-input"/></label>
+              <label className="grid gap-1 text-xs font-medium text-slate-700">Rate per {inquiry.rateUnit.toLowerCase()}<input name="dailyRate" type="number" min="0" max="1000000" step="0.01" required defaultValue={inquiry.dailyRateSnapshot} className="roam-input"/></label>
               <label className="grid gap-1 text-xs font-medium text-slate-700">Discount amount<input name="discountAmount" type="number" min="0" max="1000000" step="0.01" defaultValue="0" className="roam-input"/></label>
               <label className="grid gap-1 text-xs font-medium text-slate-700">Quote valid until<input name="validUntil" type="date" min={new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Manila"}).format(new Date())} required defaultValue={defaultExpiry()} className="roam-input"/></label>
             </div>

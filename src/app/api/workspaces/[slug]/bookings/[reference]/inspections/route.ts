@@ -34,10 +34,11 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{slug:st
  if(!booking||!booking.items.length)return NextResponse.json({error:"That vehicle is not part of this booking."},{status:404});
  if(type==="HANDOVER"&&booking.status!=="CONFIRMED"&&booking.status!=="ACTIVE")return NextResponse.json({error:"Handover inspections are available for confirmed bookings."},{status:409});
  if(type==="RETURN"&&booking.status!=="ACTIVE"&&booking.status!=="COMPLETED")return NextResponse.json({error:"Return inspections are available for active or completed bookings."},{status:409});
+ if(type==="RETURN"&&booking.status==="COMPLETED")return NextResponse.json({error:"This booking has been completed and its return settlement is locked. Contact the workspace administrator for an amendment."},{status:409});
  const inspection=await prisma.vehicleInspection.upsert({
   where:{bookingId_vehicleId_type:{bookingId:booking.id,vehicleId,type}},
   create:{tenantId:access.tenant.id,bookingId:booking.id,vehicleId,type,odometerKm,fuelLevel,conditionNotes,damageNotes:damageNotes||null},
-  update:{odometerKm,fuelLevel,conditionNotes,damageNotes:damageNotes||null,inspectedAt:new Date()},
+  update:{odometerKm,fuelLevel,conditionNotes,damageNotes:damageNotes||null},
   include:{vehicle:{select:{make:true,model:true,plateNumber:true}},photos:{select:{id:true,fileName:true}}},
  });
  return NextResponse.json({inspection},{status:201});

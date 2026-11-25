@@ -240,6 +240,22 @@ model Vehicle {
   seats           Int?
   transmission    String?
   dailyRate       Decimal       @db.Decimal(12, 2)
+  selfDriveEnabled Boolean      @default(true)
+  withDriverEnabled Boolean     @default(false)
+  withDriverDailyRate Decimal?  @db.Decimal(12, 2)
+  hourlyRate       Decimal?      @db.Decimal(12, 2)
+  weeklyRate       Decimal?      @db.Decimal(12, 2)
+  monthlyRate      Decimal?      @db.Decimal(12, 2)
+  withDriverHourlyRate Decimal?  @db.Decimal(12, 2)
+  withDriverWeeklyRate Decimal?  @db.Decimal(12, 2)
+  withDriverMonthlyRate Decimal? @db.Decimal(12, 2)
+  deliveryAvailable Boolean       @default(false)
+  deliveryFee       Decimal       @default(0) @db.Decimal(12, 2)
+  includedKmPerDay  Int?
+  excessMileageRate Decimal       @default(0) @db.Decimal(12, 2)
+  overtimeGraceMinutes Int         @default(0)
+  overtimeHourlyRate Decimal?      @db.Decimal(12, 2)
+  withDriverOvertimeHourlyRate Decimal? @db.Decimal(12, 2)
   securityDeposit Decimal       @default(0) @db.Decimal(12, 2)
   status          VehicleStatus @default(AVAILABLE)
   notes           String?
@@ -286,6 +302,9 @@ model Booking {
   endAt       DateTime
   totalAmount Decimal       @db.Decimal(12, 2)
   securityDeposit Decimal   @default(0) @db.Decimal(12, 2)
+  returnChargesAmount Decimal @default(0) @db.Decimal(12, 2)
+  returnChargesBreakdown Json?
+  returnChargesCalculatedAt DateTime?
   notes       String?
   rentalTermsSnapshot String? @db.Text
   rentalTermsVersion String?
@@ -314,6 +333,16 @@ model BookingItem {
   bookingId String
   vehicleId String
   rate      Decimal  @db.Decimal(12, 2)
+  rentalMode String   @default("SELF_DRIVE") @db.VarChar(20)
+  rateUnit  String    @default("DAILY") @db.VarChar(10)
+  ratePeriods Int     @default(1)
+  deliveryRequested Boolean @default(false)
+  deliveryAddress String? @db.Text
+  deliveryFeeSnapshot Decimal @default(0) @db.Decimal(12, 2)
+  includedKmPerDaySnapshot Int?
+  excessMileageRateSnapshot Decimal @default(0) @db.Decimal(12, 2)
+  overtimeGraceMinutesSnapshot Int @default(0)
+  overtimeHourlyRateSnapshot Decimal? @db.Decimal(12, 2)
   booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   vehicle   Vehicle  @relation(fields: [vehicleId], references: [id])
   @@unique([bookingId, vehicleId])
@@ -818,6 +847,17 @@ model MarketplaceBookingInquiry {
   startAt             DateTime
   endAt               DateTime
   dailyRateSnapshot   Decimal  @db.Decimal(12, 2)
+  rentalMode          String   @default("SELF_DRIVE") @db.VarChar(20)
+  rateUnit            String   @default("DAILY") @db.VarChar(10)
+  ratePeriods         Int      @default(1)
+  deliveryRequested   Boolean  @default(false)
+  deliveryAddress     String?  @db.Text
+  deliveryFeeSnapshot Decimal  @default(0) @db.Decimal(12, 2)
+  securityDepositSnapshot Decimal @default(0) @db.Decimal(12, 2)
+  includedKmPerDaySnapshot Int?
+  excessMileageRateSnapshot Decimal @default(0) @db.Decimal(12, 2)
+  overtimeGraceMinutesSnapshot Int @default(0)
+  overtimeHourlyRateSnapshot Decimal? @db.Decimal(12, 2)
   message              String?  @db.Text
   status               String   @default("NEW")
   hostNote             String?  @db.Text
@@ -865,6 +905,8 @@ model MarketplaceRentalQuote {
   status                String   @default("DRAFT")
   currency              String   @default("PHP") @db.VarChar(3)
   dailyRate             Decimal  @db.Decimal(12, 2)
+  securityDeposit       Decimal  @default(0) @db.Decimal(12, 2)
+  rateUnit              String   @default("DAILY") @db.VarChar(10)
   rentalDays            Int
   baseAmount            Decimal  @db.Decimal(12, 2)
   addOns                Json

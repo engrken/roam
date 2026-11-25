@@ -7,6 +7,7 @@ import { sendBookingMessageNotification, sendBookingStatusNotification, sendBook
 import { recordWorkspaceAudit } from "@/lib/workspace-audit";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { isWithinPickupReminderWindow } from "@/lib/booking-reminder";
+import { calculateReturnCharges, type ReturnChargeBreakdown } from "@/lib/rental-pricing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,11 +35,11 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const booking = await prisma.booking.findFirst({
     where: { tenantId: access.tenant.id, reference },
     select: {
-      id: true, reference: true, status: true, startAt: true, endAt: true, totalAmount: true, securityDeposit: true,
+      id: true, reference: true, status: true, startAt: true, endAt: true, totalAmount: true, securityDeposit: true, returnChargesAmount: true, returnChargesBreakdown: true, returnChargesCalculatedAt: true,
       customer: { select: { name: true, email: true, phone: true } },
       items: {
         select: {
-          vehicle: { select: { id: true, type: true, make: true, model: true, year: true, plateNumber: true } },
+          rate: true, rentalMode: true, rateUnit: true, ratePeriods: true, deliveryRequested: true, deliveryAddress: true, deliveryFeeSnapshot: true, includedKmPerDaySnapshot: true, excessMileageRateSnapshot: true, overtimeGraceMinutesSnapshot: true, overtimeHourlyRateSnapshot: true, vehicle: { select: { id: true, type: true, make: true, model: true, year: true, plateNumber: true } },
         },
       },
       messages: { orderBy: { createdAt: "asc" } },
@@ -61,9 +62,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       endAt: booking.endAt,
       totalAmount: Number(booking.totalAmount),
       securityDeposit: Number(booking.securityDeposit || 0),
+      returnChargesAmount: Number(booking.returnChargesAmount || 0), returnChargesBreakdown: booking.returnChargesBreakdown, returnChargesCalculatedAt: booking.returnChargesCalculatedAt,
       totalPayable: Number(booking.totalAmount) + Number(booking.securityDeposit || 0),
       customer: booking.customer,
-      vehicles: booking.items.map((item) => item.vehicle),
+      vehicles: booking.items.map((item) => ({ ...item.vehicle, rate: Number(item.rate), rentalMode: item.rentalMode, rateUnit: item.rateUnit, ratePeriods: item.ratePeriods, deliveryRequested: item.deliveryRequested, deliveryAddress: item.deliveryAddress, deliveryFeeSnapshot: Number(item.deliveryFeeSnapshot), includedKmPerDaySnapshot: item.includedKmPerDaySnapshot, excessMileageRateSnapshot: Number(item.excessMileageRateSnapshot), overtimeGraceMinutesSnapshot: item.overtimeGraceMinutesSnapshot, overtimeHourlyRateSnapshot: item.overtimeHourlyRateSnapshot === null ? null : Number(item.overtimeHourlyRateSnapshot) })),
       messages: booking.messages,
       payments: booking.payments.map((payment) => ({ ...payment, amount: Number(payment.amount) })),
       documents: booking.documents,
@@ -137,7 +139,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const result = await prisma.$transaction(async (tx) => {
       const current = await tx.booking.findFirst({
         where: { id: booking.id, tenantId: access.tenant.id },
-        select: { id: true, status: true, startAt: true, endAt: true, items: { select: { vehicleId: true } }, payments: { select: { amount: true, kind: true } } },
+        select: {
+          id: true, status: true, startAt: true, endAt: true,
+          items: { select: {
+            vehicleId: true, includedKmPerDaySnapshot: true, excessMileageRateSnapshot: true,
+            overtimeGraceMinutesSnapshot: true, overtimeHourlyRateSnapshot: true,
+          } },
+          payments: { select: { amount: true, kind: true } },
+        },
       });
       if (!current) return { error: "Booking not found.", status: 404 as const };
 
@@ -179,6 +188,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         }
       }
 
+      let returnChargesAmount = "0.00";
+      const returnChargeBreakdown: ReturnChargeBreakdown[] = [];
       if (nextStatus === "ACTIVE" || nextStatus === "COMPLETED") {
         const inspectionType = nextStatus === "ACTIVE" ? "HANDOVER" : "RETURN";
         const completed = await tx.vehicleInspection.findMany({
@@ -192,9 +203,64 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             status: 409 as const,
           };
         }
+
+        if (nextStatus === "COMPLETED") {
+          const [handoverInspections, returnInspections] = await Promise.all([
+            tx.vehicleInspection.findMany({
+              where: { tenantId: access.tenant.id, bookingId: current.id, type: "HANDOVER" },
+              select: { vehicleId: true, odometerKm: true },
+            }),
+            tx.vehicleInspection.findMany({
+              where: { tenantId: access.tenant.id, bookingId: current.id, type: "RETURN" },
+              select: { vehicleId: true, odometerKm: true, inspectedAt: true },
+            }),
+          ]);
+          const handoverByVehicle = new Map(handoverInspections.map((item) => [item.vehicleId, item]));
+          const returnByVehicle = new Map(returnInspections.map((item) => [item.vehicleId, item]));
+          let totalCents = 0;
+          for (const item of current.items) {
+            const handover = handoverByVehicle.get(item.vehicleId);
+            const returned = returnByVehicle.get(item.vehicleId);
+            if (!handover || !returned) {
+              return { error: "Handover and return inspections are required to calculate usage charges.", status: 409 as const };
+            }
+            const charge = calculateReturnCharges({
+              vehicleId: item.vehicleId,
+              handoverOdometerKm: handover.odometerKm,
+              returnOdometerKm: returned.odometerKm,
+              startAt: current.startAt,
+              endAt: current.endAt,
+              returnedAt: returned.inspectedAt,
+              includedKmPerDay: item.includedKmPerDaySnapshot,
+              excessMileageRate: Number(item.excessMileageRateSnapshot),
+              overtimeGraceMinutes: item.overtimeGraceMinutesSnapshot,
+              overtimeHourlyRate: item.overtimeHourlyRateSnapshot === null ? null : Number(item.overtimeHourlyRateSnapshot),
+            });
+            if (!charge) {
+              return { error: "A return inspection has invalid mileage or timing data. Review the inspection before completing this booking.", status: 409 as const };
+            }
+            totalCents += Math.round(Number(charge.totalCharge) * 100);
+            if (!Number.isSafeInteger(totalCents) || totalCents > 100_000_000_000) {
+              return { error: "The return settlement exceeds the supported amount.", status: 409 as const };
+            }
+            returnChargeBreakdown.push(charge);
+          }
+          returnChargesAmount = (totalCents / 100).toFixed(2);
+        }
       }
 
-      await tx.booking.update({ where: { id: current.id }, data: { status: nextStatus as never } });
+      await tx.booking.update({
+        where: { id: current.id },
+        data: {
+          status: nextStatus as never,
+          ...(nextStatus === "COMPLETED" ? {
+            returnChargesAmount,
+            returnChargesBreakdown: returnChargeBreakdown,
+            returnChargesCalculatedAt: new Date(),
+            totalAmount: { increment: returnChargesAmount },
+          } : {}),
+        },
+      });
       await recordWorkspaceAudit(tx, {
         tenantId: access.tenant.id, actorUserId: access.user.id, actorEmail: access.user.email,
         action: "booking.status_changed", targetType: "booking", targetId: current.id,
@@ -217,7 +283,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         data: {
           bookingId: current.id,
           sender: "SYSTEM",
-          body: "Booking status changed from " + current.status + " to " + nextStatus + " by the rental team.",
+          body: nextStatus === "COMPLETED" ? "Booking completed. Return settlement charges: " + returnChargesAmount + " (mileage and overtime, where applicable)." : "Booking status changed from " + current.status + " to " + nextStatus + " by the rental team.",
         },
       });
       return {
@@ -226,6 +292,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         nextStatus,
         startAt: current.startAt,
         endAt: current.endAt,
+        ...(nextStatus === "COMPLETED" ? { returnChargesAmount, returnChargeBreakdown } : {}),
       };
     });
 
@@ -233,7 +300,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     await createAppNotification({
       tenantId: access.tenant.id, bookingId: booking.id, audience: "CLIENT",
       type: "BOOKING_STATUS", title: "Booking " + result.nextStatus.toLowerCase(),
-      message: "Your booking " + reference + " is now " + result.nextStatus.toLowerCase() + ".",
+      message: result.nextStatus === "COMPLETED" ? "Your rental is complete. Additional mileage/overtime charges: PHP " + result.returnChargesAmount + "." : "Your booking " + reference + " is now " + result.nextStatus.toLowerCase() + ".",
       actionUrl: "/booking/" + encodeURIComponent(reference) + "#booking-update",
       dedupeKey: "booking-status:" + booking.id + ":" + result.nextStatus,
     });
@@ -310,7 +377,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           const receiptData = await prisma.booking.findFirst({
             where: { id: booking.id, tenantId: access.tenant.id },
             select: {
-              totalAmount: true, securityDeposit: true,
+              totalAmount: true, securityDeposit: true, returnChargesAmount: true, returnChargesBreakdown: true,
               items: { select: { vehicle: { select: { make: true, model: true, plateNumber: true } } } },
               payments: { orderBy: { receivedAt: "asc" }, select: { amount: true, kind: true, method: true, reference: true, notes: true, receivedAt: true } },
             },
@@ -342,7 +409,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         }
       }
     }
-    return NextResponse.json({ updated: true, notification, receipt });
+    return NextResponse.json({ updated: true, notification, receipt, ...(result.nextStatus === "COMPLETED" ? { returnChargesAmount: result.returnChargesAmount, returnChargeBreakdown: result.returnChargeBreakdown } : {}) });
   }
 
   if (typeof body?.documentId === "string" && ["APPROVED", "REJECTED"].includes(body.reviewStatus)) {

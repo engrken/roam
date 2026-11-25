@@ -27,7 +27,10 @@ export default async function MarketplaceListingDetailPage({ params }: { params:
     select: {
       id: true, headline: true, description: true, isPublished: true, status: true,
       hostProfile: { select: { status: true, displayName: true, city: true, province: true } },
-      vehicle: { select: { status: true, type: true, make: true, model: true, year: true, dailyRate: true, seats: true, transmission: true, color: true } },
+      vehicle: { select: { status: true, type: true, make: true, model: true, year: true, dailyRate: true, selfDriveEnabled: true, withDriverEnabled: true, withDriverDailyRate: true,
+        hourlyRate: true, weeklyRate: true, monthlyRate: true, withDriverHourlyRate: true, withDriverWeeklyRate: true, withDriverMonthlyRate: true,
+        deliveryAvailable: true, deliveryFee: true, includedKmPerDay: true, excessMileageRate: true, overtimeGraceMinutes: true,
+        overtimeHourlyRate: true, withDriverOvertimeHourlyRate: true, securityDeposit: true, seats: true, transmission: true, color: true } },
       tenant: { select: { status: true } },
     },
   });
@@ -36,6 +39,23 @@ export default async function MarketplaceListingDetailPage({ params }: { params:
     hostStatus: listing.hostProfile.status, vehicleStatus: listing.vehicle.status,
     tenantStatus: listing.tenant.status,
   })) notFound();
+
+  const rentalVehicle = {
+    ...listing.vehicle,
+    dailyRate: Number(listing.vehicle.dailyRate),
+    withDriverDailyRate: listing.vehicle.withDriverDailyRate === null ? null : Number(listing.vehicle.withDriverDailyRate),
+    hourlyRate: listing.vehicle.hourlyRate === null ? null : Number(listing.vehicle.hourlyRate),
+    weeklyRate: listing.vehicle.weeklyRate === null ? null : Number(listing.vehicle.weeklyRate),
+    monthlyRate: listing.vehicle.monthlyRate === null ? null : Number(listing.vehicle.monthlyRate),
+    withDriverHourlyRate: listing.vehicle.withDriverHourlyRate === null ? null : Number(listing.vehicle.withDriverHourlyRate),
+    withDriverWeeklyRate: listing.vehicle.withDriverWeeklyRate === null ? null : Number(listing.vehicle.withDriverWeeklyRate),
+    withDriverMonthlyRate: listing.vehicle.withDriverMonthlyRate === null ? null : Number(listing.vehicle.withDriverMonthlyRate),
+    deliveryFee: Number(listing.vehicle.deliveryFee),
+    excessMileageRate: Number(listing.vehicle.excessMileageRate),
+    overtimeHourlyRate: listing.vehicle.overtimeHourlyRate === null ? null : Number(listing.vehicle.overtimeHourlyRate),
+    withDriverOvertimeHourlyRate: listing.vehicle.withDriverOvertimeHourlyRate === null ? null : Number(listing.vehicle.withDriverOvertimeHourlyRate),
+    securityDeposit: Number(listing.vehicle.securityDeposit),
+  };
 
   return <MarketplacePublicShell>
     <section className="bg-slate-50 px-5 py-12 sm:px-8 sm:py-16">
@@ -54,10 +74,20 @@ export default async function MarketplaceListingDetailPage({ params }: { params:
             </div>
           </div>
           <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-7">
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Rental rate</p><p className="mt-2 text-3xl font-bold text-slate-950">{money(Number(listing.vehicle.dailyRate))}<span className="text-sm font-normal text-slate-500"> / day</span></p>
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Rental pricing</p>
+            <div className="mt-3 space-y-3 text-sm text-slate-700">
+              {listing.vehicle.selfDriveEnabled && <div><b className="text-slate-950">Self-drive</b><p>Hourly: {listing.vehicle.hourlyRate !== null ? money(Number(listing.vehicle.hourlyRate)) + "/hour" : "Not offered"}</p><p>Daily: {money(Number(listing.vehicle.dailyRate))}/day</p><p>Weekly: {listing.vehicle.weeklyRate !== null ? money(Number(listing.vehicle.weeklyRate)) + "/week" : "Not offered"}</p><p>Monthly: {listing.vehicle.monthlyRate !== null ? money(Number(listing.vehicle.monthlyRate)) + "/month" : "Not offered"}</p></div>}
+              {listing.vehicle.withDriverEnabled && <div><b className="text-slate-950">With driver</b><p>Hourly: {listing.vehicle.withDriverHourlyRate !== null ? money(Number(listing.vehicle.withDriverHourlyRate)) + "/hour" : "Not offered"}</p><p>Daily: {money(Number(listing.vehicle.withDriverDailyRate))}/day</p><p>Weekly: {listing.vehicle.withDriverWeeklyRate !== null ? money(Number(listing.vehicle.withDriverWeeklyRate)) + "/week" : "Not offered"}</p><p>Monthly: {listing.vehicle.withDriverMonthlyRate !== null ? money(Number(listing.vehicle.withDriverMonthlyRate)) + "/month" : "Not offered"}</p></div>}
+            </div>
+            <div className="mt-4 border-t border-slate-100 pt-4 text-xs leading-5 text-slate-600">
+              <p>Refundable security deposit: {money(Number(listing.vehicle.securityDeposit))}</p>
+              {listing.vehicle.deliveryAvailable && <p>Delivery: {Number(listing.vehicle.deliveryFee) > 0 ? money(Number(listing.vehicle.deliveryFee)) + " per booking" : "Available free of charge"}</p>}
+              {listing.vehicle.includedKmPerDay !== null && <p>Mileage: {listing.vehicle.includedKmPerDay} km/day included · {money(Number(listing.vehicle.excessMileageRate))}/excess km</p>}
+              <p>Overtime grace: {listing.vehicle.overtimeGraceMinutes} minutes</p>
+            </div>
             <div className="mt-6 border-t border-slate-100 pt-5"><p className="text-xs text-slate-500">Vehicle host</p><p className="mt-1 font-semibold text-slate-900">{listing.hostProfile.displayName}</p><p className="mt-2 flex items-center gap-1 text-sm text-slate-600"><MapPin size={14}/>{[listing.hostProfile.city,listing.hostProfile.province].filter(Boolean).join(", ")}</p></div>
             <div className="mt-6 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-950"><b>Bookings are not open yet.</b><p className="mt-1">This listing is part of the ROAM discovery preview. Rental requests and payments will become available only after launch readiness is complete.</p></div>
-            {inquiriesEnabled ? <MarketplaceInquiryForm listingId={listing.id}/> : <Link href="/early-access" className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800">Get renter launch updates</Link>}
+            {inquiriesEnabled ? <MarketplaceInquiryForm listingId={listing.id} vehicle={rentalVehicle}/> : <Link href="/early-access" className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800">Get renter launch updates</Link>}
           </aside>
         </div>
       </div>

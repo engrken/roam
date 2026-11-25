@@ -53,7 +53,8 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
     select: {
       id: true, headline: true, description: true, isPublished: true, status: true,
       hostProfile: { select: { status: true, displayName: true, city: true, province: true } },
-      vehicle: { select: { status: true, type: true, make: true, model: true, year: true, dailyRate: true, seats: true, transmission: true } },
+      vehicle: { select: { status: true, type: true, make: true, model: true, year: true, dailyRate: true, selfDriveEnabled: true, withDriverEnabled: true, withDriverDailyRate: true,
+        hourlyRate: true, weeklyRate: true, monthlyRate: true, withDriverHourlyRate: true, withDriverWeeklyRate: true, withDriverMonthlyRate: true, seats: true, transmission: true } },
       tenant: { select: { status: true } },
     },
   }) : [];
@@ -87,7 +88,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
           <div className="p-5"><div className="flex items-center justify-between gap-2"><span className="text-[10px] font-bold uppercase tracking-wider text-cyan-700">{listing.vehicle.type.replaceAll("_"," ")}</span><span className="text-xs text-slate-500">{listing.vehicle.year || "Year not specified"}</span></div>
             <h3 className="mt-2 text-lg font-bold text-slate-950">{listing.headline}</h3><p className="mt-1 text-sm text-slate-600">{listing.vehicle.make} {listing.vehicle.model}</p>
             <p className="mt-3 flex items-center gap-1 text-xs text-slate-500"><MapPin size={13}/>{[listing.hostProfile.city,listing.hostProfile.province].filter(Boolean).join(", ")}</p>
-            <div className="mt-4 flex items-end justify-between border-t border-slate-100 pt-4"><div><p className="text-[10px] text-slate-500">Starting from</p><p className="text-lg font-bold text-slate-950">{money(Number(listing.vehicle.dailyRate))}<span className="text-xs font-normal text-slate-500"> / day</span></p></div><Link href={`/marketplace/${listing.id}`} className="inline-flex items-center gap-1 text-xs font-bold text-cyan-800 hover:text-cyan-600">View details <ArrowRight size={14}/></Link></div>
+            <div className="mt-4 flex items-end justify-between border-t border-slate-100 pt-4"><div><p className="text-[10px] text-slate-500">Starting from</p><div className="text-xs font-bold text-slate-950">{listing.vehicle.selfDriveEnabled && <p>Self-drive: {money(Number(listing.vehicle.dailyRate))}/day{listing.vehicle.hourlyRate !== null ? " · " + money(Number(listing.vehicle.hourlyRate)) + "/hr" : ""}{listing.vehicle.weeklyRate !== null ? " · " + money(Number(listing.vehicle.weeklyRate)) + "/wk" : ""}</p>}{listing.vehicle.withDriverEnabled && <p>With driver: {money(Number(listing.vehicle.withDriverDailyRate))}/day{listing.vehicle.withDriverHourlyRate !== null ? " · " + money(Number(listing.vehicle.withDriverHourlyRate)) + "/hr" : ""}{listing.vehicle.withDriverWeeklyRate !== null ? " · " + money(Number(listing.vehicle.withDriverWeeklyRate)) + "/wk" : ""}</p>}</div></div><Link href={`/marketplace/${listing.id}`} className="inline-flex items-center gap-1 text-xs font-bold text-cyan-800 hover:text-cyan-600">View details <ArrowRight size={14}/></Link></div>
             <p className="mt-3 flex items-center gap-1 text-[11px] text-slate-500"><Store size={12}/> Hosted by {listing.hostProfile.displayName}</p>
           </div>
         </article>)}</div>

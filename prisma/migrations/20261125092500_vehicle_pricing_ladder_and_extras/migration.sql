@@ -19,6 +19,7 @@ ALTER TABLE "BookingItem"
   ADD COLUMN "deliveryRequested" BOOLEAN NOT NULL DEFAULT false,
   ADD COLUMN "deliveryAddress" TEXT,
   ADD COLUMN "deliveryFeeSnapshot" DECIMAL(12,2) NOT NULL DEFAULT 0,
+  ADD COLUMN "securityDepositSnapshot" DECIMAL(12,2) NOT NULL DEFAULT 0,
   ADD COLUMN "includedKmPerDaySnapshot" INTEGER,
   ADD COLUMN "excessMileageRateSnapshot" DECIMAL(12,2) NOT NULL DEFAULT 0,
   ADD COLUMN "overtimeGraceMinutesSnapshot" INTEGER NOT NULL DEFAULT 0,
@@ -44,4 +45,5 @@ UPDATE "MarketplaceBookingInquiry"
 SET "ratePeriods" = GREATEST(1, CEIL(EXTRACT(EPOCH FROM ("endAt" - "startAt")) / 86400)::INTEGER);
 
 ALTER TABLE "MarketplaceRentalQuote"
-  ADD COLUMN "rateUnit" VARCHAR(10) NOT NULL DEFAULT 'DAILY';
+  ADD COLUMN "rateUnit" VARCHAR(10) NOT NULL DEFAULT 'DAILY',
+  ADD COLUMN "securityDeposit" DECIMAL(12,2) NOT NULL DEFAULT 0;

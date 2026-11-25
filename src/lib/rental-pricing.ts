@@ -38,11 +38,10 @@ export function rentalRateForMode(
   mode: RentalMode,
   unit: RentalRateUnit,
 ): number | null {
-  const prefix = mode === "WITH_DRIVER" ? "withDriver" : "";
-  const suffix = unit[0] + unit.slice(1).toLowerCase() + "Rate";
+  const suffix = unit[0].toLowerCase() + unit.slice(1).toLowerCase() + "Rate";
   const field = unit === "DAILY"
     ? (mode === "WITH_DRIVER" ? "withDriverDailyRate" : "dailyRate")
-    : prefix + suffix;
+    : mode === "WITH_DRIVER" ? "withDriver" + suffix[0].toUpperCase() + suffix.slice(1) : suffix;
   const raw = vehicle[field];
   if (raw === null || raw === undefined) return null;
   const rate = Number(raw);

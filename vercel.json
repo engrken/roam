@@ -12,5 +12,12 @@
       "path": "/api/cron/subscription-payment-expiry",
       "schedule": "0 0 * * *"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "**": false,
+      "main": true,
+      "preview": true
+    }
+  }
 }
